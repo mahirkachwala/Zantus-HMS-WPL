@@ -33,6 +33,36 @@ nav ul li a:hover {
 	color: #38bdf8;
 }
 
+/* Header / Logo */
+.main-header {
+	background: #1e3a8a;
+	color: white;
+	padding: 15px 40px;
+}
+
+.logo-section {
+	display: flex;
+	align-items: center;
+	gap: 15px;
+}
+
+.logo-section img {
+	width: 70px;
+	background: white;
+	padding: 5px;
+	border-radius: 8px;
+}
+
+.logo-section h1 {
+	margin: 0;
+	font-size: 22px;
+}
+
+.logo-section p {
+	margin: 2px 0 0;
+	font-size: 14px;
+}
+
 /* Layout Styling */
 .layout {
 	display: flex;
