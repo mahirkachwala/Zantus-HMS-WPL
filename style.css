@@ -1,8 +1,8 @@
 /* Task 3: External CSS Theme */
 body {
-font-family: Arial, sans-serif;
-background: #f4f7fb;
-margin: 0;
+	font-family: Arial, sans-serif;
+	background: #f4f7fb;
+	margin: 0;
 }
 
 /* Task 2: Navigation Styling */
@@ -33,150 +33,153 @@ nav ul li a:hover {
 	color: #38bdf8;
 }
 
-/* Task 8: Layout Styling */
-.layout {
-display: flex;
-padding: 30px;
-gap: 30px;
-}
-
-.sidebar {
-width: 250px;
-/* Task 3: External CSS Theme */
-body {
-font-family: Arial, sans-serif;
-background: #f4f7fb;
-margin: 0;
-}
-
 /* Layout Styling */
 .layout {
-display: flex;
-padding: 40px;
-gap: 30px;
-max-width: 1200px;
-margin: auto;
+	display: flex;
+	padding: 40px;
+	gap: 30px;
+	max-width: 1200px;
+	margin: auto;
 }
 
 .sidebar {
-width: 250px;
-background: white;
-padding: 25px;
-border-radius: 12px;
-box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+	width: 250px;
+	background: white;
+	padding: 25px;
+	border-radius: 12px;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 
 .sidebar ul {
-list-style: none;
-padding: 0;
-margin: 0;
+	list-style: none;
+	padding: 0;
+	margin: 0;
 }
 
 .sidebar ul li {
-padding: 12px 0;
-border-bottom: 1px solid #eee;
+	padding: 12px 0;
+	border-bottom: 1px solid #eee;
 }
 
 .content {
-flex: 1;
+	flex: 1;
 }
 
 /* Doctor Cards */
 .doctors {
-display: flex;
-gap: 25px;
-margin: 25px 0;
-flex-wrap: wrap;
+	display: flex;
+	gap: 25px;
+	margin: 25px 0;
+	flex-wrap: wrap;
 }
 
 .doctor-card {
-width: 220px;
-padding: 22px;
-background: white;
-border-radius: 12px;
-text-align: center;
-box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+	width: 220px;
+	padding: 22px;
+	background: white;
+	border-radius: 12px;
+	text-align: center;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 /* Offer Box */
 .offer-box {
-background: #fff3cd;
-padding: 14px;
-border-radius: 8px;
-text-align: center;
-font-weight: bold;
-margin-bottom: 25px;
+	background: #fff3cd;
+	padding: 14px;
+	border-radius: 8px;
+	text-align: center;
+	font-weight: bold;
+	margin-bottom: 25px;
 }
 
 /* Table Styling */
 table {
-width: 100%;
-border-collapse: collapse;
-background: white;
-border-radius: 12px;
-overflow: hidden;
-box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-margin-top: 20px;
+	width: 100%;
+	border-collapse: collapse;
+	background: white;
+	border-radius: 12px;
+	overflow: hidden;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+	margin-top: 20px;
 }
 
 th {
-background: #1e3a8a;
-color: white;
-padding: 12px;
+	background: #1e3a8a;
+	color: white;
+	padding: 12px;
 }
 
 td {
-padding: 10px;
-border-bottom: 1px solid #eee;
-text-align: center;
+	padding: 10px;
+	border-bottom: 1px solid #eee;
+	text-align: center;
 }
 
 tr:nth-child(even) {
-background: #f9fafb;
+	background: #f9fafb;
 }
 
 /* Appointment Form Improvement */
 .appointment-container {
-max-width: 500px;
-margin: 40px auto;
-background: white;
-padding: 30px;
-border-radius: 12px;
-box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+	max-width: 500px;
+	margin: 40px auto;
+	background: white;
+	padding: 30px;
+	border-radius: 12px;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 .appointment-container label {
-display: block;
-margin-top: 15px;
-font-weight: 600;
+	display: block;
+	margin-top: 15px;
+	font-weight: 600;
 }
 
 .appointment-container input,
 .appointment-container select {
-width: 100%;
-padding: 10px;
-margin-top: 5px;
-border-radius: 6px;
-border: 1px solid #ccc;
+	width: 100%;
+	padding: 10px;
+	margin-top: 5px;
+	border-radius: 6px;
+	border: 1px solid #ccc;
 }
 
 .appointment-container button {
-width: 100%;
-padding: 12px;
-margin-top: 20px;
-background: #1e3a8a;
-color: white;
-border: none;
-border-radius: 8px;
-cursor: pointer;
+	width: 100%;
+	padding: 12px;
+	margin-top: 20px;
+	background: #1e3a8a;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
 }
 
 footer {
-background: #1f2937;
-color: white;
-text-align: center;
-padding: 18px;
-margin-top: 40px;
+	background: #1f2937;
+	color: white;
+	text-align: center;
+	padding: 18px;
+	margin-top: 40px;
 }
 
+/* Responsive adjustments */
+@media (max-width: 768px) {
+	nav ul {
+		flex-direction: column;
+		align-items: center;
+	}
+	nav ul li {
+		margin: 8px 0;
+	}
+	.layout {
+		flex-direction: column;
+		padding: 20px;
+	}
+	.sidebar {
+		width: 100%;
+	}
+	.doctors {
+		justify-content: center;
+	}
 }
