@@ -6,60 +6,9 @@
 </head>
 <body>
 
-<nav>
-<ul>
-<li><a href="hospital.html">Home</a></li>
-<li><a href="patients.html">Patients</a></li>
-<li><a href="doctors.html">Doctors</a></li>
-<li><a href="appointments.html">Appointments</a></li>
-<li><a href="billing.html">Billing</a></li>
-</ul>
-</nav>
-
-<h2>Book Appointment</h2>
-
-<form class="appointment-form">
-
-n<label>Patient Name</label>
-<!DOCTYPE html>
-<html>
-<head>
-<title>Appointments - Zantus Life Science</title>
-
-<!-- Task 2: Internal CSS for Navigation -->
-<style>
-nav ul {
-list-style: none;
-margin: 0;
-padding: 0;
-background: #1f2937;
-text-align: center;
-}
-nav ul li {
-display: inline-block;
-margin: 0 20px;
-}
-nav ul li a {
-color: white;
-text-decoration: none;
-padding: 15px 0;
-display: inline-block;
-}
-nav ul li a:hover {
-color: #38bdf8;
-}
-</style>
-
-<!-- Task 3: External CSS Link -->
-<link rel="stylesheet" href="style.css">
-
-</head>
-<body>
-
-<!-- Task 1: Inline CSS Header Styling -->
-<header style="background:#1e3a8a; color:white; padding:20px; border:3px solid #0f172a; text-align:center;">
-<h1>Zantus Life Science</h1>
-<p>Book Appointment</p>
+<header style="background:#1e3a8a; color:white; padding:25px; border:3px solid #0f172a; text-align:center; margin-bottom:0;">
+<h1 style="margin:0;">Zantus Life Science</h1>
+<p style="margin:5px 0 0;">Book Appointment</p>
 </header>
 
 <nav>
@@ -72,28 +21,29 @@ color: #38bdf8;
 </ul>
 </nav>
 
-<!-- Task 5: Form Styled Using Box Model -->
-<form class="appointment-form" style="margin:30px auto;">
+<div class="appointment-container">
+
+<h2>Book Appointment</h2>
 
 <label>Patient Name</label>
-<input type="text" required>
+<input type="text">
 
 <label>Select Doctor</label>
-<select required>
+<select>
 <option>Dr. Smith</option>
 <option>Dr. Patel</option>
 <option>Dr. Lee</option>
 </select>
 
 <label>Appointment Date</label>
-<input type="date" required>
+<input type="date">
 
-<label>Time Slot</label>
-<input type="time" required>
+<label>Time</label>
+<input type="time">
 
 <button type="submit">Book Appointment</button>
 
-</form>
+</div>
 
 <footer>
 © 2026 Zantus Life Science Hospital
