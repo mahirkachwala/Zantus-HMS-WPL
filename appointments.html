@@ -1,53 +1,93 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Appointments - Zantus Life Science</title>
-<link rel="stylesheet" href="style.css">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>Appointments - Zantus Life Science</title>
+
+	<!-- Task 2: Internal CSS for Navigation (per-page) -->
+	<style>
+	nav ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		background: #1f2937;
+		text-align: center;
+	}
+	nav ul li {
+		display: inline-block;
+		margin: 0 20px;
+	}
+	nav ul li a {
+		color: white;
+		text-decoration: none;
+		padding: 15px 0;
+		display: inline-block;
+	}
+	nav ul li a:hover {
+		color: #38bdf8;
+	}
+	</style>
+
+	<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header style="background:#1e3a8a; color:white; padding:25px; border:3px solid #0f172a; text-align:center; margin-bottom:0;">
-<h1 style="margin:0;">Zantus Life Science</h1>
-<p style="margin:5px 0 0;">Book Appointment</p>
-</header>
+	<header class="hero-header">
 
-<nav>
-<ul>
-<li><a href="hospital.html">Home</a></li>
-<li><a href="patients.html">Patients</a></li>
-<li><a href="doctors.html">Doctors</a></li>
-<li><a href="appointments.html">Appointments</a></li>
-<li><a href="billing.html">Billing</a></li>
-</ul>
-</nav>
+		<div class="hero-inner">
 
-<div class="appointment-container">
+			<div class="logo-box">
+				<img src="images/logo.jpg" alt="Hospital Logo">
+			</div>
 
-<h2>Book Appointment</h2>
+			<div class="hero-text">
+				<h1>Zantus Life Science Hospital</h1>
+				<p>Where Science Meets Compassion</p>
+			</div>
 
-<label>Patient Name</label>
-<input type="text">
+		</div>
 
-<label>Select Doctor</label>
-<select>
-<option>Dr. Smith</option>
-<option>Dr. Patel</option>
-<option>Dr. Lee</option>
-</select>
+	</header>
 
-<label>Appointment Date</label>
-<input type="date">
+	<nav>
+		<ul>
+			<li><a href="hospital.html">Home</a></li>
+			<li><a href="patients.html">Patients</a></li>
+			<li><a href="doctors.html">Doctors</a></li>
+			<li><a href="appointments.html">Appointments</a></li>
+			<li><a href="billing.html">Billing</a></li>
+		</ul>
+	</nav>
 
-<label>Time</label>
-<input type="time">
+	<main>
+		<h2 style="text-align:center; margin-top:30px;">Book Appointment</h2>
 
-<button type="submit">Book Appointment</button>
+		<div class="appointment-container">
+			<label>Patient Name</label>
+			<input type="text" placeholder="Enter patient name">
 
-</div>
+			<label>Select Doctor</label>
+			<select>
+				<option>Dr. Amit Sharma</option>
+				<option>Dr. Priya Nair</option>
+				<option>Dr. Rajesh Kulkarni</option>
+				<option>Dr. Sneha Verma</option>
+			</select>
 
-<footer>
-© 2026 Zantus Life Science Hospital | Mumbai, Maharashtra | Contact: +91 98765 43210
-</footer>
+			<label>Appointment Date</label>
+			<input type="date">
+
+			<label>Time</label>
+			<input type="time">
+
+			<button>Book Appointment</button>
+		</div>
+	</main>
+
+	<footer>
+		© 2026 Zantus Life Science Hospital | Mumbai, Maharashtra | Contact: +91 98765 43210
+	</footer>
 
 </body>
 </html>
