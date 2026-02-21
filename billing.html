@@ -63,6 +63,7 @@
 	<div class="page-container">
 		<div class="content-card">
 
+			<!-- Task 10: Billing Records Table -->
 			<h2 style="text-align:center; margin-top:30px;">Billing Records</h2>
 
 			<table>
@@ -109,6 +110,22 @@
 
 		</div>
 	</div>
+
+		<!-- Task 10: Calculate Total Bill -->
+		<button onclick="calculateTotalBill()">Calculate Total Bill</button>
+		<p id="billingTotal"></p>
+
+		<!-- Task 4: Patient Bill Calculator  -->
+		<div style="margin-top:30px; border:1px solid #ccc; padding:20px; max-width:400px;">
+			<h3>Patient Bill Calculator</h3>
+			<label>Patient Name: <input type="text" id="billPatientName" placeholder="Enter name"></label><br><br>
+			<label>Days Admitted: <input type="number" id="billDays" min="1" value="1"></label><br><br>
+			<button id="billCalcBtn">Calculate Patient Bill</button>
+			<div id="patientBillResult" style="margin-top:15px; font-weight:bold;"></div>
+			<div id="patientBillFinal" style="margin-top:10px; color:#2e7d32; font-weight:bold;"></div>
+		</div>
+
+		<script src="js/billing.js"></script>
 
 	<footer>
 		© 2026 Zantus Life Science Hospital | Mumbai, Maharashtra | Contact: +91 98765 43210

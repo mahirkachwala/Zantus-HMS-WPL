@@ -65,7 +65,7 @@
 
 		<div class="appointment-container">
 			<label>Patient Name</label>
-			<input type="text" placeholder="Enter patient name">
+			<input id="patientNameInput" type="text" placeholder="Enter patient name">
 
 			<label>Select Doctor</label>
 			<select>
@@ -81,9 +81,12 @@
 			<label>Time</label>
 			<input type="time">
 
-			<button>Book Appointment</button>
+			<button id="addAppointmentBtn">Book Appointment</button>
+			<p id="appointmentCount"></p>
 		</div>
 	</main>
+
+    <script src="js/appointments.js"></script>
 
 	<footer>
 		© 2026 Zantus Life Science Hospital | Mumbai, Maharashtra | Contact: +91 98765 43210

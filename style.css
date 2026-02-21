@@ -242,3 +242,60 @@ footer {
 	font-size: 16px;
 }
 
+/*Dark Mode */
+
+.dark-mode {
+    background: #0f172a;
+    color: white;
+}
+
+/* Header */
+.dark-mode .hero-header {
+    background: #0f172a;
+    border-bottom: 4px solid #1e293b;
+}
+
+/* Cards & Sidebar */
+.dark-mode .sidebar,
+.dark-mode .content-card,
+.dark-mode .doctor-card,
+.dark-mode .appointment-container {
+    background: #1e293b;
+    color: white;
+    border: 1px solid #334155;
+}
+
+/* Navigation */
+.dark-mode nav ul {
+    background: #0f172a;
+}
+
+.dark-mode nav ul li a {
+    color: white;
+}
+
+.dark-mode nav ul li a:hover {
+    color: #38bdf8;
+}
+
+/* Tables */
+.dark-mode table {
+    background: #1e293b;
+    color: white;
+}
+
+.dark-mode th {
+    background: #334155;
+    color: white;
+}
+
+.dark-mode td {
+    color: white;
+}
+
+/* Footer */
+.dark-mode footer {
+    background: #0f172a;
+    color: white;
+}
+
