@@ -1,0 +1,18 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs / temp
+*.log
+*.tmp
+*.swp
+
+# Secrets / local env
+.env
+.env.*
+
+# Runtime uploads/cache (if added later)
+uploads/
+cache/
