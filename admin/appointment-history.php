@@ -5,6 +5,13 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
+function appointmentColumnExists($con, $columnName) {
+	$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
+	return ($check && mysqli_num_rows($check) > 0);
+}
+
+$hasVisitStatus = appointmentColumnExists($con, 'visitStatus');
+
 if(isset($_GET['cancelid']))
 {
 	$aid = (int)$_GET['cancelid'];
@@ -63,7 +70,7 @@ if(isset($_GET['cancelid']))
 	<?php include('include/header.php');?>
 	<div class="row">
 		<div class="col-md-12">
-			<h3 class="page-heading">Appointment History</h3>
+			<h3 class="page-heading">Appointment History (Checked-In / Completed / Cancelled)</h3>
 			<?php if(!empty($_SESSION['msg'])): ?>
 				<div class="alert alert-info"><?php echo htmlentities($_SESSION['msg']); ?></div>
 				<?php $_SESSION['msg']=''; ?>
@@ -87,7 +94,11 @@ if(isset($_GET['cancelid']))
 				</thead>
 				<tbody>
 					<?php
-					$sql=mysqli_query($con,"select doctors.doctorName as docname,users.fullName as pname,appointment.*  from appointment join doctors on doctors.id=appointment.doctorId join users on users.id=appointment.userId ");
+					$historyWhere = "(appointment.userStatus=0 OR appointment.doctorStatus=0)";
+					if($hasVisitStatus) {
+						$historyWhere .= " OR appointment.visitStatus IN ('Checked In','Completed','Cancelled')";
+					}
+					$sql=mysqli_query($con,"select doctors.doctorName as docname,users.fullName as pname,appointment.* from appointment join doctors on doctors.id=appointment.doctorId join users on users.id=appointment.userId where (".$historyWhere.") order by appointment.id desc");
 					$cnt=1;
 					while($row=mysqli_fetch_array($sql))
 					{
@@ -142,17 +153,7 @@ if(isset($_GET['cancelid']))
 								?>
 							</td>
 							<td><?php echo nl2br(htmlentities(($row['prescription'] ?? '') ?: 'Not added yet')); ?></td>
-							<td >
-								<div class="visible-md visible-lg hidden-sm hidden-xs">
-									<?php if(($row['userStatus']==1) && ($row['doctorStatus']==1))
-									{
-										echo '<a class="btn btn-primary btn-sm" href="edit-appointment.php?id='.(int)$row['id'].'">Edit</a> ';
-										echo '<a class="btn btn-cancel btn-sm" href="appointment-history.php?cancelid='.(int)$row['id'].'" onclick="return confirm(\'Cancel this appointment?\')">Cancel</a>';
-									} else {
-										echo '<span class="status-cancelled">Cancelled</span>';
-									} ?>
-								</div>
-							</td>
+							<td><span class="text-muted">History Record</span></td>
 						</tr>
 						<?php
 						$cnt=$cnt+1;

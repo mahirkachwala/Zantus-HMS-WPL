@@ -4,6 +4,14 @@ error_reporting(0);
 include('include/config.php');
 include('include/checklogin.php');
 check_login();
+
+function appointmentColumnExists($con, $columnName) {
+	$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
+	return ($check && mysqli_num_rows($check) > 0);
+}
+
+$hasVisitStatus = appointmentColumnExists($con, 'visitStatus');
+
 if(isset($_GET['cancel']))
 {
 	mysqli_query($con,"update appointment set doctorStatus='0' where id ='".$_GET['id']."'");
@@ -61,7 +69,7 @@ if(isset($_GET['cancel']))
 
 	<div class="row">
 		<div class="col-md-12">
-			<h3 class="page-heading">Appointment History</h3>
+			<h3 class="page-heading">Appointment History (Checked-In / Completed / Cancelled)</h3>
 
 			<?php if(!empty($_SESSION['msg'])): ?>
 				<div class="alert alert-info"><?php echo htmlentities($_SESSION['msg']);?></div>
@@ -86,7 +94,11 @@ if(isset($_GET['cancel']))
 				</thead>
 				<tbody>
 					<?php
-					$sql=mysqli_query($con,"select users.fullName as fname,appointment.*  from appointment join users on users.id=appointment.userId where appointment.doctorId='".$_SESSION['id']."'");
+					$historyWhere = "(appointment.userStatus=0 OR appointment.doctorStatus=0)";
+					if($hasVisitStatus) {
+						$historyWhere .= " OR appointment.visitStatus IN ('Checked In','Completed','Cancelled')";
+					}
+					$sql=mysqli_query($con,"select users.fullName as fname,appointment.* from appointment join users on users.id=appointment.userId where appointment.doctorId='".$_SESSION['id']."' and (".$historyWhere.") order by appointment.id desc");
 					$cnt=1;
 					while($row=mysqli_fetch_array($sql))
 					{
@@ -145,20 +157,7 @@ if(isset($_GET['cancel']))
 								?>
 							</td>
 							<td><?php echo nl2br(htmlentities(($row['prescription'] ?? '') ?: 'Not added yet')); ?></td>
-							<td >
-								<div class="visible-md visible-lg hidden-sm hidden-xs">
-									<?php if(($row['userStatus']==1) && ($row['doctorStatus']==1))
-									{ ?>
-
-
-										<a href="visit-management.php" class="btn btn-primary btn-sm">Manage Visit</a>
-										<a href="appointment-history.php?id=<?php echo $row['id']?>&cancel=update" onClick="return confirm('Are you sure you want to cancel this appointment ?')" class="btn btn-cancel btn-sm">Cancel</a>
-									<?php } else {
-
-										echo '<span class="status-cancelled">Cancelled</span>';
-									} ?>
-								</div>
-							</td>
+							<td><span class="text-muted">History Record</span></td>
 						</tr>
 
 						<?php

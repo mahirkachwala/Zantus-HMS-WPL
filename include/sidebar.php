@@ -5,6 +5,7 @@
 		<ul class="nav side-menu">
 			<li><a href="dashboard.php"><i class="fa fa-home"></i> Dashboard</a></li>
 			<li><a href="book-appointment.php"><i class="fa fa-copy"></i> Book Appointment</a></li>
+			<li><a href="appointments.php"><i class="fa fa-calendar"></i> Appointments</a></li>
 			<li><a href="pay-fees.php"><i class="fa fa-credit-card"></i> Pay Fees</a></li>
 			<li><a href="appointment-history.php"><i class="fa fa-list-alt"></i> Appointment History</a></li>
 			<li><a href="manage-medhistory.php"><i class="fa fa-line-chart"></i> Medical History</a></li>

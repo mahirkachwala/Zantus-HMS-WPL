@@ -131,7 +131,10 @@ include('include/header.php');
 			<tbody>
 			<?php
 			$cnt=1;
-			$whereVisit = $hasVisitStatus ? " AND COALESCE(appointment.visitStatus,'Scheduled')!='Cancelled'" : "";
+			$whereVisit = " AND appointment.userStatus='1' AND appointment.doctorStatus='1'";
+			if ($hasVisitStatus) {
+				$whereVisit .= " AND COALESCE(appointment.visitStatus,'Scheduled')='Scheduled'";
+			}
 			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId'" . $whereVisit . " ORDER BY appointment.id DESC");
 			if ($sql) while($row = mysqli_fetch_array($sql)) {
 				if ($hasVisitStatus) {
@@ -175,14 +178,14 @@ include('include/header.php');
 					<td>
 						<?php if(!$isPaid): ?>
 							<span class="text-muted">Waiting for payment</span>
-						<?php elseif($status !== 'Completed'): ?>
+						<?php elseif($status === 'Checked In'): ?>
 							<form method="post" class="form-inline" style="display:flex; gap:8px;">
 								<input type="hidden" name="appointment_id" value="<?php echo (int)$row['id']; ?>">
 								<input type="text" class="form-control" name="prescription" placeholder="Write prescription" required>
 								<button type="submit" name="checkout" class="btn btn-cancel btn-sm">Check Out</button>
 							</form>
 						<?php else: ?>
-							<?php echo nl2br(htmlentities($row['prescription'] ?: 'Prescription added.')); ?>
+							--
 						<?php endif; ?>
 					</td>
 				</tr>
