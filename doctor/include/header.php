@@ -91,6 +91,21 @@
 		background: #f4f7fb;
 		min-height: 100vh !important;
 	}
+	@media (min-width: 992px) {
+		.nav-md .container.body .left_col {
+			width: 230px !important;
+			position: fixed !important;
+			z-index: 20;
+		}
+		.nav-md .container.body .top_nav {
+			margin-left: 230px !important;
+			width: calc(100% - 230px) !important;
+		}
+		.nav-md .container.body .right_col {
+			margin-left: 230px !important;
+			width: calc(100% - 230px) !important;
+		}
+	}
 	.x_content, .x_content p, .x_content td, .x_content th {
 		font-size: 14px;
 	}
@@ -115,6 +130,32 @@
 	.x_title h2 {
 		color: #1e3a8a;
 		font-weight: 700;
+	}
+	.over-title {
+		font-size: 22px;
+		font-weight: 700;
+		color: #1e3a8a;
+		margin-bottom: 14px;
+	}
+	.panel.panel-white {
+		background: #fff;
+		border: 1px solid #e6ebf5;
+		border-radius: 10px;
+		box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+	}
+	.panel.panel-white > .panel-heading {
+		background: transparent;
+		border-bottom: 1px solid #e6ebf5;
+		padding: 14px 16px;
+	}
+	.panel.panel-white > .panel-heading .panel-title {
+		font-size: 18px;
+		font-weight: 700;
+		color: #1e3a8a;
+		margin: 0;
+	}
+	.panel.panel-white > .panel-body {
+		padding: 16px;
 	}
 	.side-menu>li>a,
 	.nav.child_menu li a {

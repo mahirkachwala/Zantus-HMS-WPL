@@ -58,7 +58,8 @@ check_login();
 			<table class="table table-hover data-table-wrap" id="sample-table-1">
 				<thead>
 					<tr>
-							<a href="view-patient.php?viewid=<?php echo $row['ID']; ?>" class="btn btn-primary btn-sm">View</a>
+						<th class="center">#</th>
+						<th>Patient Name</th>
 						<th>Patient Contact Number</th>
 						<th>Patient Gender </th>
 						<th>Creation Date </th>
@@ -82,11 +83,7 @@ check_login();
 							<td><?php echo $row['CreationDate'];?></td>
 							<td><?php echo $row['UpdationDate'];?>
 						</td>
-						<td>
-
-							<a href="view-patient.php?viewid=<?php echo $row['ID'];?>"><i class="fa fa-eye"></i></a>
-
-						</td>
+						<td><a href="view-patient.php?viewid=<?php echo $row['ID'];?>" class="btn btn-primary btn-sm">View</a></td>
 					</tr>
 					<?php
 					$cnt=$cnt+1;

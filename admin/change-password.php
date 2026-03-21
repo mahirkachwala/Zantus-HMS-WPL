@@ -8,16 +8,20 @@ date_default_timezone_set('Asia/Kolkata');// change according timezone
 $currentTime = date( 'Y-m-d h:i:s', time () );
 if(isset($_POST['submit']))
 {
-	$sql=mysqli_query($con,"SELECT password FROM  admin where password='".$_POST['cpass']."' && username='".$_SESSION['login']."'");
-	$num=mysqli_fetch_array($sql);
-	if($num>0)
-	{
-		$con=mysqli_query($con,"update admin set `password`='".$_POST['npass']."', `updationDate`='$currentTime' where username='".$_SESSION['login']."'");
-		$_SESSION['msg1']="Password Changed Successfully !!";
-	}
-	else
-	{
-		$_SESSION['msg1']="Old Password not match !!";
+	if($_POST['npass'] != $_POST['cfpass']) {
+		$_SESSION['msg1']="Confirm Password not match !!";
+	} else {
+		$sql=mysqli_query($con,"SELECT password FROM  admin where password='".$_POST['cpass']."' && username='".$_SESSION['login']."'");
+		$num=mysqli_fetch_array($sql);
+		if($num>0)
+		{
+			$con=mysqli_query($con,"update admin set `password`='".$_POST['npass']."', `updationDate`='$currentTime' where username='".$_SESSION['login']."'");
+			$_SESSION['msg1']="Password Changed Successfully !!";
+		}
+		else
+		{
+			$_SESSION['msg1']="Old Password not match !!";
+		}
 	}
 }
 ?>
@@ -47,6 +51,14 @@ if(isset($_POST['submit']))
 	<link href="../vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
 	<!-- Custom Theme Style -->
 	<link href="../assets/css/custom.min.css" rel="stylesheet">
+	<style>
+		.page-heading {
+			font-size: 22px;
+			font-weight: 700;
+			color: #1e3a8a;
+			margin-bottom: 14px;
+		}
+	</style>
 	<script type="text/javascript">
 		function valid()
 		{
@@ -86,15 +98,15 @@ if(isset($_POST['submit']))
 	<?php include('include/header.php');?>
 	<div class="row">
 		<div class="col-md-12">
+			<h3 class="page-heading">Change Password</h3>
 			<div class="row margin-top-30">
 				<div class="col-lg-8 col-md-12">
 					<div class="panel panel-white">
-						<div class="panel-heading">
-							<h5 class="panel-title">Change Password</h5>
-						</div>
 						<div class="panel-body">
-							<p style="color:red;"><?php echo htmlentities($_SESSION['msg1']);?>
-							<?php echo htmlentities($_SESSION['msg1']="");?></p>
+							<?php if(!empty($_SESSION['msg1'])): ?>
+								<div class="alert alert-info"><?php echo htmlentities($_SESSION['msg1']); ?></div>
+								<?php $_SESSION['msg1']=''; ?>
+							<?php endif; ?>
 							<form role="form" name="chngpwd" method="post" onSubmit="return valid();">
 								<div class="form-group">
 									<label for="exampleInputEmail1">
@@ -114,17 +126,13 @@ if(isset($_POST['submit']))
 									</label>
 									<input type="password" name="cfpass" class="form-control"  placeholder="Confirm Password">
 								</div>
-								<button type="submit" name="submit" class="btn btn-o btn-primary">
+								<button type="submit" name="submit" class="btn btn-primary">
 									Submit
 								</button>
 							</form>
 						</div>
 					</div>
 				</div>
-			</div>
-		</div>
-		<div class="col-lg-12 col-md-12">
-			<div class="panel panel-white">
 			</div>
 		</div>
 	</div>

@@ -10,7 +10,13 @@ function appointmentColumnExists($con, $columnName) {
 	return ($check && mysqli_num_rows($check) > 0);
 }
 
+function tableExists($con, $tableName) {
+	$check = mysqli_query($con, "SHOW TABLES LIKE '" . mysqli_real_escape_string($con, $tableName) . "'");
+	return ($check && mysqli_num_rows($check) > 0);
+}
+
 $hasVisitStatus = appointmentColumnExists($con, 'visitStatus');
+$hasPrescriptionsTable = tableExists($con, 'prescriptions');
 
 if(isset($_GET['cancelid']))
 {
@@ -83,7 +89,6 @@ if(isset($_GET['cancelid']))
 						<th>Patient Name</th>
 						<th>Specialization</th>
 						<th>Consultancy Fee</th>
-						<th>Payment</th>
 						<th>Appointment Date / Time </th>
 						<th>Appointment Creation Date  </th>
 						<th>Current Status</th>
@@ -109,13 +114,6 @@ if(isset($_GET['cancelid']))
 							<td class="hidden-xs"><?php echo $row['pname'];?></td>
 							<td><?php echo $row['doctorSpecialization'];?></td>
 							<td><?php echo $row['consultancyFees'];?></td>
-							<td>
-								<?php if(($row['paymentStatus'] ?? 'Pending') === 'Paid'): ?>
-									<span class="status-active">Paid</span>
-								<?php else: ?>
-									<span class="status-cancelled"><?php echo htmlentities($row['paymentStatus'] ?? 'Pending'); ?></span>
-								<?php endif; ?>
-							</td>
 							<td><?php echo $row['appointmentDate'];?> / <?php echo
 							$row['appointmentTime'];?>
 						</td>
@@ -153,7 +151,20 @@ if(isset($_GET['cancelid']))
 								?>
 							</td>
 							<td><?php echo nl2br(htmlentities(($row['prescription'] ?? '') ?: 'Not added yet')); ?></td>
-							<td><span class="text-muted">History Record</span></td>
+							<td>
+								<?php
+								$hasStructured = false;
+								if($hasPrescriptionsTable) {
+									$ps = mysqli_query($con, "SELECT id FROM prescriptions WHERE appointment_id='".(int)$row['id']."' ORDER BY id DESC LIMIT 1");
+									$hasStructured = ($ps && mysqli_num_rows($ps) > 0);
+								}
+								if($hasStructured) {
+									echo '<a href="view-prescription.php?appointment_id='.(int)$row['id'].'" class="btn btn-primary btn-sm">View</a>';
+								} else {
+									echo '<span class="text-muted">History Record</span>';
+								}
+								?>
+							</td>
 						</tr>
 						<?php
 						$cnt=$cnt+1;

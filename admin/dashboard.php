@@ -178,7 +178,7 @@ check_login();
         <div class="stat-card">
           <div class="stat-top"><i class="fa fa-credit-card"></i> Payments Received</div>
           <div class="stat-count"><?php echo $total_paid; ?></div>
-          <div class="stat-link"><a href="appointment-history.php">Check payment status</a></div>
+          <div class="stat-link"><a href="payments.php">Check payment status</a></div>
         </div>
       </div>
       <div class="stat-col">

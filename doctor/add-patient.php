@@ -18,8 +18,9 @@ if(isset($_POST['submit']))
 	$sql=mysqli_query($con,"insert into tblpatient(Docid,PatientName,PatientContno,PatientEmail,PatientGender,PatientAdd,PatientAge,PatientMedhis) values('$docid','$patname','$patcontact','$patemail','$gender','$pataddress','$patage','$medhis')");
 	if($sql)
 	{
-		echo "<script>alert('Patient info added Successfully');</script>";
+		$_SESSION['msg'] = 'Patient info added successfully.';
 		header('location:add-patient.php');
+		exit();
 
 	}
 }
@@ -45,6 +46,14 @@ if(isset($_POST['submit']))
 	<link href="../vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
 	<!-- Custom Theme Style -->
 	<link href="../assets/css/custom.css" rel="stylesheet">
+	<style>
+		.page-heading {
+			font-size: 22px;
+			font-weight: 700;
+			color: #1e3a8a;
+			margin-bottom: 14px;
+		}
+	</style>
 
 	<script>
 		function userAvailability() {
@@ -71,12 +80,14 @@ if(isset($_POST['submit']))
 
 	<div class="row">
 		<div class="col-md-12">
-			<div class="row margin-top-30">
+			<h3 class="page-heading">Add Patient</h3>
+			<?php if(!empty($_SESSION['msg'])): ?>
+				<div class="alert alert-info"><?php echo htmlentities($_SESSION['msg']); ?></div>
+				<?php $_SESSION['msg']=''; ?>
+			<?php endif; ?>
+			<div class="row margin-top-10">
 				<div class="col-lg-8 col-md-12">
 					<div class="panel panel-white">
-						<div class="panel-heading">
-							<h5 class="panel-title">Add Patient</h5>
-						</div>
 						<div class="panel-body">
 							<form role="form" name="" method="post">
 
@@ -133,7 +144,7 @@ if(isset($_POST['submit']))
 									<textarea type="text" name="medhis" class="form-control"  placeholder="Enter Patient Medical History(if any)" required="true"></textarea>
 								</div>
 
-								<button type="submit" name="submit" id="submit" class="btn btn-o btn-primary">
+								<button type="submit" name="submit" id="submit" class="btn btn-primary">
 									Add
 								</button>
 							</form>

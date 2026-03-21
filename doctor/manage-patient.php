@@ -27,6 +27,23 @@ check_login();
 	<link href="../vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
 	<!-- Custom Theme Style -->
 	<link href="../assets/css/custom.css" rel="stylesheet">
+	<style>
+		.page-heading {
+			font-size: 22px;
+			font-weight: 700;
+			color: #1e3a8a;
+			margin-bottom: 14px;
+		}
+		.data-table-wrap {
+			background: #fff;
+			border: 1px solid #e6ebf5;
+			border-radius: 10px;
+			overflow: hidden;
+		}
+		.data-table-wrap td, .data-table-wrap th {
+			font-size: 14px;
+		}
+	</style>
 </head>
 <body class="nav-md">
 	<?php
@@ -36,9 +53,9 @@ check_login();
 	<?php include('include/header.php');?>
 	<div class="row">
 		<div class="col-md-12">
-			<h5 class="over-title margin-bottom-15">Manage <span class="text-bold">Patients</span></h5>
+			<h3 class="page-heading">Manage Patients</h3>
 
-			<table class="table table-hover" id="sample-table-1">
+			<table class="table table-hover data-table-wrap" id="sample-table-1">
 				<thead>
 					<tr>
 						<th class="center">#</th>
@@ -67,9 +84,8 @@ check_login();
 							<td><?php echo $row['UpdationDate'];?>
 						</td>
 						<td>
-
-							<a href="edit-patient.php?editid=<?php echo $row['ID'];?>"><i class="fa fa-edit"></i></a> || <a href="view-patient.php?viewid=<?php echo $row['ID'];?>"><i class="fa fa-eye"></i></a>
-
+							<a href="edit-patient.php?editid=<?php echo $row['ID'];?>" class="btn btn-primary btn-sm">Edit</a>
+							<a href="view-patient.php?viewid=<?php echo $row['ID'];?>" class="btn btn-cancel btn-sm">View</a>
 						</td>
 					</tr>
 					<?php

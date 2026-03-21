@@ -60,32 +60,6 @@ if (isset($_GET['checkin'])) {
 	exit();
 }
 
-if (isset($_POST['checkout'])) {
-	$aid = (int)$_POST['appointment_id'];
-	$prescription = mysqli_real_escape_string($con, trim($_POST['prescription'] ?? ''));
-	if ($prescription === '') {
-		$_SESSION['msg'] = 'Prescription is required for check-out.';
-	} else {
-		$updates = [];
-		if ($hasVisitStatus) {
-			$updates[] = "visitStatus='Completed'";
-		}
-		if ($hasCheckOutTime) {
-			$updates[] = "checkOutTime=NOW()";
-		}
-		if ($hasPrescription) {
-			$updates[] = "prescription='$prescription'";
-		}
-		if (!empty($updates)) {
-			mysqli_query($con, "UPDATE appointment SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
-			$_SESSION['msg'] = 'Patient checked out and prescription saved.';
-		} else {
-			$_SESSION['msg'] = 'Visit tracking columns are missing in database.';
-		}
-	}
-	header('location:visit-management.php');
-	exit();
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -125,7 +99,7 @@ include('include/header.php');
 					<th>Appointment Date/Time</th>
 					<th>Visit Status</th>
 					<th>Check In</th>
-					<th>Check Out + Prescription</th>
+					<th>Prescription</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -133,7 +107,7 @@ include('include/header.php');
 			$cnt=1;
 			$whereVisit = " AND appointment.userStatus='1' AND appointment.doctorStatus='1'";
 			if ($hasVisitStatus) {
-				$whereVisit .= " AND COALESCE(appointment.visitStatus,'Scheduled')='Scheduled'";
+				$whereVisit .= " AND COALESCE(appointment.visitStatus,'Scheduled') IN ('Scheduled','Checked In')";
 			}
 			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId'" . $whereVisit . " ORDER BY appointment.id DESC");
 			if ($sql) while($row = mysqli_fetch_array($sql)) {
@@ -178,12 +152,8 @@ include('include/header.php');
 					<td>
 						<?php if(!$isPaid): ?>
 							<span class="text-muted">Waiting for payment</span>
-						<?php elseif($status === 'Checked In'): ?>
-							<form method="post" class="form-inline" style="display:flex; gap:8px;">
-								<input type="hidden" name="appointment_id" value="<?php echo (int)$row['id']; ?>">
-								<input type="text" class="form-control" name="prescription" placeholder="Write prescription" required>
-								<button type="submit" name="checkout" class="btn btn-cancel btn-sm">Check Out</button>
-							</form>
+						<?php elseif($status === 'Checked In' || !$hasVisitStatus): ?>
+							<a class="btn btn-primary btn-sm" href="add-prescription.php?appointment_id=<?php echo (int)$row['id']; ?>">Add Prescription</a>
 						<?php else: ?>
 							--
 						<?php endif; ?>

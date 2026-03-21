@@ -27,6 +27,23 @@ check_login();
 	<link href="../vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
 	<!-- Custom Theme Style -->
 	<link href="../assets/css/custom.css" rel="stylesheet">
+	<style>
+		.page-heading {
+			font-size: 22px;
+			font-weight: 700;
+			color: #1e3a8a;
+			margin-bottom: 14px;
+		}
+		.data-table-wrap {
+			background: #fff;
+			border: 1px solid #e6ebf5;
+			border-radius: 10px;
+			overflow: hidden;
+		}
+		.data-table-wrap td, .data-table-wrap th {
+			font-size: 14px;
+		}
+	</style>
 </head>
 <body class="nav-md">
 	<?php
@@ -36,6 +53,7 @@ check_login();
 	<?php include('include/header.php');?>
 	<div class="row">
 		<div class="col-md-12">
+			<h3 class="page-heading">Search Patients</h3>
 			<form role="form" method="post" name="search">
 
 				<div class="form-group">
@@ -45,7 +63,7 @@ check_login();
 					<input type="text" name="searchdata" id="searchdata" class="form-control" value="" required='true'>
 				</div>
 
-				<button type="submit" name="search" id="submit" class="btn btn-o btn-primary">
+				<button type="submit" name="search" id="submit" class="btn btn-primary">
 					Search
 				</button>
 			</form>
@@ -55,9 +73,9 @@ check_login();
 
 				$sdata=$_POST['searchdata'];
 				?>
-				<h4 align="center">Result against "<?php echo $sdata;?>" keyword </h4>
+				<h4 style="margin:16px 0;">Result for "<?php echo htmlentities($sdata); ?>"</h4>
 
-				<table class="table table-hover" id="sample-table-1">
+				<table class="table table-hover data-table-wrap" id="sample-table-1">
 					<thead>
 						<tr>
 							<th class="center">#</th>
@@ -71,7 +89,9 @@ check_login();
 					</thead>
 					<tbody>
 						<?php
-						$sql=mysqli_query($con,"select * from tblpatient where PatientName like '%$sdata%'|| PatientContno like '%$sdata%'");
+						$docid=(int)$_SESSION['id'];
+						$sdata=mysqli_real_escape_string($con,$sdata);
+						$sql=mysqli_query($con,"select * from tblpatient where Docid='$docid' and (PatientName like '%$sdata%' OR PatientContno like '%$sdata%')");
 						$num=mysqli_num_rows($sql);
 						if($num>0){
 							$cnt=1;
@@ -87,16 +107,15 @@ check_login();
 									<td><?php echo $row['UpdationDate'];?>
 								</td>
 								<td>
-
-									<a href="edit-patient.php?editid=<?php echo $row['ID'];?>"><i class="fa fa-edit"></i></a> || <a href="view-patient.php?viewid=<?php echo $row['ID'];?>"><i class="fa fa-eye"></i></a>
-
+									<a href="edit-patient.php?editid=<?php echo $row['ID'];?>" class="btn btn-primary btn-sm">Edit</a>
+									<a href="view-patient.php?viewid=<?php echo $row['ID'];?>" class="btn btn-cancel btn-sm">View</a>
 								</td>
 							</tr>
 							<?php
 							$cnt=$cnt+1;
 						} } else { ?>
 							<tr>
-								<td colspan="8"> No record found against this search</td>
+								<td colspan="8" class="text-center text-muted">No record found against this search.</td>
 
 							</tr>
 
