@@ -17,7 +17,10 @@ if(isset($_POST['submit']))
 	$query=mysqli_query($con,"insert into appointment(doctorSpecialization,doctorId,userId,consultancyFees,appointmentDate,appointmentTime,userStatus,doctorStatus) values('$specilization','$doctorid','$userid','$fees','$appdate','$time','$userstatus','$docstatus')");
 	if($query)
 	{
-		echo "<script>alert('Your appointment successfully booked');</script>";
+		$appointmentId = mysqli_insert_id($con);
+		$_SESSION['msg1'] = "Your appointment was booked successfully. Please complete payment.";
+		header("Location: pay-fees.php?appointment_id=".$appointmentId);
+		exit();
 	}
 }
 ?>
@@ -81,8 +84,10 @@ if(isset($_POST['submit']))
 							<h5 class="panel-title">Book Appointment</h5>
 						</div>
 						<div class="panel-body">
-							<p style="color:red;"><?php echo htmlentities($_SESSION['msg1']);?>
-							<?php echo htmlentities($_SESSION['msg1']="");?></p>
+							<?php if(!empty($_SESSION['msg1'])): ?>
+								<div class="alert alert-info"><?php echo htmlentities($_SESSION['msg1']);?></div>
+								<?php $_SESSION['msg1']=""; ?>
+							<?php endif; ?>
 							<form role="form" name="book" method="post" >
 								<div class="form-group">
 									<label for="DoctorSpecialization">
@@ -127,8 +132,8 @@ if(isset($_POST['submit']))
 									</label>
 									<input type="time" class="form-control" name="apptime" id="time" required="required">eg : 10:00 PM
 								</div>
-								<button type="submit" name="submit" class="btn btn-o btn-primary">
-									Submit
+								<button type="submit" name="submit" class="btn btn-primary">
+									Book and Continue to Payment
 								</button>
 							</form>
 						</div>

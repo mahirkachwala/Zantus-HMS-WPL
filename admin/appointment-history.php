@@ -89,15 +89,15 @@ check_login();
 						<td class="status-text">
 							<?php if(($row['userStatus']==1) && ($row['doctorStatus']==1))
 							{
-								echo "Active";
+								echo '<span class="status-active">Active</span>';
 							}
 							if(($row['userStatus']==0) && ($row['doctorStatus']==1))
 							{
-								echo "Cancelled by Patient";
+								echo '<span class="status-cancelled">Cancelled by Patient</span>';
 							}
 							if(($row['userStatus']==1) && ($row['doctorStatus']==0))
 							{
-								echo "Cancelled by Doctor";
+								echo '<span class="status-cancelled">Cancelled by Doctor</span>';
 							}
 							?></td>
 							<td >
@@ -106,7 +106,7 @@ check_login();
 									{
 										echo "No Action yet";
 									} else {
-										echo "Canceled";
+										echo '<span class="status-cancelled">Cancelled</span>';
 									} ?>
 								</div>
 							</td>

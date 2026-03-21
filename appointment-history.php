@@ -101,16 +101,16 @@ if(isset($_GET['cancel']))
 						<td class="status-text">
 							<?php if(($row['userStatus']==1) && ($row['doctorStatus']==1))
 							{
-								echo "Active";
+								echo '<span class="status-active">Active</span>';
 							}
 							if(($row['userStatus']==0) && ($row['doctorStatus']==1))
 							{
-								echo "Cancelled by You";
+								echo '<span class="status-cancelled">Cancelled by You</span>';
 							}
 
 							if(($row['userStatus']==1) && ($row['doctorStatus']==0))
 							{
-								echo "Cancelled by Doctor";
+								echo '<span class="status-cancelled">Cancelled by Doctor</span>';
 							}
 
 
@@ -122,10 +122,11 @@ if(isset($_GET['cancel']))
 									{ ?>
 
 
-										<a href="appointment-history.php?id=<?php echo $row['id']?>&cancel=update" onClick="return confirm('Are you sure you want to cancel this appointment ?')" class="btn btn-danger btn-sm">Cancel</a>
+										<a href="appointment-history.php?id=<?php echo $row['id']?>&cancel=update" onClick="return confirm('Are you sure you want to cancel this appointment ?')" class="btn btn-cancel btn-sm">Cancel</a>
+										<a href="pay-fees.php?appointment_id=<?php echo (int)$row['id']; ?>" class="btn btn-primary btn-sm">Pay</a>
 									<?php } else {
 
-										echo "Canceled";
+										echo '<span class="status-cancelled">Cancelled</span>';
 									} ?>
 								</div>
 							</td>

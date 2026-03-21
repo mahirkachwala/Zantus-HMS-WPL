@@ -85,6 +85,23 @@
 		background: #1e40af;
 		border-color: #1e40af;
 	}
+	.btn-cancel {
+		background: #dc2626 !important;
+		border-color: #dc2626 !important;
+		color: #fff !important;
+	}
+	.btn-cancel:hover {
+		background: #b91c1c !important;
+		border-color: #b91c1c !important;
+	}
+	.status-active {
+		color: #16a34a;
+		font-weight: 700;
+	}
+	.status-cancelled {
+		color: #dc2626;
+		font-weight: 700;
+	}
 </style>
 <div class="container body">
 	<div class="main_container">
@@ -103,7 +120,7 @@
 					</div>
 					<div class="profile_info">
 						<span>Welcome,</span>
-						<h2><?php echo $_SESSION['login']; ?></h2>
+						<h2><?php echo htmlentities($_SESSION['login'] ?? 'Admin'); ?></h2>
 					</div>
 				</div>
 				<!-- /menu profile quick info -->
@@ -130,7 +147,7 @@
 					<ul class=" navbar-right">
 						<li class="nav-item dropdown open" style="padding-left: 15px;">
 							<a href="javascript:;" class="user-profile dropdown-toggle" aria-haspopup="true" id="navbarDropdown" data-toggle="dropdown" aria-expanded="false">
-								<img src="../assets/images/zantus-logo.jpg" alt=""><?php echo $_SESSION['login']; ?>
+								<img src="../assets/images/zantus-logo.jpg" alt=""><?php echo htmlentities($_SESSION['login'] ?? 'Admin'); ?>
 							</a>
 							<div class="dropdown-menu dropdown-usermenu pull-right" aria-labelledby="navbarDropdown">
 								<a class="dropdown-item"  href="change-password.php"> Change Password</a>
@@ -159,5 +176,7 @@
 							</div>
 							<div class="x_content">
 							<?php endif; ?>
-							<p style="color:red;"><?php echo htmlentities($_SESSION['msg']);?>
-							<?php echo htmlentities($_SESSION['msg']="");?></p>
+							<?php if(!empty($_SESSION['msg'])): ?>
+								<p style="color:red;"><?php echo htmlentities($_SESSION['msg']);?></p>
+								<?php $_SESSION['msg']=""; ?>
+							<?php endif; ?>
