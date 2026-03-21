@@ -81,9 +81,38 @@
 		background: #1e3a8a;
 		border-color: #1e3a8a;
 	}
+	.btn-o.btn-primary {
+		background: #1e3a8a !important;
+		border-color: #1e3a8a !important;
+		color: #fff !important;
+	}
 	.btn-primary:hover {
 		background: #1e40af;
 		border-color: #1e40af;
+	}
+	.btn-o.btn-primary:hover {
+		background: #1e40af !important;
+		border-color: #1e40af !important;
+		color: #fff !important;
+	}
+	.btn {
+		border-radius: 8px;
+		font-size: 14px;
+		font-weight: 600;
+	}
+	.nav-tabs>li>a {
+		color: #334155;
+		font-weight: 600;
+	}
+	.nav-tabs>li.active>a,
+	.nav-tabs>li.active>a:focus,
+	.nav-tabs>li.active>a:hover {
+		color: #1e3a8a;
+		border-top: 2px solid #1e3a8a;
+	}
+	.alert {
+		border-radius: 8px;
+		font-size: 14px;
 	}
 	.btn-transparent.btn-xs,
 	.btn-transparent.btn-xs.tooltips {

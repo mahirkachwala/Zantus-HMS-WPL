@@ -30,7 +30,7 @@ $doctorId = (int)($_SESSION['id'] ?? 0);
 
 if (isset($_GET['checkin'])) {
 	$aid = (int)$_GET['checkin'];
-	mysqli_query($con, "UPDATE appointment SET visitStatus='Checked In', checkInTime=NOW() WHERE id='$aid' AND doctorId='$doctorId' AND userStatus='1' AND doctorStatus='1'");
+	mysqli_query($con, "UPDATE appointment SET visitStatus='Checked In', checkInTime=NOW() WHERE id='$aid' AND doctorId='$doctorId'");
 	$_SESSION['msg'] = 'Patient checked in successfully.';
 	header('location:visit-management.php');
 	exit();
@@ -42,7 +42,7 @@ if (isset($_POST['checkout'])) {
 	if ($prescription === '') {
 		$_SESSION['msg'] = 'Prescription is required for check-out.';
 	} else {
-		mysqli_query($con, "UPDATE appointment SET visitStatus='Completed', checkOutTime=NOW(), prescription='$prescription' WHERE id='$aid' AND doctorId='$doctorId' AND userStatus='1' AND doctorStatus='1'");
+		mysqli_query($con, "UPDATE appointment SET visitStatus='Completed', checkOutTime=NOW(), prescription='$prescription' WHERE id='$aid' AND doctorId='$doctorId'");
 		$_SESSION['msg'] = 'Patient checked out and prescription saved.';
 	}
 	header('location:visit-management.php');
@@ -90,7 +90,7 @@ include('include/header.php');
 			<tbody>
 			<?php
 			$cnt=1;
-			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId' AND COALESCE(appointment.userStatus,1)=1 AND COALESCE(appointment.doctorStatus,1)=1 AND ((UPPER(COALESCE(appointment.paymentStatus,''))='PAID') OR (appointment.paymentRef IS NOT NULL AND appointment.paymentRef!='') OR (appointment.paidAt IS NOT NULL)) ORDER BY appointment.id DESC");
+			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId' AND COALESCE(appointment.visitStatus,'Scheduled')!='Cancelled' AND ((UPPER(COALESCE(appointment.paymentStatus,''))='PAID') OR (appointment.paymentRef IS NOT NULL AND appointment.paymentRef!='') OR (appointment.paidAt IS NOT NULL)) ORDER BY appointment.id DESC");
 			while($row = mysqli_fetch_array($sql)) {
 				$status = $row['visitStatus'] ?: 'Scheduled';
 			?>
