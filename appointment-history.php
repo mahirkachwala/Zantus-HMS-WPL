@@ -74,9 +74,12 @@ if(isset($_GET['cancel']))
 						<th class="hidden-xs">Doctor Name</th>
 						<th>Specialization</th>
 						<th>Consultancy Fee</th>
+						<th>Payment</th>
 						<th>Appointment Date / Time </th>
 						<th>Appointment Creation Date  </th>
 						<th>Current Status</th>
+						<th>Visit Status</th>
+						<th>Prescription</th>
 						<th>Action</th>
 
 					</tr>
@@ -94,6 +97,7 @@ if(isset($_GET['cancel']))
 							<td class="hidden-xs"><?php echo $row['docname'];?></td>
 							<td><?php echo $row['doctorSpecialization'];?></td>
 							<td><?php echo $row['consultancyFees'];?></td>
+							<td><?php echo htmlentities($row['paymentStatus'] ?? 'Pending'); ?></td>
 							<td><?php echo $row['appointmentDate'];?> / <?php echo
 							$row['appointmentTime'];?>
 						</td>
@@ -112,10 +116,29 @@ if(isset($_GET['cancel']))
 							{
 								echo '<span class="status-cancelled">Cancelled by Doctor</span>';
 							}
+							if(($row['userStatus']==0) && ($row['doctorStatus']==0))
+							{
+								echo '<span class="status-cancelled">Cancelled</span>';
+							}
 
 
 
 							?></td>
+							<td>
+								<?php
+								$visitStatus = $row['visitStatus'] ?? 'Scheduled';
+								if($visitStatus === 'Completed') {
+									echo '<span class="status-active">Completed</span>';
+								} elseif($visitStatus === 'Checked In') {
+									echo '<span style="color:#1d4ed8;font-weight:700;">Checked In</span>';
+								} elseif($visitStatus === 'Cancelled') {
+									echo '<span class="status-cancelled">Cancelled</span>';
+								} else {
+									echo 'Scheduled';
+								}
+								?>
+							</td>
+							<td><?php echo nl2br(htmlentities($row['prescription'] ?? '')); ?></td>
 							<td >
 								<div class="visible-md visible-lg hidden-sm hidden-xs">
 									<?php if(($row['userStatus']==1) && ($row['doctorStatus']==1))

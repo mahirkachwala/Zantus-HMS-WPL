@@ -30,7 +30,7 @@ $errors = [];
 $successMsg = '';
 
 if ($appointmentId > 0) {
-	$stmt = mysqli_prepare($con, "SELECT id, consultancyFees, appointmentDate, appointmentTime FROM appointment WHERE id=? AND userId=?");
+	$stmt = mysqli_prepare($con, "SELECT id, consultancyFees, appointmentDate, appointmentTime, paymentStatus FROM appointment WHERE id=? AND userId=?");
 	mysqli_stmt_bind_param($stmt, 'ii', $appointmentId, $userId);
 	mysqli_stmt_execute($stmt);
 	$result = mysqli_stmt_get_result($stmt);
@@ -101,6 +101,13 @@ if (isset($_POST['submit_payment'])) {
 			'paidAt' => date('Y-m-d H:i:s'),
 			'cardLast4' => substr($cardNumber, -4)
 		];
+		if ($appointmentId > 0) {
+			$stmt = mysqli_prepare($con, "UPDATE appointment SET paymentStatus='Paid', paymentRef=?, paidAt=NOW() WHERE id=? AND userId=?");
+			mysqli_stmt_bind_param($stmt, 'sii', $txnRef, $appointmentId, $userId);
+			mysqli_stmt_execute($stmt);
+			mysqli_stmt_close($stmt);
+		}
+
 		$successMsg = 'Payment successful. Transaction Ref: ' . $txnRef;
 	}
 }
@@ -191,7 +198,7 @@ if (isset($_POST['submit_payment'])) {
 
 				<?php if ($appointment): ?>
 					<div class="alert alert-info">
-						Appointment #<?php echo (int)$appointment['id']; ?> | Date: <?php echo htmlentities($appointment['appointmentDate']); ?> <?php echo htmlentities($appointment['appointmentTime']); ?> | Amount: ₹<?php echo htmlentities($appointment['consultancyFees']); ?>
+						Appointment #<?php echo (int)$appointment['id']; ?> | Date: <?php echo htmlentities($appointment['appointmentDate']); ?> <?php echo htmlentities($appointment['appointmentTime']); ?> | Amount: ₹<?php echo htmlentities($appointment['consultancyFees']); ?> | Current Payment: <?php echo htmlentities($appointment['paymentStatus'] ?? 'Pending'); ?>
 					</div>
 				<?php endif; ?>
 

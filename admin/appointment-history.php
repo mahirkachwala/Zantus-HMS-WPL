@@ -4,11 +4,20 @@ error_reporting(0);
 include('include/config.php');
 include('include/checklogin.php');
 check_login();
+
+if(isset($_GET['cancelid']))
+{
+	$aid = (int)$_GET['cancelid'];
+	mysqli_query($con,"update appointment set userStatus='0', doctorStatus='0', visitStatus='Cancelled' where id='$aid'");
+	$_SESSION['msg'] = 'Appointment cancelled by admin.';
+	header('location:appointment-history.php');
+	exit();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<title>Patients | Appointment History</title>
+	<title>Admin | Appointment Management</title>
 	<!-- Bootstrap -->
 	<link href="../vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
 	<!-- Font Awesome -->
@@ -48,13 +57,17 @@ check_login();
 </head>
 <body class="nav-md">
 	<?php
-	$page_title = 'Patients  | Appointment History';
+	$page_title = 'Admin | Appointment Management';
 	$x_content = true;
 	?>
 	<?php include('include/header.php');?>
 	<div class="row">
 		<div class="col-md-12">
 			<h3 class="page-heading">Appointment History</h3>
+			<?php if(!empty($_SESSION['msg'])): ?>
+				<div class="alert alert-info"><?php echo htmlentities($_SESSION['msg']); ?></div>
+				<?php $_SESSION['msg']=''; ?>
+			<?php endif; ?>
 			<table class="table table-hover history-table" id="sample-table-1">
 				<thead>
 					<tr>
@@ -63,9 +76,12 @@ check_login();
 						<th>Patient Name</th>
 						<th>Specialization</th>
 						<th>Consultancy Fee</th>
+						<th>Payment</th>
 						<th>Appointment Date / Time </th>
 						<th>Appointment Creation Date  </th>
 						<th>Current Status</th>
+						<th>Visit Status</th>
+						<th>Prescription</th>
 						<th>Action</th>
 					</tr>
 				</thead>
@@ -82,6 +98,7 @@ check_login();
 							<td class="hidden-xs"><?php echo $row['pname'];?></td>
 							<td><?php echo $row['doctorSpecialization'];?></td>
 							<td><?php echo $row['consultancyFees'];?></td>
+							<td><?php echo htmlentities($row['paymentStatus'] ?? 'Pending'); ?></td>
 							<td><?php echo $row['appointmentDate'];?> / <?php echo
 							$row['appointmentTime'];?>
 						</td>
@@ -99,12 +116,32 @@ check_login();
 							{
 								echo '<span class="status-cancelled">Cancelled by Doctor</span>';
 							}
+							if(($row['userStatus']==0) && ($row['doctorStatus']==0))
+							{
+								echo '<span class="status-cancelled">Cancelled</span>';
+							}
 							?></td>
+							<td>
+								<?php
+								$visitStatus = $row['visitStatus'] ?? 'Scheduled';
+								if($visitStatus === 'Completed') {
+									echo '<span class="status-active">Completed</span>';
+								} elseif($visitStatus === 'Checked In') {
+									echo '<span style="color:#1d4ed8;font-weight:700;">Checked In</span>';
+								} elseif($visitStatus === 'Cancelled') {
+									echo '<span class="status-cancelled">Cancelled</span>';
+								} else {
+									echo 'Scheduled';
+								}
+								?>
+							</td>
+							<td><?php echo nl2br(htmlentities($row['prescription'] ?? '')); ?></td>
 							<td >
 								<div class="visible-md visible-lg hidden-sm hidden-xs">
 									<?php if(($row['userStatus']==1) && ($row['doctorStatus']==1))
 									{
-										echo "No Action yet";
+										echo '<a class="btn btn-primary btn-sm" href="edit-appointment.php?id='.(int)$row['id'].'">Edit</a> ';
+										echo '<a class="btn btn-cancel btn-sm" href="appointment-history.php?cancelid='.(int)$row['id'].'" onclick="return confirm(\'Cancel this appointment?\')">Cancel</a>';
 									} else {
 										echo '<span class="status-cancelled">Cancelled</span>';
 									} ?>

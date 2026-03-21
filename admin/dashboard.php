@@ -132,17 +132,23 @@ check_login();
       $num_rows22 = mysqli_num_rows($sql);
       $total_queries = htmlentities($num_rows22);
 
+      $sql= mysqli_query($con,"SELECT * FROM appointment where visitStatus='Completed'");
+      $total_completed = htmlentities(mysqli_num_rows($sql));
+
+      $sql= mysqli_query($con,"SELECT * FROM appointment where paymentStatus='Paid'");
+      $total_paid = htmlentities(mysqli_num_rows($sql));
+
       ?>
       <div class="stat-col">
         <div class="stat-card">
-          <div class="stat-top"><i class="fa fa-users"></i> Total Users</div>
+          <div class="stat-top"><i class="fa fa-users"></i> Registered Users</div>
           <div class="stat-count"><?php echo $total_users; ?></div>
           <div class="stat-link"><a href="manage-users.php">View all users</a></div>
         </div>
       </div>
       <div class="stat-col">
         <div class="stat-card">
-          <div class="stat-top"><i class="fa fa-user-md"></i> Total Doctors</div>
+          <div class="stat-top"><i class="fa fa-user-md"></i> Active Doctors</div>
           <div class="stat-count"><?php echo $total_doctors; ?></div>
           <div class="stat-link"><a href="manage-doctors.php">View all doctors</a></div>
         </div>
@@ -163,7 +169,21 @@ check_login();
       </div>
       <div class="stat-col">
         <div class="stat-card">
-          <div class="stat-top"><i class="fa fa-copy"></i> Total Queries</div>
+          <div class="stat-top"><i class="fa fa-check-circle"></i> Completed Visits</div>
+          <div class="stat-count"><?php echo $total_completed; ?></div>
+          <div class="stat-link"><a href="appointment-history.php">Review completed visits</a></div>
+        </div>
+      </div>
+      <div class="stat-col">
+        <div class="stat-card">
+          <div class="stat-top"><i class="fa fa-credit-card"></i> Payments Received</div>
+          <div class="stat-count"><?php echo $total_paid; ?></div>
+          <div class="stat-link"><a href="appointment-history.php">Check payment status</a></div>
+        </div>
+      </div>
+      <div class="stat-col">
+        <div class="stat-card">
+          <div class="stat-top"><i class="fa fa-copy"></i> Open Queries</div>
           <div class="stat-count"><?php echo $total_queries; ?></div>
           <div class="stat-link"><a href="read-query.php">View all queries</a></div>
         </div>

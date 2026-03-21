@@ -85,6 +85,18 @@
 		background: #1e40af;
 		border-color: #1e40af;
 	}
+	.btn-transparent.btn-xs,
+	.btn-transparent.btn-xs.tooltips {
+		background: #dc2626 !important;
+		border: 1px solid #dc2626 !important;
+		color: #fff !important;
+		border-radius: 6px;
+	}
+	.btn-transparent.btn-xs:hover,
+	.btn-transparent.btn-xs.tooltips:hover {
+		background: #b91c1c !important;
+		border-color: #b91c1c !important;
+	}
 	.btn-cancel {
 		background: #dc2626 !important;
 		border-color: #dc2626 !important;

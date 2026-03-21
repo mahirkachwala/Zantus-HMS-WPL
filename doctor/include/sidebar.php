@@ -5,6 +5,7 @@
 		<ul class="nav side-menu">
 			<li><a href="dashboard.php"><i class="fa fa-home"></i> Dashboard</a></li>
 			<li><a href="appointment-history.php"><i class="fa fa-line-chart"></i> Appointment History</a></li>
+			<li><a href="visit-management.php"><i class="fa fa-stethoscope"></i> Visit Management</a></li>
 
 			<li><a><i class="fa fa-user-md"></i> Patients <span class="fa fa-chevron-down"></span></a>
 				<ul class="nav child_menu">

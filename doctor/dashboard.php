@@ -54,6 +54,19 @@ check_login();
 </head>
 <body class="nav-md">
 	<?php include('include/header.php');?>
+	<?php
+	$doctorId = (int)($_SESSION['id'] ?? 0);
+	$completedCount = 0;
+	$activeCount = 0;
+	if($doctorId > 0) {
+		$res1 = mysqli_query($con, "SELECT COUNT(*) as total FROM appointment WHERE doctorId='$doctorId' AND visitStatus='Completed'");
+		$row1 = mysqli_fetch_assoc($res1);
+		$completedCount = (int)($row1['total'] ?? 0);
+		$res2 = mysqli_query($con, "SELECT COUNT(*) as total FROM appointment WHERE doctorId='$doctorId' AND userStatus='1' AND doctorStatus='1' AND visitStatus!='Completed'");
+		$row2 = mysqli_fetch_assoc($res2);
+		$activeCount = (int)($row2['total'] ?? 0);
+	}
+	?>
 	<div class="row dashboard-grid">
 		<div class="col-md-4 col-sm-4 ">
 			<div class="x_panel tile fixed_height_320">
@@ -85,7 +98,7 @@ check_login();
 		<div class="col-md-4 col-sm-4 ">
 			<div class="x_panel tile fixed_height_320">
 				<div class="x_title">
-					<h2>My Appointments</h2>
+					<h2>Visit Management</h2>
 					<ul class="nav navbar-right panel_toolbox">
 						<li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
 						</li>
@@ -97,10 +110,11 @@ check_login();
 				<div class="x_content">
 					<div class="panel panel-white no-radius text-center">
 						<div class="panel-body">
-							<span class="fa-stack fa-2x"> <i class="fa fa-square fa-stack-2x text-primary"></i> <i class="fa fa-paperclip fa-stack-1x fa-inverse"></i> </span>
+							<span class="fa-stack fa-2x"> <i class="fa fa-square fa-stack-2x text-primary"></i> <i class="fa fa-stethoscope fa-stack-1x fa-inverse"></i> </span>
+							<p class="text-muted">Pending Clinical Visits: <strong><?php echo $activeCount; ?></strong></p>
 							<p class="cl-effect-1">
-								<a href="appointment-history.php">
-									View Appointment History
+								<a href="visit-management.php">
+									Check In / Check Out Patients
 								</a>
 							</p>
 						</div>
@@ -110,7 +124,34 @@ check_login();
 			</div>
 		</div>
 
+		<div class="col-md-4 col-sm-4 ">
+			<div class="x_panel tile fixed_height_320">
+				<div class="x_title">
+					<h2>Completed Appointments</h2>
+					<ul class="nav navbar-right panel_toolbox">
+						<li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
+						</li>
+						<li><a class="close-link"><i class="fa fa-close"></i></a>
+						</li>
+					</ul>
+					<div class="clearfix"></div>
+				</div>
+				<div class="x_content">
+					<div class="panel panel-white no-radius text-center">
+						<div class="panel-body">
+							<span class="fa-stack fa-2x"> <i class="fa fa-square fa-stack-2x text-primary"></i> <i class="fa fa-check fa-stack-1x fa-inverse"></i> </span>
+							<p class="text-muted">Completed Visits: <strong><?php echo $completedCount; ?></strong></p>
+							<p class="cl-effect-1">
+								<a href="appointment-history.php">
+									View Completed with Prescription
+								</a>
+							</p>
+						</div>
+					</div>
 
+				</div>
+			</div>
+		</div>
 	</div>
 
 

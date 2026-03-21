@@ -21,7 +21,7 @@
 					<li><a href="manage-patient.php">Manage Patients</a></li>
 				</ul>
 			</li>
-			<li><a href="appointment-history.php"><i class="fa fa-folder-open"></i> Appointment History</a></li>
+			<li><a href="appointment-history.php"><i class="fa fa-folder-open"></i> Appointments & Payments</a></li>
 
 
 		</ul>
