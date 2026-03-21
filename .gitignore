@@ -16,3 +16,6 @@ Thumbs.db
 # Runtime uploads/cache (if added later)
 uploads/
 cache/
+
+# Local DB migration scripts
+db_updates/
