@@ -90,14 +90,21 @@ include('include/header.php');
 			<tbody>
 			<?php
 			$cnt=1;
-			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId' AND COALESCE(appointment.visitStatus,'Scheduled')!='Cancelled' AND ((UPPER(COALESCE(appointment.paymentStatus,''))='PAID') OR (appointment.paymentRef IS NOT NULL AND appointment.paymentRef!='') OR (appointment.paidAt IS NOT NULL)) ORDER BY appointment.id DESC");
+			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId' AND COALESCE(appointment.visitStatus,'Scheduled')!='Cancelled' ORDER BY appointment.id DESC");
 			while($row = mysqli_fetch_array($sql)) {
 				$status = $row['visitStatus'] ?: 'Scheduled';
+				$isPaid = (strtoupper((string)($row['paymentStatus'] ?? '')) === 'PAID') || (!empty($row['paymentRef'])) || (!empty($row['paidAt']));
 			?>
 				<tr>
 					<td><?php echo $cnt; ?>.</td>
 					<td><?php echo htmlentities($row['fullName']); ?></td>
-					<td><span class="status-active">Paid</span></td>
+					<td>
+						<?php if($isPaid): ?>
+							<span class="status-active">Paid</span>
+						<?php else: ?>
+							<span class="status-cancelled">Pending</span>
+						<?php endif; ?>
+					</td>
 					<td><?php echo htmlentities($row['appointmentDate'].' '.$row['appointmentTime']); ?></td>
 					<td>
 						<?php if($status === 'Completed'): ?>
@@ -109,14 +116,18 @@ include('include/header.php');
 						<?php endif; ?>
 					</td>
 					<td>
-						<?php if($status === 'Scheduled'): ?>
+						<?php if(!$isPaid): ?>
+							<span class="text-muted">Awaiting Payment</span>
+						<?php elseif($status === 'Scheduled'): ?>
 							<a class="btn btn-primary btn-sm" href="visit-management.php?checkin=<?php echo (int)$row['id']; ?>">Check In</a>
 						<?php else: ?>
 							--
 						<?php endif; ?>
 					</td>
 					<td>
-						<?php if($status !== 'Completed'): ?>
+						<?php if(!$isPaid): ?>
+							<span class="text-muted">Waiting for payment</span>
+						<?php elseif($status !== 'Completed'): ?>
 							<form method="post" class="form-inline" style="display:flex; gap:8px;">
 								<input type="hidden" name="appointment_id" value="<?php echo (int)$row['id']; ?>">
 								<input type="text" class="form-control" name="prescription" placeholder="Write prescription" required>
@@ -130,7 +141,7 @@ include('include/header.php');
 			<?php $cnt++; } ?>
 			<?php if($cnt === 1): ?>
 				<tr>
-					<td colspan="7" class="text-center text-muted">No paid appointments are ready for visit management yet.</td>
+					<td colspan="7" class="text-center text-muted">No appointments found for this doctor.</td>
 				</tr>
 			<?php endif; ?>
 			</tbody>
