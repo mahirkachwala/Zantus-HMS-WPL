@@ -2,8 +2,11 @@
 	.zantus-brand {
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
 		gap: 10px;
 		font-weight: 600;
+		width: 100%;
+		text-align: center;
 	}
 	.zantus-brand img {
 		width: 30px;
@@ -16,7 +19,24 @@
 		font-size: 12px;
 		line-height: 1.3;
 		color: #bcd0ee;
-		margin-bottom: 8px;
+		margin: 10px 0 8px;
+		text-align: center;
+	}
+	.profile.clearfix {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 0 10px;
+		flex-wrap: wrap;
+	}
+	.profile_info h2 {
+		font-size: 16px;
+		margin: 2px 0;
+	}
+	.zantus-meta {
+		font-size: 12px;
+		color: #cfe0ff;
+		margin: 0;
 	}
 	.left_col, .nav_title {
 		background: #1e3a8a !important;
@@ -162,6 +182,7 @@
 					<div class="profile_info">
 						<span>Welcome,</span>
 						<h2><?php echo htmlentities($_SESSION['login'] ?? 'Admin'); ?></h2>
+						<p class="zantus-meta">Role: Admin | ID: <?php echo (int)($_SESSION['id'] ?? 0); ?></p>
 					</div>
 				</div>
 				<!-- /menu profile quick info -->

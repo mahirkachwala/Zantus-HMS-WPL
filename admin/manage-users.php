@@ -30,6 +30,23 @@ if(isset($_GET['del']))
 	<link href="../vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
 	<!-- Custom Theme Style -->
 	<link href="../assets/css/custom.min.css" rel="stylesheet">
+	<style>
+		.page-heading {
+			font-size: 22px;
+			font-weight: 700;
+			color: #1e3a8a;
+			margin-bottom: 14px;
+		}
+		.data-table-wrap {
+			background: #fff;
+			border: 1px solid #e6ebf5;
+			border-radius: 10px;
+			overflow: hidden;
+		}
+		.data-table-wrap td, .data-table-wrap th {
+			font-size: 14px;
+		}
+	</style>
 </head>
 <body class="nav-md">
 	<?php
@@ -39,10 +56,12 @@ if(isset($_GET['del']))
 	<?php include('include/header.php');?>
 	<div class="row">
 		<div class="col-md-12">
-			<h5 class="over-title margin-bottom-15">Manage <span class="text-bold">Users</span></h5>
-			<p style="color:red;"><?php echo htmlentities($_SESSION['msg']);?>
-			<?php echo htmlentities($_SESSION['msg']="");?></p>
-			<table class="table table-hover" id="sample-table-1">
+			<h3 class="page-heading">Manage Users</h3>
+			<?php if(!empty($_SESSION['msg'])): ?>
+				<div class="alert alert-info"><?php echo htmlentities($_SESSION['msg']);?></div>
+				<?php $_SESSION['msg']=""; ?>
+			<?php endif; ?>
+			<table class="table table-hover data-table-wrap" id="sample-table-1">
 				<thead>
 					<tr>
 						<th class="center">#</th>
@@ -76,7 +95,7 @@ if(isset($_GET['del']))
 					</td>
 					<td >
 						<div class="visible-md visible-lg hidden-sm hidden-xs">
-							<a href="manage-users.php?id=<?php echo $row['id']?>&del=delete" onClick="return confirm('Are you sure you want to delete?')"class="btn btn-transparent btn-xs tooltips" tooltip-placement="top" tooltip="Remove"><i class="fa fa-times fa fa-white"></i></a>
+							<a href="manage-users.php?id=<?php echo $row['id']?>&del=delete" onClick="return confirm('Are you sure you want to delete?')" class="btn btn-cancel btn-sm">Delete</a>
 						</div>
 					</td>
 				</tr>
