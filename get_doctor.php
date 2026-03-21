@@ -7,8 +7,8 @@ if(!empty($_POST["specilizationid"]))
  <option selected="selected">Select Doctor </option>
  <?php
  while($row=mysqli_fetch_array($sql))
- 	{?>
-  <option value="<?php echo htmlentities($row['id']); ?>"><?php echo htmlentities($row['doctorName']); ?></option>
+  {?>
+ <option value="<?php echo htmlentities($row['id']); ?>"><?php echo htmlentities($row['doctorName']); ?> (ID: <?php echo (int)$row['id']; ?>)</option>
   <?php
 }
 }

@@ -108,6 +108,9 @@ include('include/header.php');
 ?>
 <div class="row">
 	<div class="col-md-12">
+		<div class="alert alert-warning" style="margin-bottom:12px;">
+			Showing appointments for <strong><?php echo htmlentities($_SESSION['doctorName'] ?? 'Doctor'); ?></strong> (Doctor ID: <strong><?php echo (int)$doctorId; ?></strong>) only.
+		</div>
 		<?php if(!empty($_SESSION['msg'])): ?>
 			<div class="alert alert-info"><?php echo htmlentities($_SESSION['msg']); ?></div>
 			<?php $_SESSION['msg']=''; ?>
