@@ -123,7 +123,7 @@ if (isset($_POST['submit_payment'])) {
 			'cardLast4' => substr($cardNumber, -4)
 		];
 		if ($appointmentId > 0) {
-			$stmt = mysqli_prepare($con, "UPDATE appointment SET paymentStatus='Paid', paymentRef=?, paidAt=NOW() WHERE id=? AND userId=?");
+			$stmt = mysqli_prepare($con, "UPDATE appointment SET paymentStatus='Paid', paymentRef=?, paidAt=NOW(), userStatus=1, doctorStatus=1, visitStatus=CASE WHEN visitStatus IS NULL OR visitStatus='' OR visitStatus='Cancelled' THEN 'Scheduled' ELSE visitStatus END WHERE id=? AND userId=?");
 			mysqli_stmt_bind_param($stmt, 'sii', $txnRef, $appointmentId, $userId);
 			$ok = mysqli_stmt_execute($stmt);
 			mysqli_stmt_close($stmt);
