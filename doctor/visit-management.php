@@ -59,6 +59,7 @@ include('include/header.php');
 				<tr>
 					<th>#</th>
 					<th>Patient</th>
+					<th>Payment Status</th>
 					<th>Appointment Date/Time</th>
 					<th>Visit Status</th>
 					<th>Check In</th>
@@ -68,13 +69,14 @@ include('include/header.php');
 			<tbody>
 			<?php
 			$cnt=1;
-			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId' AND appointment.userStatus='1' AND appointment.doctorStatus='1' ORDER BY appointment.id DESC");
+			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId' AND appointment.userStatus='1' AND appointment.doctorStatus='1' AND appointment.paymentStatus='Paid' ORDER BY appointment.id DESC");
 			while($row = mysqli_fetch_array($sql)) {
 				$status = $row['visitStatus'] ?: 'Scheduled';
 			?>
 				<tr>
 					<td><?php echo $cnt; ?>.</td>
 					<td><?php echo htmlentities($row['fullName']); ?></td>
+					<td><span class="status-active">Paid</span></td>
 					<td><?php echo htmlentities($row['appointmentDate'].' '.$row['appointmentTime']); ?></td>
 					<td>
 						<?php if($status === 'Completed'): ?>
@@ -100,11 +102,16 @@ include('include/header.php');
 								<button type="submit" name="checkout" class="btn btn-cancel btn-sm">Check Out</button>
 							</form>
 						<?php else: ?>
-							<?php echo htmlentities($row['prescription']); ?>
+							<?php echo nl2br(htmlentities($row['prescription'] ?: 'Prescription added.')); ?>
 						<?php endif; ?>
 					</td>
 				</tr>
 			<?php $cnt++; } ?>
+			<?php if($cnt === 1): ?>
+				<tr>
+					<td colspan="7" class="text-center text-muted">No paid appointments are ready for visit management yet.</td>
+				</tr>
+			<?php endif; ?>
 			</tbody>
 		</table>
 	</div>

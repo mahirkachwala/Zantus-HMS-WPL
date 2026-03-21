@@ -98,7 +98,13 @@ if(isset($_GET['cancelid']))
 							<td class="hidden-xs"><?php echo $row['pname'];?></td>
 							<td><?php echo $row['doctorSpecialization'];?></td>
 							<td><?php echo $row['consultancyFees'];?></td>
-							<td><?php echo htmlentities($row['paymentStatus'] ?? 'Pending'); ?></td>
+							<td>
+								<?php if(($row['paymentStatus'] ?? 'Pending') === 'Paid'): ?>
+									<span class="status-active">Paid</span>
+								<?php else: ?>
+									<span class="status-cancelled"><?php echo htmlentities($row['paymentStatus'] ?? 'Pending'); ?></span>
+								<?php endif; ?>
+							</td>
 							<td><?php echo $row['appointmentDate'];?> / <?php echo
 							$row['appointmentTime'];?>
 						</td>
@@ -135,7 +141,7 @@ if(isset($_GET['cancelid']))
 								}
 								?>
 							</td>
-							<td><?php echo nl2br(htmlentities($row['prescription'] ?? '')); ?></td>
+							<td><?php echo nl2br(htmlentities(($row['prescription'] ?? '') ?: 'Not added yet')); ?></td>
 							<td >
 								<div class="visible-md visible-lg hidden-sm hidden-xs">
 									<?php if(($row['userStatus']==1) && ($row['doctorStatus']==1))

@@ -62,7 +62,7 @@ check_login();
 		$res1 = mysqli_query($con, "SELECT COUNT(*) as total FROM appointment WHERE doctorId='$doctorId' AND visitStatus='Completed'");
 		$row1 = mysqli_fetch_assoc($res1);
 		$completedCount = (int)($row1['total'] ?? 0);
-		$res2 = mysqli_query($con, "SELECT COUNT(*) as total FROM appointment WHERE doctorId='$doctorId' AND userStatus='1' AND doctorStatus='1' AND visitStatus!='Completed'");
+		$res2 = mysqli_query($con, "SELECT COUNT(*) as total FROM appointment WHERE doctorId='$doctorId' AND userStatus='1' AND doctorStatus='1' AND paymentStatus='Paid' AND visitStatus!='Completed'");
 		$row2 = mysqli_fetch_assoc($res2);
 		$activeCount = (int)($row2['total'] ?? 0);
 	}
