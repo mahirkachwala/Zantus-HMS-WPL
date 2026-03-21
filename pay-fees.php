@@ -106,6 +106,9 @@ if (isset($_POST['submit_payment'])) {
 			mysqli_stmt_bind_param($stmt, 'sii', $txnRef, $appointmentId, $userId);
 			mysqli_stmt_execute($stmt);
 			mysqli_stmt_close($stmt);
+			$_SESSION['msg'] = 'Payment successful for appointment #'.$appointmentId.'.';
+			header('Location: appointment-history.php');
+			exit();
 		}
 
 		$successMsg = 'Payment successful. Transaction Ref: ' . $txnRef;

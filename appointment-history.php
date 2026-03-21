@@ -152,7 +152,9 @@ if(isset($_GET['cancel']))
 
 
 										<a href="appointment-history.php?id=<?php echo $row['id']?>&cancel=update" onClick="return confirm('Are you sure you want to cancel this appointment ?')" class="btn btn-cancel btn-sm">Cancel</a>
-										<a href="pay-fees.php?appointment_id=<?php echo (int)$row['id']; ?>" class="btn btn-primary btn-sm">Pay</a>
+										<?php if(($row['paymentStatus'] ?? 'Pending') !== 'Paid'): ?>
+											<a href="pay-fees.php?appointment_id=<?php echo (int)$row['id']; ?>" class="btn btn-primary btn-sm">Pay</a>
+										<?php endif; ?>
 									<?php } else {
 
 										echo '<span class="status-cancelled">Cancelled</span>';

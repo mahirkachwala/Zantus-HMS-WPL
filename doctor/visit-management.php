@@ -69,7 +69,7 @@ include('include/header.php');
 			<tbody>
 			<?php
 			$cnt=1;
-			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId' AND appointment.userStatus='1' AND appointment.doctorStatus='1' AND appointment.paymentStatus='Paid' ORDER BY appointment.id DESC");
+			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId' AND appointment.userStatus='1' AND appointment.doctorStatus='1' AND ((appointment.paymentStatus='Paid') OR (appointment.paymentRef IS NOT NULL AND appointment.paymentRef!='') OR (appointment.paidAt IS NOT NULL)) ORDER BY appointment.appointmentDate DESC, appointment.id DESC");
 			while($row = mysqli_fetch_array($sql)) {
 				$status = $row['visitStatus'] ?: 'Scheduled';
 			?>
