@@ -24,14 +24,38 @@ function ensureAppointmentColumns($con) {
 	}
 }
 
+function appointmentColumnExists($con, $columnName) {
+	$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
+	return ($check && mysqli_num_rows($check) > 0);
+}
+
 ensureAppointmentColumns($con);
+
+$hasVisitStatus = appointmentColumnExists($con, 'visitStatus');
+$hasCheckInTime = appointmentColumnExists($con, 'checkInTime');
+$hasCheckOutTime = appointmentColumnExists($con, 'checkOutTime');
+$hasPrescription = appointmentColumnExists($con, 'prescription');
+$hasPaymentStatus = appointmentColumnExists($con, 'paymentStatus');
+$hasPaymentRef = appointmentColumnExists($con, 'paymentRef');
+$hasPaidAt = appointmentColumnExists($con, 'paidAt');
 
 $doctorId = (int)($_SESSION['id'] ?? 0);
 
 if (isset($_GET['checkin'])) {
 	$aid = (int)$_GET['checkin'];
-	mysqli_query($con, "UPDATE appointment SET visitStatus='Checked In', checkInTime=NOW() WHERE id='$aid' AND doctorId='$doctorId'");
-	$_SESSION['msg'] = 'Patient checked in successfully.';
+	$updates = [];
+	if ($hasVisitStatus) {
+		$updates[] = "visitStatus='Checked In'";
+	}
+	if ($hasCheckInTime) {
+		$updates[] = "checkInTime=NOW()";
+	}
+	if (!empty($updates)) {
+		mysqli_query($con, "UPDATE appointment SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
+		$_SESSION['msg'] = 'Patient checked in successfully.';
+	} else {
+		$_SESSION['msg'] = 'Visit tracking columns are missing in database.';
+	}
 	header('location:visit-management.php');
 	exit();
 }
@@ -42,8 +66,22 @@ if (isset($_POST['checkout'])) {
 	if ($prescription === '') {
 		$_SESSION['msg'] = 'Prescription is required for check-out.';
 	} else {
-		mysqli_query($con, "UPDATE appointment SET visitStatus='Completed', checkOutTime=NOW(), prescription='$prescription' WHERE id='$aid' AND doctorId='$doctorId'");
-		$_SESSION['msg'] = 'Patient checked out and prescription saved.';
+		$updates = [];
+		if ($hasVisitStatus) {
+			$updates[] = "visitStatus='Completed'";
+		}
+		if ($hasCheckOutTime) {
+			$updates[] = "checkOutTime=NOW()";
+		}
+		if ($hasPrescription) {
+			$updates[] = "prescription='$prescription'";
+		}
+		if (!empty($updates)) {
+			mysqli_query($con, "UPDATE appointment SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
+			$_SESSION['msg'] = 'Patient checked out and prescription saved.';
+		} else {
+			$_SESSION['msg'] = 'Visit tracking columns are missing in database.';
+		}
 	}
 	header('location:visit-management.php');
 	exit();
@@ -90,10 +128,17 @@ include('include/header.php');
 			<tbody>
 			<?php
 			$cnt=1;
-			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId' AND COALESCE(appointment.visitStatus,'Scheduled')!='Cancelled' ORDER BY appointment.id DESC");
-			while($row = mysqli_fetch_array($sql)) {
-				$status = $row['visitStatus'] ?: 'Scheduled';
-				$isPaid = (strtoupper((string)($row['paymentStatus'] ?? '')) === 'PAID') || (!empty($row['paymentRef'])) || (!empty($row['paidAt']));
+			$whereVisit = $hasVisitStatus ? " AND COALESCE(appointment.visitStatus,'Scheduled')!='Cancelled'" : "";
+			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId'" . $whereVisit . " ORDER BY appointment.id DESC");
+			if ($sql) while($row = mysqli_fetch_array($sql)) {
+				if ($hasVisitStatus) {
+					$status = $row['visitStatus'] ?: 'Scheduled';
+				} else {
+					$status = ((int)($row['doctorStatus'] ?? 1) === 0 || (int)($row['userStatus'] ?? 1) === 0) ? 'Cancelled' : 'Scheduled';
+				}
+				$isPaid = ($hasPaymentStatus && strtoupper((string)($row['paymentStatus'] ?? '')) === 'PAID')
+					|| ($hasPaymentRef && !empty($row['paymentRef']))
+					|| ($hasPaidAt && !empty($row['paidAt']));
 			?>
 				<tr>
 					<td><?php echo $cnt; ?>.</td>
@@ -139,6 +184,11 @@ include('include/header.php');
 					</td>
 				</tr>
 			<?php $cnt++; } ?>
+			<?php if(!$sql): ?>
+				<tr>
+					<td colspan="7" class="text-center text-danger">Unable to load visit data. Please check database updates.</td>
+				</tr>
+			<?php endif; ?>
 			<?php if($cnt === 1): ?>
 				<tr>
 					<td colspan="7" class="text-center text-muted">No appointments found for this doctor.</td>
