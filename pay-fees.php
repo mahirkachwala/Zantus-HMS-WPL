@@ -4,6 +4,27 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
+function ensureAppointmentColumns($con) {
+	$requiredColumns = [
+		"visitStatus" => "ALTER TABLE appointment ADD COLUMN visitStatus varchar(30) NOT NULL DEFAULT 'Scheduled' AFTER doctorStatus",
+		"checkInTime" => "ALTER TABLE appointment ADD COLUMN checkInTime datetime DEFAULT NULL AFTER visitStatus",
+		"checkOutTime" => "ALTER TABLE appointment ADD COLUMN checkOutTime datetime DEFAULT NULL AFTER checkInTime",
+		"prescription" => "ALTER TABLE appointment ADD COLUMN prescription mediumtext DEFAULT NULL AFTER checkOutTime",
+		"paymentStatus" => "ALTER TABLE appointment ADD COLUMN paymentStatus varchar(20) NOT NULL DEFAULT 'Pending' AFTER prescription",
+		"paymentRef" => "ALTER TABLE appointment ADD COLUMN paymentRef varchar(64) DEFAULT NULL AFTER paymentStatus",
+		"paidAt" => "ALTER TABLE appointment ADD COLUMN paidAt datetime DEFAULT NULL AFTER paymentRef"
+	];
+
+	foreach ($requiredColumns as $columnName => $ddl) {
+		$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . $columnName . "'");
+		if ($check && mysqli_num_rows($check) === 0) {
+			mysqli_query($con, $ddl);
+		}
+	}
+}
+
+ensureAppointmentColumns($con);
+
 function luhnCheck($number) {
 	$number = preg_replace('/\D/', '', $number);
 	$sum = 0;
@@ -104,11 +125,16 @@ if (isset($_POST['submit_payment'])) {
 		if ($appointmentId > 0) {
 			$stmt = mysqli_prepare($con, "UPDATE appointment SET paymentStatus='Paid', paymentRef=?, paidAt=NOW() WHERE id=? AND userId=?");
 			mysqli_stmt_bind_param($stmt, 'sii', $txnRef, $appointmentId, $userId);
-			mysqli_stmt_execute($stmt);
+			$ok = mysqli_stmt_execute($stmt);
 			mysqli_stmt_close($stmt);
-			$_SESSION['msg'] = 'Payment successful for appointment #'.$appointmentId.'.';
-			header('Location: appointment-history.php');
-			exit();
+
+			if ($ok) {
+				$_SESSION['msg'] = 'Payment successful for appointment #'.$appointmentId.'.';
+				header('Location: appointment-history.php');
+				exit();
+			}
+
+			$errors[] = 'Payment recorded but appointment update failed. Please refresh and try again.';
 		}
 
 		$successMsg = 'Payment successful. Transaction Ref: ' . $txnRef;

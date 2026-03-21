@@ -5,6 +5,27 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
+function ensureAppointmentColumns($con) {
+	$requiredColumns = [
+		"visitStatus" => "ALTER TABLE appointment ADD COLUMN visitStatus varchar(30) NOT NULL DEFAULT 'Scheduled' AFTER doctorStatus",
+		"checkInTime" => "ALTER TABLE appointment ADD COLUMN checkInTime datetime DEFAULT NULL AFTER visitStatus",
+		"checkOutTime" => "ALTER TABLE appointment ADD COLUMN checkOutTime datetime DEFAULT NULL AFTER checkInTime",
+		"prescription" => "ALTER TABLE appointment ADD COLUMN prescription mediumtext DEFAULT NULL AFTER checkOutTime",
+		"paymentStatus" => "ALTER TABLE appointment ADD COLUMN paymentStatus varchar(20) NOT NULL DEFAULT 'Pending' AFTER prescription",
+		"paymentRef" => "ALTER TABLE appointment ADD COLUMN paymentRef varchar(64) DEFAULT NULL AFTER paymentStatus",
+		"paidAt" => "ALTER TABLE appointment ADD COLUMN paidAt datetime DEFAULT NULL AFTER paymentRef"
+	];
+
+	foreach ($requiredColumns as $columnName => $ddl) {
+		$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . $columnName . "'");
+		if ($check && mysqli_num_rows($check) === 0) {
+			mysqli_query($con, $ddl);
+		}
+	}
+}
+
+ensureAppointmentColumns($con);
+
 $doctorId = (int)($_SESSION['id'] ?? 0);
 
 if (isset($_GET['checkin'])) {
@@ -69,7 +90,7 @@ include('include/header.php');
 			<tbody>
 			<?php
 			$cnt=1;
-			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId' AND appointment.userStatus='1' AND appointment.doctorStatus='1' AND ((appointment.paymentStatus='Paid') OR (appointment.paymentRef IS NOT NULL AND appointment.paymentRef!='') OR (appointment.paidAt IS NOT NULL)) ORDER BY appointment.appointmentDate DESC, appointment.id DESC");
+			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId' AND appointment.userStatus='1' AND appointment.doctorStatus='1' AND ((UPPER(appointment.paymentStatus)='PAID') OR (appointment.paymentRef IS NOT NULL AND appointment.paymentRef!='') OR (appointment.paidAt IS NOT NULL)) ORDER BY appointment.id DESC");
 			while($row = mysqli_fetch_array($sql)) {
 				$status = $row['visitStatus'] ?: 'Scheduled';
 			?>
