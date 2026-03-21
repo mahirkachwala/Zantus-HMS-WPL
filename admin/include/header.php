@@ -8,6 +8,12 @@
 		width: 100%;
 		text-align: center;
 	}
+	.site_title.zantus-brand {
+		height: 56px;
+		line-height: 56px;
+		padding-left: 0 !important;
+		margin: 0 !important;
+	}
 	.zantus-brand img {
 		width: 30px;
 		height: 30px;
@@ -19,24 +25,52 @@
 		font-size: 12px;
 		line-height: 1.3;
 		color: #bcd0ee;
-		margin: 10px 0 8px;
+		margin: 10px 0 6px;
 		text-align: center;
+	}
+	.left_col {
+		min-height: 100vh !important;
+	}
+	.left_col.scroll-view {
+		display: flex;
+		flex-direction: column;
 	}
 	.profile.clearfix {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		padding: 0 10px;
-		flex-wrap: wrap;
+		gap: 12px;
+		padding: 6px 12px 12px;
+	}
+	.profile_pic {
+		width: 56px;
+	}
+	.profile_pic .profile_img {
+		width: 52px;
+		height: 52px;
+		margin: 0;
+	}
+	.profile_info {
+		padding: 0;
+		width: calc(100% - 68px);
+	}
+	.profile_info span {
+		color: #dbeafe;
+		font-size: 12px;
 	}
 	.profile_info h2 {
-		font-size: 16px;
+		font-size: 15px;
 		margin: 2px 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.zantus-meta {
 		font-size: 12px;
 		color: #cfe0ff;
 		margin: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.left_col, .nav_title {
 		background: #1e3a8a !important;
@@ -55,6 +89,7 @@
 	}
 	.right_col {
 		background: #f4f7fb;
+		min-height: 100vh !important;
 	}
 	.x_content, .x_content p, .x_content td, .x_content th {
 		font-size: 14px;
@@ -174,8 +209,8 @@
 				</div>
 				<div class="clearfix"></div>
 				<!-- menu profile quick info -->
+				<div class="zantus-subtitle">Zantus Life Science Hospital</div>
 				<div class="profile clearfix">
-					<div class="zantus-subtitle">Zantus Life Science Hospital</div>
 					<div class="profile_pic">
 						<img src="../assets/images/zantus-logo.jpg" alt="..." class="img-circle profile_img">
 					</div>
