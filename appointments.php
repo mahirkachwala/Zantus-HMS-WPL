@@ -5,18 +5,29 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
-function appointmentColumnExists($con, $columnName) {
-	$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
+function tableExists($con, $tableName) {
+	$check = mysqli_query($con, "SHOW TABLES LIKE '" . mysqli_real_escape_string($con, $tableName) . "'");
 	return ($check && mysqli_num_rows($check) > 0);
 }
 
-$hasVisitStatus = appointmentColumnExists($con, 'visitStatus');
+function appointmentColumnExists($con, $table, $columnName) {
+	$check = mysqli_query($con, "SHOW COLUMNS FROM $table LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
+	return ($check && mysqli_num_rows($check) > 0);
+}
+
+// Determine which appointment table to use
+$useCurrentAppointments = tableExists($con, 'current_appointments');
+$appointmentTable = $useCurrentAppointments ? 'current_appointments' : 'appointment';
+
+$hasVisitStatus = appointmentColumnExists($con, $appointmentTable, 'visitStatus');
+$hasPaymentStatus = appointmentColumnExists($con, $appointmentTable, 'paymentStatus');
+$hasPaymentOption = appointmentColumnExists($con, $appointmentTable, 'paymentOption');
 
 if(isset($_GET['cancel']))
 {
-	mysqli_query($con,"update appointment set userStatus='0' where id = '".$_GET['id']."'");
+	mysqli_query($con,"update $appointmentTable set userStatus='0' where id = '".$_GET['id']."'");
 	$_SESSION['msg']="Your appointment canceled !!";
-	header('location:appointments.php');
+	header("location:appointments.php");
 	exit();
 }
 ?>
@@ -79,19 +90,25 @@ if(isset($_GET['cancel']))
 						<td><?php echo htmlentities($row['doctorSpecialization']); ?></td>
 						<td><?php echo htmlentities($row['consultancyFees']); ?></td>
 						<td>
-							<?php if(($row['paymentStatus'] ?? 'Pending') === 'Paid'): ?>
-								<span class="status-active">Paid</span>
+							<?php 
+							$paymentStatus = $row['paymentStatus'] ?? 'Pending';
+							if($paymentStatus === 'Paid'): ?>
+								<span class="badge badge-success">Paid</span>
+							<?php elseif($paymentStatus === 'Pay at Hospital'): ?>
+								<span class="badge badge-info">Pay at Hospital</span>
 							<?php else: ?>
-								<span class="status-cancelled"><?php echo htmlentities($row['paymentStatus'] ?? 'Pending'); ?></span>
+								<span class="badge badge-warning">Pending</span>
 							<?php endif; ?>
 						</td>
 						<td><?php echo htmlentities($row['appointmentDate'].' / '.$row['appointmentTime']); ?></td>
-						<td><span class="status-active">Active</span></td>
+						<td><span class="badge badge-info">Active</span></td>
 						<td>
-							<a href="appointments.php?id=<?php echo (int)$row['id']; ?>&cancel=update" onClick="return confirm('Are you sure you want to cancel this appointment ?')" class="btn btn-cancel btn-sm">Cancel</a>
-							<?php if(($row['paymentStatus'] ?? 'Pending') !== 'Paid'): ?>
-								<a href="pay-fees.php?appointment_id=<?php echo (int)$row['id']; ?>" class="btn btn-primary btn-sm">Pay</a>
-							<?php endif; ?>
+							<div style="display:flex; gap:5px; flex-wrap:wrap;">
+								<a href="appointments.php?id=<?php echo (int)$row['id']; ?>&cancel=update" onClick="return confirm('Are you sure you want to cancel this appointment ?')" class="btn btn-danger btn-sm">Cancel</a>
+								<?php if(($row['paymentStatus'] ?? 'Pending') !== 'Paid' && ($row['paymentStatus'] ?? 'Pending') !== 'Pay at Hospital'): ?>
+									<a href="pay-fees.php?appointment_id=<?php echo (int)$row['id']; ?>" class="btn btn-success btn-sm">Pay Now</a>
+								<?php endif; ?>
+							</div>
 						</td>
 					</tr>
 					<?php $cnt++; } ?>

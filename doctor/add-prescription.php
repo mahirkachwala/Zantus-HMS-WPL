@@ -6,6 +6,7 @@ include('include/checklogin.php');
 check_login();
 
 function ensureAppointmentColumns($con) {
+	// Server-side schema guard for appointment workflow fields.
 	$requiredColumns = [
 		"visitStatus" => "ALTER TABLE appointment ADD COLUMN visitStatus varchar(30) NOT NULL DEFAULT 'Scheduled' AFTER doctorStatus",
 		"checkOutTime" => "ALTER TABLE appointment ADD COLUMN checkOutTime datetime DEFAULT NULL AFTER checkInTime",
@@ -143,7 +144,7 @@ if (isset($_POST['submit_prescription'])) {
 				$summary .= ' | Follow-up: ' . $nextVisitDate;
 			}
 			$summaryEscaped = mysqli_real_escape_string($con, $summary);
-			mysqli_query($con, "UPDATE appointment SET visitStatus='Completed', checkOutTime=NOW(), prescription='$summaryEscaped' WHERE id='$appointmentId' AND doctorId='$doctorId'");
+			mysqli_query($con, "UPDATE appointment SET visitStatus='Completed', checkOutTime=NOW(), prescription='$summaryEscaped', paymentStatus='Paid' WHERE id='$appointmentId' AND doctorId='$doctorId'");
 
 			$_SESSION['msg'] = 'Prescription added and visit completed successfully.';
 			header('location:visit-management.php');
@@ -195,6 +196,7 @@ include('include/header.php');
 		<?php endif; ?>
 
 		<form method="post">
+			<!-- Form groups collect clinical inputs using Bootstrap grid columns. -->
 			<input type="hidden" name="appointment_id" value="<?php echo (int)$appointmentId; ?>">
 
 			<div class="card-box">
@@ -243,6 +245,7 @@ include('include/header.php');
 
 			<div class="card-box">
 				<div class="section-title">Medicines</div>
+				<!-- HTML table captures multiple medicine rows for one prescription. -->
 				<table class="table table-bordered" id="medicineTable">
 					<thead>
 						<tr>
@@ -319,6 +322,7 @@ include('include/header.php');
 <script src="../vendors/bootstrap-daterangepicker/daterangepicker.js"></script>
 <script src="../assets/js/custom.min.js"></script>
 <script>
+// DOM helpers add and remove medicine rows dynamically.
 function addMedicineRow() {
 	var row = '<tr>' +
 		'<td><input type="text" name="medicine_name[]" class="form-control" placeholder="Medicine name"></td>' +
