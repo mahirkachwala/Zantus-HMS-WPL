@@ -55,6 +55,9 @@ if (isset($_GET['markpaid'])) {
 	$aid = (int)$_GET['markpaid'];
 	$txnRef = 'HOSPITAL-' . date('YmdHis') . '-' . $aid;
 	$updates = [];
+	$apptRow = mysqli_query($con, "SELECT * FROM $appointmentTable WHERE id='$aid' AND doctorId='$doctorId' LIMIT 1");
+	$apptData = ($apptRow) ? mysqli_fetch_array($apptRow) : null;
+	$hasPrescriptionData = !empty(trim((string)($apptData['prescription'] ?? '')));
 	if ($hasPaymentStatus) {
 		$updates[] = "paymentStatus='Paid'";
 	}
@@ -64,9 +67,17 @@ if (isset($_GET['markpaid'])) {
 	if ($hasPaidAt) {
 		$updates[] = "paidAt=NOW()";
 	}
+	if ($hasPrescriptionData && $hasVisitStatus) {
+		$updates[] = "visitStatus='Completed'";
+	}
+	if ($hasPrescriptionData && $hasCheckOutTime) {
+		$updates[] = "checkOutTime=NOW()";
+	}
 	if (!empty($updates)) {
 		mysqli_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
-		$_SESSION['msg'] = 'Payment marked as received.';
+		$_SESSION['msg'] = $hasPrescriptionData
+			? 'Payment marked as received and appointment moved to history.'
+			: 'Payment marked as received.';
 	}
 	header('location:visit-management.php');
 	exit();
@@ -111,7 +122,8 @@ if (isset($_GET['checkout'])) {
 // Transfer to admitted functionality
 if (isset($_POST['transferToAdmitted'])) {
 	$appointmentId = (int)$_POST['appointmentId'];
-	$transferReason = $_POST['transferReason'];
+	$transferReason = trim($_POST['transferReason'] ?? '');
+	$transferReasonEscaped = mysqli_real_escape_string($con, $transferReason);
 	
 	// Check if appointment_transfers table exists
 	$transferTableCheck = mysqli_query($con, "SHOW TABLES LIKE 'appointment_transfers'");
@@ -134,11 +146,27 @@ if (isset($_POST['transferToAdmitted'])) {
 				'$doctorId', 
 				'consultancy', 
 				'admitted', 
-				'$transferReason', 
+				'$transferReasonEscaped', 
 				NOW()
 			)";
 			if (mysqli_query($con, $transferQuery)) {
-				$_SESSION['msg'] = 'Patient transferred to Admitted status successfully.';
+				$disposeUpdates = [];
+				if ($hasVisitStatus) {
+					$disposeUpdates[] = "visitStatus='Completed'";
+				}
+				if ($hasCheckOutTime) {
+					$disposeUpdates[] = "checkOutTime=NOW()";
+				}
+				if ($hasPrescription) {
+					$transferNote = 'Transferred to Admitted: ' . ($transferReason !== '' ? $transferReason : 'Reason not specified');
+					$disposeUpdates[] = "prescription='" . mysqli_real_escape_string($con, $transferNote) . "'";
+				}
+
+				if (!empty($disposeUpdates)) {
+					mysqli_query($con, "UPDATE $appointmentTable SET " . implode(', ', $disposeUpdates) . " WHERE id='$appointmentId' AND doctorId='$doctorId'");
+				}
+
+				$_SESSION['msg'] = 'Patient transferred to Admitted and appointment moved to history.';
 			}
 		}
 	}
@@ -203,6 +231,7 @@ include('include/header.php');
 				} else {
 					$status = ((int)($row['doctorStatus'] ?? 1) === 0 || (int)($row['userStatus'] ?? 1) === 0) ? 'Cancelled' : 'Scheduled';
 				}
+				$hasPrescriptionData = !empty(trim((string)($row['prescription'] ?? '')));
 				$isPaid = ($hasPaymentStatus && strtoupper((string)($row['paymentStatus'] ?? '')) === 'PAID')
 					|| ($hasPaymentRef && !empty($row['paymentRef']))
 					|| ($hasPaidAt && !empty($row['paidAt']));
@@ -231,17 +260,20 @@ include('include/header.php');
 						<?php if($status === 'Scheduled'): ?>
 							<a class="btn btn-primary btn-xs" href="visit-management.php?checkin=<?php echo (int)$row['id']; ?>">Check In</a>
 						<?php elseif($status === 'Checked In'): ?>
-							<?php if(!$isPaid): ?>
-								<div style="margin-bottom:5px;">
-									<a class="btn btn-success btn-xs" href="visit-management.php?markpaid=<?php echo (int)$row['id']; ?>">Payment Received</a>
-								</div>
-							<?php endif; ?>
-							<?php if($isPaid): ?>
+							<?php if(!$hasPrescriptionData): ?>
 								<div style="margin-bottom:5px;">
 									<a class="btn btn-primary btn-xs" href="add-prescription.php?appointment_id=<?php echo (int)$row['id']; ?>">Add Prescription</a>
 								</div>
 							<?php endif; ?>
-							<button class="btn btn-warning btn-xs" onclick="showTransferModal(<?php echo (int)$row['id']; ?>)">Transfer to Admitted</button>
+							<?php if($hasPrescriptionData && !$isPaid): ?>
+								<div style="margin-bottom:5px;">
+									<a class="btn btn-primary btn-xs" href="visit-management.php?markpaid=<?php echo (int)$row['id']; ?>">Payment Received</a>
+								</div>
+							<?php endif; ?>
+							<?php if($hasPrescriptionData && $isPaid): ?>
+								<span class="status-active">Completed - In History</span>
+							<?php endif; ?>
+							<button class="btn btn-cancel btn-xs" onclick="showTransferModal(<?php echo (int)$row['id']; ?>)">Transfer to Admitted</button>
 						<?php else: ?>
 							<span class="text-muted">--</span>
 						<?php endif; ?>
@@ -282,7 +314,7 @@ include('include/header.php');
 					<input type="hidden" name="appointmentId" id="appointmentId">
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-cancel" data-dismiss="modal">Cancel</button>
 					<button type="submit" name="transferToAdmitted" class="btn btn-primary">Transfer to Admitted</button>
 				</div>
 			</form>
