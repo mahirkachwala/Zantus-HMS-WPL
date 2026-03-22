@@ -1,4 +1,4 @@
-<!-- sidebar menu -->
+
 <div id="sidebar-menu" class="main_menu_side hidden-print main_menu">
 	<div class="menu_section">
 		<h3>General</h3>
@@ -10,7 +10,8 @@
 			<li><a><i class="fa fa-user-md"></i> Patients <span class="fa fa-chevron-down"></span></a>
 				<ul class="nav child_menu">
 					<li><a href="add-patient.php">Add Patient</a></li>
-					<li><a href="manage-patient.php">Manage Patient</a></li>
+					<li><a href="manage-patient.php?patientType=consultancy">Consultancy Patients</a></li>
+					<li><a href="manage-patient.php?patientType=admitted">Admitted Patients</a></li>
 				</ul>
 			</li>
 			<li><a href="search.php"><i class="fa fa-home"></i> Search</a></li>

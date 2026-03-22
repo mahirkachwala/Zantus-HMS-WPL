@@ -65,7 +65,7 @@ ensurePrescriptionTables($con);
 
 $appointmentTable = appointmentTableName($con);
 
-$doctorId = (int)($_SESSION['id'] ?? 0);
+$doctorId = (int)($_SESSION['doctor_id'] ?? $_SESSION['id'] ?? 0);
 $appointmentId = (int)($_GET['appointment_id'] ?? $_POST['appointment_id'] ?? 0);
 
 if ($appointmentId <= 0) {

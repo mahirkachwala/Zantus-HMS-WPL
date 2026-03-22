@@ -5,7 +5,7 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
-if (!isset($_SESSION['id'])) {
+if (!isset($_SESSION['doctor_id']) && !isset($_SESSION['id'])) {
 	header('location:index.php');
 	exit();
 }
@@ -49,7 +49,7 @@ $hasPaymentStatus = appointmentColumnExists($con, $appointmentTable, 'paymentSta
 $hasPaymentRef = appointmentColumnExists($con, $appointmentTable, 'paymentRef');
 $hasPaidAt = appointmentColumnExists($con, $appointmentTable, 'paidAt');
 
-$doctorId = (int)($_SESSION['id'] ?? 0);
+$doctorId = (int)($_SESSION['doctor_id'] ?? $_SESSION['id'] ?? 0);
 
 if (isset($_GET['markpaid'])) {
 	$aid = (int)$_GET['markpaid'];

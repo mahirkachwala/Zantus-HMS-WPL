@@ -4,13 +4,16 @@ include("include/config.php");
 error_reporting(0);
 if(isset($_POST['submit']))
 {
+	// Server-side login check creates doctor session state.
 	$ret=mysqli_query($con,"SELECT * FROM doctors WHERE docEmail='".$_POST['username']."' and password='".md5($_POST['password'])."'");
 	$num=mysqli_fetch_array($ret);
 	if($num>0)
 	{
+		session_regenerate_id(true);
 		$extra="dashboard.php";
 		$_SESSION['dlogin']=$_POST['username'];
 		$_SESSION['id']=$num['id'];
+		$_SESSION['doctor_id']=$num['id'];
 		$_SESSION['doctorName']=$num['doctorName'];
 		$uip=$_SERVER['REMOTE_ADDR'];
 		$status=1;
@@ -39,21 +42,13 @@ if(isset($_POST['submit']))
 <html lang="en">
 <head>
 	<title>Doctor Login</title>
-	<!-- Bootstrap -->
 	<link href="../vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
-	<!-- Font Awesome -->
 	<link href="../vendors/font-awesome/css/font-awesome.min.css" rel="stylesheet">
-	<!-- NProgress -->
 	<link href="../vendors/nprogress/nprogress.css" rel="stylesheet">
-	<!-- iCheck -->
 	<link href="../vendors/iCheck/skins/flat/green.css" rel="stylesheet">
-	<!-- bootstrap-progressbar -->
 	<link href="../vendors/bootstrap-progressbar/css/bootstrap-progressbar-3.3.4.min.css" rel="stylesheet">
-	<!-- JQVMap -->
 	<link href="../vendors/jqvmap/dist/jqvmap.min.css" rel="stylesheet"/>
-	<!-- bootstrap-daterangepicker -->
 	<link href="../vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
-	<!-- Custom Theme Style -->
 	<link href="../assets/css/custom.min.css" rel="stylesheet">
 	<style>
 		.login-brand {
@@ -122,5 +117,4 @@ if(isset($_POST['submit']))
 						</div>
 					</div>
 				</body>
-				<!-- end: BODY -->
 				</html>
