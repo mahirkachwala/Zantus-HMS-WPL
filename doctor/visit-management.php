@@ -5,42 +5,74 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
-function ensureAppointmentColumns($con) {
+if (!isset($_SESSION['id'])) {
+	header('location:index.php');
+	exit();
+}
+
+// Check which appointment table to use
+$currentApptCheck = mysqli_query($con, "SHOW TABLES LIKE 'current_appointments'");
+$useCurrentAppointments = mysqli_num_rows($currentApptCheck) > 0;
+$appointmentTable = $useCurrentAppointments ? 'current_appointments' : 'appointment';
+
+function ensureAppointmentColumns($con, $table) {
 	$requiredColumns = [
-		"visitStatus" => "ALTER TABLE appointment ADD COLUMN visitStatus varchar(30) NOT NULL DEFAULT 'Scheduled' AFTER doctorStatus",
-		"checkInTime" => "ALTER TABLE appointment ADD COLUMN checkInTime datetime DEFAULT NULL AFTER visitStatus",
-		"checkOutTime" => "ALTER TABLE appointment ADD COLUMN checkOutTime datetime DEFAULT NULL AFTER checkInTime",
-		"prescription" => "ALTER TABLE appointment ADD COLUMN prescription mediumtext DEFAULT NULL AFTER checkOutTime",
-		"paymentStatus" => "ALTER TABLE appointment ADD COLUMN paymentStatus varchar(20) NOT NULL DEFAULT 'Pending' AFTER prescription",
-		"paymentRef" => "ALTER TABLE appointment ADD COLUMN paymentRef varchar(64) DEFAULT NULL AFTER paymentStatus",
-		"paidAt" => "ALTER TABLE appointment ADD COLUMN paidAt datetime DEFAULT NULL AFTER paymentRef"
+		"visitStatus" => "ALTER TABLE $table ADD COLUMN visitStatus varchar(30) NOT NULL DEFAULT 'Scheduled' AFTER doctorStatus",
+		"checkInTime" => "ALTER TABLE $table ADD COLUMN checkInTime datetime DEFAULT NULL AFTER visitStatus",
+		"checkOutTime" => "ALTER TABLE $table ADD COLUMN checkOutTime datetime DEFAULT NULL AFTER checkInTime",
+		"prescription" => "ALTER TABLE $table ADD COLUMN prescription mediumtext DEFAULT NULL AFTER checkOutTime",
+		"paymentStatus" => "ALTER TABLE $table ADD COLUMN paymentStatus varchar(20) NOT NULL DEFAULT 'Pending' AFTER prescription",
+		"paymentRef" => "ALTER TABLE $table ADD COLUMN paymentRef varchar(64) DEFAULT NULL AFTER paymentStatus",
+		"paidAt" => "ALTER TABLE $table ADD COLUMN paidAt datetime DEFAULT NULL AFTER paymentRef"
 	];
 
 	foreach ($requiredColumns as $columnName => $ddl) {
-		$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . $columnName . "'");
+		$check = mysqli_query($con, "SHOW COLUMNS FROM $table LIKE '" . $columnName . "'");
 		if ($check && mysqli_num_rows($check) === 0) {
 			mysqli_query($con, $ddl);
 		}
 	}
 }
 
-function appointmentColumnExists($con, $columnName) {
-	$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
+function appointmentColumnExists($con, $table, $columnName) {
+	$check = mysqli_query($con, "SHOW COLUMNS FROM $table LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
 	return ($check && mysqli_num_rows($check) > 0);
 }
 
-ensureAppointmentColumns($con);
+ensureAppointmentColumns($con, $appointmentTable);
 
-$hasVisitStatus = appointmentColumnExists($con, 'visitStatus');
-$hasCheckInTime = appointmentColumnExists($con, 'checkInTime');
-$hasCheckOutTime = appointmentColumnExists($con, 'checkOutTime');
-$hasPrescription = appointmentColumnExists($con, 'prescription');
-$hasPaymentStatus = appointmentColumnExists($con, 'paymentStatus');
-$hasPaymentRef = appointmentColumnExists($con, 'paymentRef');
-$hasPaidAt = appointmentColumnExists($con, 'paidAt');
+$hasVisitStatus = appointmentColumnExists($con, $appointmentTable, 'visitStatus');
+$hasCheckInTime = appointmentColumnExists($con, $appointmentTable, 'checkInTime');
+$hasCheckOutTime = appointmentColumnExists($con, $appointmentTable, 'checkOutTime');
+$hasPrescription = appointmentColumnExists($con, $appointmentTable, 'prescription');
+$hasPaymentStatus = appointmentColumnExists($con, $appointmentTable, 'paymentStatus');
+$hasPaymentRef = appointmentColumnExists($con, $appointmentTable, 'paymentRef');
+$hasPaidAt = appointmentColumnExists($con, $appointmentTable, 'paidAt');
 
 $doctorId = (int)($_SESSION['id'] ?? 0);
 
+if (isset($_GET['markpaid'])) {
+	$aid = (int)$_GET['markpaid'];
+	$txnRef = 'HOSPITAL-' . date('YmdHis') . '-' . $aid;
+	$updates = [];
+	if ($hasPaymentStatus) {
+		$updates[] = "paymentStatus='Paid'";
+	}
+	if ($hasPaymentRef) {
+		$updates[] = "paymentRef='" . mysqli_real_escape_string($con, $txnRef) . "'";
+	}
+	if ($hasPaidAt) {
+		$updates[] = "paidAt=NOW()";
+	}
+	if (!empty($updates)) {
+		mysqli_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
+		$_SESSION['msg'] = 'Payment marked as received.';
+	}
+	header('location:visit-management.php');
+	exit();
+}
+
+// Check-in functionality
 if (isset($_GET['checkin'])) {
 	$aid = (int)$_GET['checkin'];
 	$updates = [];
@@ -51,10 +83,64 @@ if (isset($_GET['checkin'])) {
 		$updates[] = "checkInTime=NOW()";
 	}
 	if (!empty($updates)) {
-		mysqli_query($con, "UPDATE appointment SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
+		mysqli_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
 		$_SESSION['msg'] = 'Patient checked in successfully.';
-	} else {
-		$_SESSION['msg'] = 'Visit tracking columns are missing in database.';
+	}
+	header('location:visit-management.php');
+	exit();
+}
+
+// Check-out functionality
+if (isset($_GET['checkout'])) {
+	$aid = (int)$_GET['checkout'];
+	$updates = [];
+	if ($hasVisitStatus) {
+		$updates[] = "visitStatus='Completed'";
+	}
+	if ($hasCheckOutTime) {
+		$updates[] = "checkOutTime=NOW()";
+	}
+	if (!empty($updates)) {
+		mysqli_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
+		$_SESSION['msg'] = 'Patient checked out successfully.';
+	}
+	header('location:visit-management.php');
+	exit();
+}
+
+// Transfer to admitted functionality
+if (isset($_POST['transferToAdmitted'])) {
+	$appointmentId = (int)$_POST['appointmentId'];
+	$transferReason = $_POST['transferReason'];
+	
+	// Check if appointment_transfers table exists
+	$transferTableCheck = mysqli_query($con, "SHOW TABLES LIKE 'appointment_transfers'");
+	if (mysqli_num_rows($transferTableCheck) > 0) {
+		// Get appointment details
+		$apptDetails = mysqli_query($con, "SELECT * FROM $appointmentTable WHERE id='$appointmentId' AND doctorId='$doctorId'");
+		if ($apptDetails && $row = mysqli_fetch_array($apptDetails)) {
+			// Insert transfer record
+			$transferQuery = "INSERT INTO appointment_transfers(
+				originalAppointmentId, 
+				patientId, 
+				doctorId, 
+				fromType, 
+				toType, 
+				transferReason, 
+				transferDate
+			) VALUES(
+				'$appointmentId', 
+				'" . ($row['patientId'] ?? 0) . "', 
+				'$doctorId', 
+				'consultancy', 
+				'admitted', 
+				'$transferReason', 
+				NOW()
+			)";
+			if (mysqli_query($con, $transferQuery)) {
+				$_SESSION['msg'] = 'Patient transferred to Admitted status successfully.';
+			}
+		}
 	}
 	header('location:visit-management.php');
 	exit();
@@ -94,22 +180,23 @@ include('include/header.php');
 			<thead>
 				<tr>
 					<th>#</th>
-					<th>Patient</th>
+					<th>Patient Name</th>
 					<th>Payment Status</th>
 					<th>Appointment Date/Time</th>
 					<th>Visit Status</th>
-					<th>Check In</th>
-					<th>Prescription</th>
+					<th>Actions</th>
 				</tr>
 			</thead>
 			<tbody>
 			<?php
 			$cnt=1;
-			$whereVisit = " AND appointment.userStatus='1' AND appointment.doctorStatus='1'";
+			$whereVisit = " AND $appointmentTable.userStatus='1' AND $appointmentTable.doctorStatus='1'";
 			if ($hasVisitStatus) {
-				$whereVisit .= " AND COALESCE(appointment.visitStatus,'Scheduled') IN ('Scheduled','Checked In')";
+				$whereVisit .= " AND COALESCE($appointmentTable.visitStatus,'Scheduled') IN ('Scheduled','Checked In')";
 			}
-			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.doctorId='$doctorId'" . $whereVisit . " ORDER BY appointment.id DESC");
+			
+			$sql = mysqli_query($con, "SELECT $appointmentTable.*, users.fullName FROM $appointmentTable JOIN users ON users.id=$appointmentTable.userId WHERE $appointmentTable.doctorId='$doctorId'" . $whereVisit . " ORDER BY $appointmentTable.id DESC");
+			
 			if ($sql) while($row = mysqli_fetch_array($sql)) {
 				if ($hasVisitStatus) {
 					$status = $row['visitStatus'] ?: 'Scheduled';
@@ -127,7 +214,7 @@ include('include/header.php');
 						<?php if($isPaid): ?>
 							<span class="status-active">Paid</span>
 						<?php else: ?>
-							<span class="status-cancelled">Pending</span>
+							<span class="status-cancelled"><?php echo htmlentities($row['paymentStatus'] ?? 'Pending'); ?></span>
 						<?php endif; ?>
 					</td>
 					<td><?php echo htmlentities($row['appointmentDate'].' '.$row['appointmentTime']); ?></td>
@@ -140,38 +227,66 @@ include('include/header.php');
 							<span>Scheduled</span>
 						<?php endif; ?>
 					</td>
-					<td>
-						<?php if(!$isPaid): ?>
-							<span class="text-muted">Awaiting Payment</span>
-						<?php elseif($status === 'Scheduled'): ?>
-							<a class="btn btn-primary btn-sm" href="visit-management.php?checkin=<?php echo (int)$row['id']; ?>">Check In</a>
+					<td style="font-size:12px;">
+						<?php if($status === 'Scheduled'): ?>
+							<a class="btn btn-primary btn-xs" href="visit-management.php?checkin=<?php echo (int)$row['id']; ?>">Check In</a>
+						<?php elseif($status === 'Checked In'): ?>
+							<?php if(!$isPaid): ?>
+								<div style="margin-bottom:5px;">
+									<a class="btn btn-success btn-xs" href="visit-management.php?markpaid=<?php echo (int)$row['id']; ?>">Payment Received</a>
+								</div>
+							<?php endif; ?>
+							<?php if($isPaid): ?>
+								<div style="margin-bottom:5px;">
+									<a class="btn btn-primary btn-xs" href="add-prescription.php?appointment_id=<?php echo (int)$row['id']; ?>">Add Prescription</a>
+								</div>
+							<?php endif; ?>
+							<button class="btn btn-warning btn-xs" onclick="showTransferModal(<?php echo (int)$row['id']; ?>)">Transfer to Admitted</button>
 						<?php else: ?>
-							--
-						<?php endif; ?>
-					</td>
-					<td>
-						<?php if(!$isPaid): ?>
-							<span class="text-muted">Waiting for payment</span>
-						<?php elseif($status === 'Checked In' || !$hasVisitStatus): ?>
-							<a class="btn btn-primary btn-sm" href="add-prescription.php?appointment_id=<?php echo (int)$row['id']; ?>">Add Prescription</a>
-						<?php else: ?>
-							--
+							<span class="text-muted">--</span>
 						<?php endif; ?>
 					</td>
 				</tr>
 			<?php $cnt++; } ?>
 			<?php if(!$sql): ?>
 				<tr>
-					<td colspan="7" class="text-center text-danger">Unable to load visit data. Please check database updates.</td>
+					<td colspan="6" class="text-center text-danger">Unable to load visit data. Please check database updates.</td>
 				</tr>
 			<?php endif; ?>
 			<?php if($cnt === 1): ?>
 				<tr>
-					<td colspan="7" class="text-center text-muted">No appointments found for this doctor.</td>
+					<td colspan="6" class="text-center text-muted">No appointments found for this doctor.</td>
 				</tr>
 			<?php endif; ?>
 			</tbody>
 		</table>
+	</div>
+</div>
+
+<!-- Transfer to Admitted Modal -->
+<div class="modal fade" id="transferModal" tabindex="-1" role="dialog">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Transfer Patient to Admitted Status</h5>
+				<button type="button" class="close" data-dismiss="modal">
+					<span>&times;</span>
+				</button>
+			</div>
+			<form method="POST">
+				<div class="modal-body">
+					<div class="form-group">
+						<label>Transfer Reason</label>
+						<textarea name="transferReason" class="form-control" placeholder="Enter reason for transfer (e.g., Surgery required, Extended hospitalization needed)" required></textarea>
+					</div>
+					<input type="hidden" name="appointmentId" id="appointmentId">
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+					<button type="submit" name="transferToAdmitted" class="btn btn-primary">Transfer to Admitted</button>
+				</div>
+			</form>
+		</div>
 	</div>
 </div>
 
@@ -200,5 +315,11 @@ include('include/header.php');
 <script src="../vendors/moment/min/moment.min.js"></script>
 <script src="../vendors/bootstrap-daterangepicker/daterangepicker.js"></script>
 <script src="../assets/js/custom.min.js"></script>
+<script>
+	function showTransferModal(appointmentId) {
+		document.getElementById('appointmentId').value = appointmentId;
+		$('#transferModal').modal('show');
+	}
+</script>
 </body>
 </html>

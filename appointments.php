@@ -47,6 +47,8 @@ if(isset($_GET['cancel']))
 		.page-heading { font-size: 22px; font-weight: 700; color: #1e3a8a; margin-bottom: 14px; }
 		.history-table { background: #fff; border: 1px solid #e6ebf5; border-radius: 10px; overflow: hidden; }
 		.history-table td, .history-table th { font-size: 14px; }
+		.status-active { color: #16a34a; font-weight: 700; }
+		.status-cancelled { color: #dc2626; font-weight: 700; }
 	</style>
 </head>
 <body class="nav-md">
@@ -93,15 +95,15 @@ if(isset($_GET['cancel']))
 							<?php 
 							$paymentStatus = $row['paymentStatus'] ?? 'Pending';
 							if($paymentStatus === 'Paid'): ?>
-								<span class="badge badge-success">Paid</span>
+								<span class="status-active">Paid</span>
 							<?php elseif($paymentStatus === 'Pay at Hospital'): ?>
-								<span class="badge badge-info">Pay at Hospital</span>
+								<span style="color:#1d4ed8;font-weight:700;">Pay at Hospital</span>
 							<?php else: ?>
-								<span class="badge badge-warning">Pending</span>
+								<span class="status-cancelled">Pending</span>
 							<?php endif; ?>
 						</td>
 						<td><?php echo htmlentities($row['appointmentDate'].' / '.$row['appointmentTime']); ?></td>
-						<td><span class="badge badge-info">Active</span></td>
+						<td><span class="status-active">Active</span></td>
 						<td>
 							<div style="display:flex; gap:5px; flex-wrap:wrap;">
 								<a href="appointments.php?id=<?php echo (int)$row['id']; ?>&cancel=update" onClick="return confirm('Are you sure you want to cancel this appointment ?')" class="btn btn-danger btn-sm">Cancel</a>

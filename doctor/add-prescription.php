@@ -95,6 +95,12 @@ if (($appointment['visitStatus'] ?? 'Scheduled') !== 'Checked In') {
 	exit();
 }
 
+if (strtoupper((string)($appointment['paymentStatus'] ?? 'Pending')) !== 'PAID') {
+	$_SESSION['msg'] = 'Please mark payment received before completing visit.';
+	header('location:visit-management.php');
+	exit();
+}
+
 if (isset($_POST['submit_prescription'])) {
 	$temperature = mysqli_real_escape_string($con, trim($_POST['temperature'] ?? ''));
 	$bloodPressure = mysqli_real_escape_string($con, trim($_POST['blood_pressure'] ?? ''));
@@ -151,7 +157,7 @@ if (isset($_POST['submit_prescription'])) {
 				$summary .= ' | Follow-up: ' . $nextVisitDate;
 			}
 			$summaryEscaped = mysqli_real_escape_string($con, $summary);
-			mysqli_query($con, "UPDATE $appointmentTable SET visitStatus='Completed', checkOutTime=NOW(), prescription='$summaryEscaped', paymentStatus='Paid' WHERE id='$appointmentId' AND doctorId='$doctorId'");
+			mysqli_query($con, "UPDATE $appointmentTable SET visitStatus='Completed', checkOutTime=NOW(), prescription='$summaryEscaped' WHERE id='$appointmentId' AND doctorId='$doctorId'");
 
 			$_SESSION['msg'] = 'Prescription added and visit completed successfully.';
 			header('location:visit-management.php');

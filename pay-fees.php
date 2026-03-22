@@ -4,26 +4,29 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
-function ensureAppointmentColumns($con) {
+function ensureAppointmentColumns($con, $table) {
 	$requiredColumns = [
-		"visitStatus" => "ALTER TABLE appointment ADD COLUMN visitStatus varchar(30) NOT NULL DEFAULT 'Scheduled' AFTER doctorStatus",
-		"checkInTime" => "ALTER TABLE appointment ADD COLUMN checkInTime datetime DEFAULT NULL AFTER visitStatus",
-		"checkOutTime" => "ALTER TABLE appointment ADD COLUMN checkOutTime datetime DEFAULT NULL AFTER checkInTime",
-		"prescription" => "ALTER TABLE appointment ADD COLUMN prescription mediumtext DEFAULT NULL AFTER checkOutTime",
-		"paymentStatus" => "ALTER TABLE appointment ADD COLUMN paymentStatus varchar(20) NOT NULL DEFAULT 'Pending' AFTER prescription",
-		"paymentRef" => "ALTER TABLE appointment ADD COLUMN paymentRef varchar(64) DEFAULT NULL AFTER paymentStatus",
-		"paidAt" => "ALTER TABLE appointment ADD COLUMN paidAt datetime DEFAULT NULL AFTER paymentRef"
+		"visitStatus" => "ALTER TABLE $table ADD COLUMN visitStatus varchar(30) NOT NULL DEFAULT 'Scheduled' AFTER doctorStatus",
+		"checkInTime" => "ALTER TABLE $table ADD COLUMN checkInTime datetime DEFAULT NULL AFTER visitStatus",
+		"checkOutTime" => "ALTER TABLE $table ADD COLUMN checkOutTime datetime DEFAULT NULL AFTER checkInTime",
+		"prescription" => "ALTER TABLE $table ADD COLUMN prescription mediumtext DEFAULT NULL AFTER checkOutTime",
+		"paymentStatus" => "ALTER TABLE $table ADD COLUMN paymentStatus varchar(20) NOT NULL DEFAULT 'Pending' AFTER prescription",
+		"paymentRef" => "ALTER TABLE $table ADD COLUMN paymentRef varchar(64) DEFAULT NULL AFTER paymentStatus",
+		"paidAt" => "ALTER TABLE $table ADD COLUMN paidAt datetime DEFAULT NULL AFTER paymentRef"
 	];
 
 	foreach ($requiredColumns as $columnName => $ddl) {
-		$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . $columnName . "'");
+		$check = mysqli_query($con, "SHOW COLUMNS FROM $table LIKE '" . $columnName . "'");
 		if ($check && mysqli_num_rows($check) === 0) {
 			mysqli_query($con, $ddl);
 		}
 	}
 }
 
-ensureAppointmentColumns($con);
+$tableCheck = mysqli_query($con, "SHOW TABLES LIKE 'current_appointments'");
+$appointmentTable = ($tableCheck && mysqli_num_rows($tableCheck) > 0) ? 'current_appointments' : 'appointment';
+
+ensureAppointmentColumns($con, $appointmentTable);
 
 function luhnCheck($number) {
 	$number = preg_replace('/\D/', '', $number);
@@ -51,12 +54,14 @@ $errors = [];
 $successMsg = '';
 
 if ($appointmentId > 0) {
-	$stmt = mysqli_prepare($con, "SELECT id, consultancyFees, appointmentDate, appointmentTime, paymentStatus FROM appointment WHERE id=? AND userId=?");
-	mysqli_stmt_bind_param($stmt, 'ii', $appointmentId, $userId);
-	mysqli_stmt_execute($stmt);
-	$result = mysqli_stmt_get_result($stmt);
-	$appointment = mysqli_fetch_assoc($result);
-	mysqli_stmt_close($stmt);
+	$stmt = mysqli_prepare($con, "SELECT id, consultancyFees, appointmentDate, appointmentTime, paymentStatus FROM $appointmentTable WHERE id=? AND userId=?");
+	if ($stmt) {
+		mysqli_stmt_bind_param($stmt, 'ii', $appointmentId, $userId);
+		mysqli_stmt_execute($stmt);
+		$result = mysqli_stmt_get_result($stmt);
+		$appointment = mysqli_fetch_assoc($result);
+		mysqli_stmt_close($stmt);
+	}
 
 	if ($appointment) {
 		$amount = $appointment['consultancyFees'];
@@ -99,12 +104,16 @@ if (isset($_POST['submit_payment'])) {
 	}
 
 	if ($appointmentId > 0) {
-		$stmt = mysqli_prepare($con, "SELECT consultancyFees FROM appointment WHERE id=? AND userId=?");
-		mysqli_stmt_bind_param($stmt, 'ii', $appointmentId, $userId);
-		mysqli_stmt_execute($stmt);
-		$result = mysqli_stmt_get_result($stmt);
-		$row = mysqli_fetch_assoc($result);
-		mysqli_stmt_close($stmt);
+		$stmt = mysqli_prepare($con, "SELECT consultancyFees FROM $appointmentTable WHERE id=? AND userId=?");
+		if ($stmt) {
+			mysqli_stmt_bind_param($stmt, 'ii', $appointmentId, $userId);
+			mysqli_stmt_execute($stmt);
+			$result = mysqli_stmt_get_result($stmt);
+			$row = mysqli_fetch_assoc($result);
+			mysqli_stmt_close($stmt);
+		} else {
+			$row = null;
+		}
 
 		if (!$row) {
 			$errors[] = 'Selected appointment is invalid.';
@@ -123,14 +132,18 @@ if (isset($_POST['submit_payment'])) {
 			'cardLast4' => substr($cardNumber, -4)
 		];
 		if ($appointmentId > 0) {
-			$stmt = mysqli_prepare($con, "UPDATE appointment SET paymentStatus='Paid', paymentRef=?, paidAt=NOW(), userStatus=1, doctorStatus=1, visitStatus=CASE WHEN visitStatus IS NULL OR visitStatus='' OR visitStatus='Cancelled' THEN 'Scheduled' ELSE visitStatus END WHERE id=? AND userId=?");
-			mysqli_stmt_bind_param($stmt, 'sii', $txnRef, $appointmentId, $userId);
-			$ok = mysqli_stmt_execute($stmt);
-			mysqli_stmt_close($stmt);
+			$stmt = mysqli_prepare($con, "UPDATE $appointmentTable SET paymentStatus='Paid', paymentRef=?, paidAt=NOW(), userStatus=1, doctorStatus=1, visitStatus=CASE WHEN visitStatus IS NULL OR visitStatus='' OR visitStatus='Cancelled' THEN 'Scheduled' ELSE visitStatus END WHERE id=? AND userId=?");
+			if ($stmt) {
+				mysqli_stmt_bind_param($stmt, 'sii', $txnRef, $appointmentId, $userId);
+				$ok = mysqli_stmt_execute($stmt);
+				mysqli_stmt_close($stmt);
+			} else {
+				$ok = false;
+			}
 
 			if ($ok) {
 				$_SESSION['msg'] = 'Payment successful for appointment #'.$appointmentId.'.';
-				header('Location: appointment-history.php');
+				header('Location: appointments.php');
 				exit();
 			}
 
