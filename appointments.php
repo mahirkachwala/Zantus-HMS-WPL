@@ -76,11 +76,11 @@ if(isset($_GET['cancel']))
 				</thead>
 				<tbody>
 					<?php
-					$activeWhere = "appointment.userStatus=1 AND appointment.doctorStatus=1";
+					$activeWhere = "$appointmentTable.userStatus=1 AND $appointmentTable.doctorStatus=1";
 					if($hasVisitStatus) {
-						$activeWhere .= " AND COALESCE(appointment.visitStatus,'Scheduled')='Scheduled'";
+						$activeWhere .= " AND COALESCE($appointmentTable.visitStatus,'Scheduled')='Scheduled'";
 					}
-					$sql=mysqli_query($con,"select doctors.doctorName as docname,appointment.* from appointment join doctors on doctors.id=appointment.doctorId where appointment.userId='".$_SESSION['id']."' and (".$activeWhere.") order by appointment.id desc");
+					$sql=mysqli_query($con,"select doctors.doctorName as docname,$appointmentTable.* from $appointmentTable join doctors on doctors.id=$appointmentTable.doctorId where $appointmentTable.userId='".$_SESSION['id']."' and (".$activeWhere.") order by $appointmentTable.id desc");
 					$cnt=1;
 					while($row=mysqli_fetch_array($sql)) {
 					?>

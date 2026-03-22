@@ -5,8 +5,8 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
-function appointmentColumnExists($con, $columnName) {
-	$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
+function appointmentColumnExists($con, $tableName, $columnName) {
+	$check = mysqli_query($con, "SHOW COLUMNS FROM `$tableName` LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
 	return ($check && mysqli_num_rows($check) > 0);
 }
 
@@ -15,16 +15,13 @@ function tableExists($con, $tableName) {
 	return ($check && mysqli_num_rows($check) > 0);
 }
 
-$hasVisitStatus = appointmentColumnExists($con, 'visitStatus');
 $hasPrescriptionsTable = tableExists($con, 'prescriptions');
-// Determine which appointment table to use
 $usePastAppointments = tableExists($con, 'past_appointments');
-$appointmentTable = $usePastAppointments ? 'past_appointments' : 'appointment';
-
+$appointmentTable = $usePastAppointments ? 'past_appointments' : (tableExists($con, 'current_appointments') ? 'current_appointments' : 'appointment');
 $hasVisitStatus = appointmentColumnExists($con, $appointmentTable, 'visitStatus');
 if(isset($_GET['cancel']))
 {
-	mysqli_query($con,"update appointment set userStatus='0' where id = '".$_GET['id']."'");
+	mysqli_query($con,"update $appointmentTable set userStatus='0' where id = '".$_GET['id']."'");
 	$_SESSION['msg']="Your appointment canceled !!";
 }
 ?>
@@ -104,12 +101,6 @@ if(isset($_GET['cancel']))
 				</thead>
 				<tbody>
 					<?php
-					$historyWhere = "(appointment.userStatus=0 OR appointment.doctorStatus=0)";
-					if($hasVisitStatus) {
-						$historyWhere .= " OR appointment.visitStatus IN ('Checked In','Completed','Cancelled')";
-					}
-					$sql=mysqli_query($con,"select doctors.doctorName as docname,appointment.*  from appointment join doctors on doctors.id=appointment.doctorId where appointment.userId='".$_SESSION['id']."' and (".$historyWhere.") order by appointment.id desc");
-										// Use past_appointments if available, else fall back to appointment table
 										$historyWhere = "($appointmentTable.userStatus=0 OR $appointmentTable.doctorStatus=0)";
 										if($hasVisitStatus) {
 											$historyWhere .= " OR $appointmentTable.visitStatus IN ('Checked In','Completed','Cancelled')";

@@ -5,8 +5,8 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
-function appointmentColumnExists($con, $columnName) {
-	$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
+function appointmentColumnExists($con, $tableName, $columnName) {
+	$check = mysqli_query($con, "SHOW COLUMNS FROM `$tableName` LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
 	return ($check && mysqli_num_rows($check) > 0);
 }
 
@@ -15,13 +15,14 @@ function tableExists($con, $tableName) {
 	return ($check && mysqli_num_rows($check) > 0);
 }
 
-$hasVisitStatus = appointmentColumnExists($con, 'visitStatus');
+$appointmentTable = tableExists($con, 'current_appointments') ? 'current_appointments' : 'appointment';
+$hasVisitStatus = appointmentColumnExists($con, $appointmentTable, 'visitStatus');
 $hasPrescriptionsTable = tableExists($con, 'prescriptions');
 
 if(isset($_GET['cancelid']))
 {
 	$aid = (int)$_GET['cancelid'];
-	mysqli_query($con,"update appointment set userStatus='0', doctorStatus='0', visitStatus='Cancelled' where id='$aid'");
+	mysqli_query($con,"update $appointmentTable set userStatus='0', doctorStatus='0', visitStatus='Cancelled' where id='$aid'");
 	$_SESSION['msg'] = 'Appointment cancelled by admin.';
 	header('location:appointment-history.php');
 	exit();
@@ -31,21 +32,13 @@ if(isset($_GET['cancelid']))
 <html lang="en">
 <head>
 	<title>Admin | Appointment Management</title>
-	<!-- Bootstrap -->
 	<link href="../vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
-	<!-- Font Awesome -->
 	<link href="../vendors/font-awesome/css/font-awesome.min.css" rel="stylesheet">
-	<!-- NProgress -->
 	<link href="../vendors/nprogress/nprogress.css" rel="stylesheet">
-	<!-- iCheck -->
 	<link href="../vendors/iCheck/skins/flat/green.css" rel="stylesheet">
-	<!-- bootstrap-progressbar -->
 	<link href="../vendors/bootstrap-progressbar/css/bootstrap-progressbar-3.3.4.min.css" rel="stylesheet">
-	<!-- JQVMap -->
 	<link href="../vendors/jqvmap/dist/jqvmap.min.css" rel="stylesheet"/>
-	<!-- bootstrap-daterangepicker -->
 	<link href="../vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
-	<!-- Custom Theme Style -->
 	<link href="../assets/css/custom.min.css" rel="stylesheet">
 	<style>
 		.page-heading {
@@ -99,11 +92,12 @@ if(isset($_GET['cancelid']))
 				</thead>
 				<tbody>
 					<?php
-					$historyWhere = "(appointment.userStatus=0 OR appointment.doctorStatus=0)";
+					$historyWhere = "($appointmentTable.userStatus=0 OR $appointmentTable.doctorStatus=0)";
 					if($hasVisitStatus) {
-						$historyWhere .= " OR appointment.visitStatus IN ('Checked In','Completed','Cancelled')";
+						$historyWhere .= " OR $appointmentTable.visitStatus IN ('Checked In','Completed','Cancelled')";
 					}
-					$sql=mysqli_query($con,"select doctors.doctorName as docname,users.fullName as pname,appointment.* from appointment join doctors on doctors.id=appointment.doctorId join users on users.id=appointment.userId where (".$historyWhere.") order by appointment.id desc");
+					// MySQL rows are rendered into each HTML table row below.
+					$sql=mysqli_query($con,"select doctors.doctorName as docname,users.fullName as pname,$appointmentTable.* from $appointmentTable join doctors on doctors.id=$appointmentTable.doctorId join users on users.id=$appointmentTable.userId where (".$historyWhere.") order by $appointmentTable.id desc");
 					$cnt=1;
 					while($row=mysqli_fetch_array($sql))
 					{
@@ -174,43 +168,28 @@ if(isset($_GET['cancelid']))
 		</div>
 	</div>
 	<?php include('include/footer.php');?>
-	<!-- jQuery -->
 	<script src="../vendors/jquery/dist/jquery.min.js"></script>
-	<!-- Bootstrap -->
 	<script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-	<!-- FastClick -->
 	<script src="../vendors/fastclick/lib/fastclick.js"></script>
-	<!-- NProgress -->
 	<script src="../vendors/nprogress/nprogress.js"></script>
-	<!-- Chart.js -->
 	<script src="../vendors/Chart.js/dist/Chart.min.js"></script>
-	<!-- gauge.js -->
 	<script src="../vendors/gauge.js/dist/gauge.min.js"></script>
-	<!-- bootstrap-progressbar -->
 	<script src="../vendors/bootstrap-progressbar/bootstrap-progressbar.min.js"></script>
-	<!-- iCheck -->
 	<script src="../vendors/iCheck/icheck.min.js"></script>
-	<!-- Skycons -->
 	<script src="../vendors/skycons/skycons.js"></script>
-	<!-- Flot -->
 	<script src="../vendors/Flot/jquery.flot.js"></script>
 	<script src="../vendors/Flot/jquery.flot.pie.js"></script>
 	<script src="../vendors/Flot/jquery.flot.time.js"></script>
 	<script src="../vendors/Flot/jquery.flot.stack.js"></script>
 	<script src="../vendors/Flot/jquery.flot.resize.js"></script>
-	<!-- Flot plugins -->
 	<script src="../vendors/flot.orderbars/js/jquery.flot.orderBars.js"></script>
 	<script src="../vendors/flot-spline/js/jquery.flot.spline.min.js"></script>
 	<script src="../vendors/flot.curvedlines/curvedLines.js"></script>
-	<!-- DateJS -->
 	<script src="../vendors/DateJS/build/date.js"></script>
-	<!-- JQVMap -->
 	<script src="../vendors/jqvmap/dist/jquery.vmap.js"></script>
 	<script src="../vendors/jqvmap/dist/maps/jquery.vmap.world.js"></script>
 	<script src="../vendors/jqvmap/examples/js/jquery.vmap.sampledata.js"></script>
-	<!-- bootstrap-daterangepicker -->
 	<script src="../vendors/moment/min/moment.min.js"></script>
 	<script src="../vendors/bootstrap-daterangepicker/daterangepicker.js"></script>
-	<!-- Custom Theme Scripts -->
 	<script src="../assets/js/custom.min.js"></script>
 </body>

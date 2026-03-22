@@ -130,7 +130,8 @@ if(isset($_POST['submit'])) {
 				data:'docid='+val,
 				success: function(data){
 					$("#fees").html(data);
-					$("#feesDisplay").text('₹ ' + data.replace(/[^0-9]/g, ''));
+					var selectedFee = $("#fees option:selected").val() || '';
+					$("#feesDisplay").text(selectedFee ? ('₹ ' + selectedFee) : '-');
 				}
 			});
 		}

@@ -5,36 +5,39 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
-function appointmentColumnExists($con, $columnName) {
-	$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
+function appointmentColumnExists($con, $tableName, $columnName) {
+	$check = mysqli_query($con, "SHOW COLUMNS FROM `$tableName` LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
 	return ($check && mysqli_num_rows($check) > 0);
 }
 
-$hasPaymentStatus = appointmentColumnExists($con, 'paymentStatus');
-$hasPaymentRef = appointmentColumnExists($con, 'paymentRef');
-$hasPaidAt = appointmentColumnExists($con, 'paidAt');
+$tableCheck = mysqli_query($con, "SHOW TABLES LIKE 'current_appointments'");
+$appointmentTable = ($tableCheck && mysqli_num_rows($tableCheck) > 0) ? 'current_appointments' : 'appointment';
+
+$hasPaymentStatus = appointmentColumnExists($con, $appointmentTable, 'paymentStatus');
+$hasPaymentRef = appointmentColumnExists($con, $appointmentTable, 'paymentRef');
+$hasPaidAt = appointmentColumnExists($con, $appointmentTable, 'paidAt');
 
 $statusFilter = trim($_GET['status'] ?? 'all');
 $where = "1=1";
 if ($statusFilter === 'paid') {
 	if ($hasPaymentStatus || $hasPaymentRef || $hasPaidAt) {
-		$where .= " AND ((COALESCE(appointment.paymentStatus,'')='Paid')";
-		if ($hasPaymentRef) { $where .= " OR COALESCE(appointment.paymentRef,'')<>''"; }
-		if ($hasPaidAt) { $where .= " OR appointment.paidAt IS NOT NULL"; }
+		$where .= " AND ((COALESCE($appointmentTable.paymentStatus,'')='Paid')";
+		if ($hasPaymentRef) { $where .= " OR COALESCE($appointmentTable.paymentRef,'')<>''"; }
+		if ($hasPaidAt) { $where .= " OR $appointmentTable.paidAt IS NOT NULL"; }
 		$where .= ")";
 	}
 } elseif ($statusFilter === 'pending') {
 	if ($hasPaymentStatus || $hasPaymentRef || $hasPaidAt) {
-		$where .= " AND NOT ((COALESCE(appointment.paymentStatus,'')='Paid')";
-		if ($hasPaymentRef) { $where .= " OR COALESCE(appointment.paymentRef,'')<>''"; }
-		if ($hasPaidAt) { $where .= " OR appointment.paidAt IS NOT NULL"; }
+		$where .= " AND NOT ((COALESCE($appointmentTable.paymentStatus,'')='Paid')";
+		if ($hasPaymentRef) { $where .= " OR COALESCE($appointmentTable.paymentRef,'')<>''"; }
+		if ($hasPaidAt) { $where .= " OR $appointmentTable.paidAt IS NOT NULL"; }
 		$where .= ")";
 	}
 }
 
 $paidCount = 0;
 $pendingCount = 0;
-$totQ = mysqli_query($con, "SELECT appointment.* FROM appointment");
+$totQ = mysqli_query($con, "SELECT $appointmentTable.* FROM $appointmentTable");
 if ($totQ) {
 	while($r = mysqli_fetch_array($totQ)) {
 		$isPaid = (($r['paymentStatus'] ?? '') === 'Paid') || (!empty($r['paymentRef'])) || (!empty($r['paidAt']));
@@ -92,7 +95,7 @@ if ($totQ) {
 			<tbody>
 			<?php
 			$cnt=1;
-			$sql = mysqli_query($con, "SELECT appointment.*, users.fullName AS pname, doctors.doctorName AS dname FROM appointment JOIN users ON users.id=appointment.userId JOIN doctors ON doctors.id=appointment.doctorId WHERE $where ORDER BY appointment.id DESC");
+			$sql = mysqli_query($con, "SELECT $appointmentTable.*, users.fullName AS pname, doctors.doctorName AS dname FROM $appointmentTable JOIN users ON users.id=$appointmentTable.userId JOIN doctors ON doctors.id=$appointmentTable.doctorId WHERE $where ORDER BY $appointmentTable.id DESC");
 			if($sql) while($row=mysqli_fetch_array($sql)) {
 				$isPaid = (($row['paymentStatus'] ?? '') === 'Paid') || (!empty($row['paymentRef'])) || (!empty($row['paidAt']));
 			?>

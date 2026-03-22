@@ -5,20 +5,25 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
-function ensureAppointmentColumns($con) {
+function ensureAppointmentColumns($con, $table) {
 	// Server-side schema guard for appointment workflow fields.
 	$requiredColumns = [
-		"visitStatus" => "ALTER TABLE appointment ADD COLUMN visitStatus varchar(30) NOT NULL DEFAULT 'Scheduled' AFTER doctorStatus",
-		"checkOutTime" => "ALTER TABLE appointment ADD COLUMN checkOutTime datetime DEFAULT NULL AFTER checkInTime",
-		"prescription" => "ALTER TABLE appointment ADD COLUMN prescription mediumtext DEFAULT NULL AFTER checkOutTime"
+		"visitStatus" => "ALTER TABLE $table ADD COLUMN visitStatus varchar(30) NOT NULL DEFAULT 'Scheduled' AFTER doctorStatus",
+		"checkOutTime" => "ALTER TABLE $table ADD COLUMN checkOutTime datetime DEFAULT NULL AFTER checkInTime",
+		"prescription" => "ALTER TABLE $table ADD COLUMN prescription mediumtext DEFAULT NULL AFTER checkOutTime"
 	];
 
 	foreach ($requiredColumns as $columnName => $ddl) {
-		$check = mysqli_query($con, "SHOW COLUMNS FROM appointment LIKE '" . $columnName . "'");
+		$check = mysqli_query($con, "SHOW COLUMNS FROM $table LIKE '" . $columnName . "'");
 		if ($check && mysqli_num_rows($check) === 0) {
 			mysqli_query($con, $ddl);
 		}
 	}
+}
+
+function appointmentTableName($con) {
+	$check = mysqli_query($con, "SHOW TABLES LIKE 'current_appointments'");
+	return ($check && mysqli_num_rows($check) > 0) ? 'current_appointments' : 'appointment';
 }
 
 function ensurePrescriptionTables($con) {
@@ -55,8 +60,10 @@ function ensurePrescriptionTables($con) {
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
 
-ensureAppointmentColumns($con);
+ensureAppointmentColumns($con, appointmentTableName($con));
 ensurePrescriptionTables($con);
+
+$appointmentTable = appointmentTableName($con);
 
 $doctorId = (int)($_SESSION['id'] ?? 0);
 $appointmentId = (int)($_GET['appointment_id'] ?? $_POST['appointment_id'] ?? 0);
@@ -67,7 +74,7 @@ if ($appointmentId <= 0) {
 	exit();
 }
 
-$appointmentSql = mysqli_query($con, "SELECT appointment.*, users.fullName FROM appointment JOIN users ON users.id=appointment.userId WHERE appointment.id='$appointmentId' AND appointment.doctorId='$doctorId' LIMIT 1");
+$appointmentSql = mysqli_query($con, "SELECT $appointmentTable.*, users.fullName FROM $appointmentTable JOIN users ON users.id=$appointmentTable.userId WHERE $appointmentTable.id='$appointmentId' AND $appointmentTable.doctorId='$doctorId' LIMIT 1");
 $appointment = ($appointmentSql) ? mysqli_fetch_array($appointmentSql) : null;
 
 if (!$appointment) {
@@ -144,7 +151,7 @@ if (isset($_POST['submit_prescription'])) {
 				$summary .= ' | Follow-up: ' . $nextVisitDate;
 			}
 			$summaryEscaped = mysqli_real_escape_string($con, $summary);
-			mysqli_query($con, "UPDATE appointment SET visitStatus='Completed', checkOutTime=NOW(), prescription='$summaryEscaped', paymentStatus='Paid' WHERE id='$appointmentId' AND doctorId='$doctorId'");
+			mysqli_query($con, "UPDATE $appointmentTable SET visitStatus='Completed', checkOutTime=NOW(), prescription='$summaryEscaped', paymentStatus='Paid' WHERE id='$appointmentId' AND doctorId='$doctorId'");
 
 			$_SESSION['msg'] = 'Prescription added and visit completed successfully.';
 			header('location:visit-management.php');
