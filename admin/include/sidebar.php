@@ -1,4 +1,4 @@
-<!-- sidebar menu -->
+
 <div id="sidebar-menu" class="main_menu_side hidden-print main_menu">
 	<div class="menu_section">
 		<h3>General</h3>
@@ -14,6 +14,7 @@
 			<li><a><i class="fa fa-users"></i> Users <span class="fa fa-chevron-down"></span></a>
 				<ul class="nav child_menu">
 					<li><a href="manage-users.php">Manage Users</a></li>
+					<li><a href="user-logs.php">User Logs</a></li>
 				</ul>
 			</li>
 			<li><a><i class="fa fa-user"></i> Patients <span class="fa fa-chevron-down"></span></a>

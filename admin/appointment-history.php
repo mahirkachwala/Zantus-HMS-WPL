@@ -18,6 +18,7 @@ function tableExists($con, $tableName) {
 $appointmentTable = tableExists($con, 'current_appointments') ? 'current_appointments' : 'appointment';
 $hasVisitStatus = appointmentColumnExists($con, $appointmentTable, 'visitStatus');
 $hasPrescriptionsTable = tableExists($con, 'prescriptions');
+$hasTransferTable = tableExists($con, 'appointment_transfers');
 
 if(isset($_GET['cancelid']))
 {
@@ -69,7 +70,7 @@ if(isset($_GET['cancelid']))
 	<?php include('include/header.php');?>
 	<div class="row">
 		<div class="col-md-12">
-			<h3 class="page-heading">Appointment History (Checked-In / Completed / Cancelled)</h3>
+			<h3 class="page-heading">All Appointments (Active / Checked-In / Completed / Cancelled / Transferred)</h3>
 			<?php if(!empty($_SESSION['msg'])): ?>
 				<div class="alert alert-info"><?php echo htmlentities($_SESSION['msg']); ?></div>
 				<?php $_SESSION['msg']=''; ?>
@@ -92,15 +93,19 @@ if(isset($_GET['cancelid']))
 				</thead>
 				<tbody>
 					<?php
-					$historyWhere = "($appointmentTable.userStatus=0 OR $appointmentTable.doctorStatus=0)";
-					if($hasVisitStatus) {
-						$historyWhere .= " OR $appointmentTable.visitStatus IN ('Checked In','Completed','Cancelled')";
-					}
 					// MySQL rows are rendered into each HTML table row below.
-					$sql=mysqli_query($con,"select doctors.doctorName as docname,users.fullName as pname,$appointmentTable.* from $appointmentTable join doctors on doctors.id=$appointmentTable.doctorId join users on users.id=$appointmentTable.userId where (".$historyWhere.") order by $appointmentTable.id desc");
+					$sql=mysqli_query($con,"select doctors.doctorName as docname,users.fullName as pname,$appointmentTable.* from $appointmentTable join doctors on doctors.id=$appointmentTable.doctorId join users on users.id=$appointmentTable.userId order by $appointmentTable.id desc");
 					$cnt=1;
 					while($row=mysqli_fetch_array($sql))
 					{
+						$isTransferred = false;
+						if($hasTransferTable) {
+							$tr = mysqli_query($con, "SELECT id FROM appointment_transfers WHERE originalAppointmentId='".(int)$row['id']."' ORDER BY id DESC LIMIT 1");
+							$isTransferred = ($tr && mysqli_num_rows($tr) > 0);
+						}
+						if(!$isTransferred && stripos((string)($row['prescription'] ?? ''), 'Transferred to Admitted') !== false) {
+							$isTransferred = true;
+						}
 						?>
 						<tr>
 							<td class="center"><?php echo $cnt;?>.</td>
@@ -133,7 +138,9 @@ if(isset($_GET['cancelid']))
 							<td>
 								<?php
 								$visitStatus = $row['visitStatus'] ?? 'Scheduled';
-								if($visitStatus === 'Completed') {
+								if($isTransferred) {
+									echo '<span style="color:#7c3aed;font-weight:700;">Transferred to Admitted</span>';
+								} elseif($visitStatus === 'Completed') {
 									echo '<span class="status-active">Completed</span>';
 								} elseif($visitStatus === 'Checked In') {
 									echo '<span style="color:#1d4ed8;font-weight:700;">Checked In</span>';
