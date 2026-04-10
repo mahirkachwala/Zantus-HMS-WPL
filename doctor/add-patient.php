@@ -12,8 +12,8 @@ if ($doctorId <= 0) {
 }
 
 // Check if new patients table exists
-$patientsTableCheck = mysqli_query($con, "SHOW TABLES LIKE 'patients'");
-$usePatientsTable = mysqli_num_rows($patientsTableCheck) > 0;
+$patientsTableCheck = hms_query($con, "SHOW TABLES LIKE 'patients'");
+$usePatientsTable = hms_num_rows($patientsTableCheck) > 0;
 
 if(isset($_POST['submit'])) {
 	$docid = $doctorId;
@@ -25,24 +25,26 @@ if(isset($_POST['submit'])) {
 	$patage = (int)$_POST['patage'];
 	$patientType = $_POST['patientType'] ?? 'consultancy';
 	$isEmergency = isset($_POST['isEmergency']) ? 1 : 0;
+	$newPatientId = 0;
+	$userId = 0;
 	
 	// If using new patients table
 	if ($usePatientsTable) {
 		// First check if user exists, if not create a temporary user
-		$userCheck = mysqli_query($con, "SELECT id FROM users WHERE email='$patemail' LIMIT 1");
-		if (mysqli_num_rows($userCheck) == 0) {
+		$userCheck = hms_query($con, "SELECT id FROM users WHERE email='$patemail' LIMIT 1");
+		if (hms_num_rows($userCheck) == 0) {
 			// Create a temporary user for this patient
-			$tempPassword = md5('hospital2026');
-			mysqli_query($con, "INSERT INTO users(fullName, email, password, regDate) VALUES('$patname', '$patemail', '$tempPassword', NOW())");
-			$userId = mysqli_insert_id($con);
+			$tempPassword = 'hospital2026';
+			hms_query($con, "INSERT INTO users(fullName, email, password, regDate) VALUES('$patname', '$patemail', '$tempPassword', NOW())");
+			$userId = hms_last_insert_id($con);
 		} else {
-			$userRow = mysqli_fetch_array($userCheck);
+			$userRow = hms_fetch_array($userCheck);
 			$userId = $userRow['id'];
 		}
 		
 		// Insert into patients table
 		$admissionDate = $isEmergency ? 'NOW()' : 'NULL';
-		$sql = mysqli_query($con, "INSERT INTO patients(
+		$sql = hms_query($con, "INSERT INTO patients(
 			userId, 
 			doctorId, 
 			patientName, 
@@ -69,9 +71,12 @@ if(isset($_POST['submit'])) {
 			".($isEmergency ? 'NOW()' : 'NULL').",
 			'Active'
 		)");
+		if ($sql) {
+			$newPatientId = (int)hms_last_insert_id($con);
+		}
 	} else {
 		// Fallback to old tblpatient table
-		$sql = mysqli_query($con, "INSERT INTO tblpatient(
+		$sql = hms_query($con, "INSERT INTO tblpatient(
 			Docid,
 			PatientName,
 			PatientContno,
@@ -91,11 +96,88 @@ if(isset($_POST['submit'])) {
 	}
 	
 	if($sql) {
-		$_SESSION['msg'] = 'Patient added successfully.';
-		header('location:add-patient.php');
+		// For consultancy patients added by doctor, create a same-day appointment
+		// so doctor-side workflow buttons (check-in, prescription, payment, transfer) are available.
+		if ($usePatientsTable && strtolower($patientType) === 'consultancy' && $userId > 0) {
+			$tableCheck = hms_query($con, "SHOW TABLES LIKE 'current_appointments'");
+			$appointmentTable = ($tableCheck && hms_num_rows($tableCheck) > 0) ? 'current_appointments' : 'appointment';
+
+			$columnsCheck = hms_query($con, "SHOW COLUMNS FROM $appointmentTable");
+			$columns = [];
+			while ($col = hms_fetch_assoc($columnsCheck)) {
+				$columns[] = $col['Field'];
+			}
+
+			$doctorSpecialization = '';
+			$doctorSpecColumn = 'specilization';
+			if (hms_num_rows(hms_query($con, "SHOW COLUMNS FROM doctors LIKE 'specialization'")) > 0) {
+				$doctorSpecColumn = 'specialization';
+			}
+			$docRowQ = hms_query($con, "SELECT $doctorSpecColumn AS dspec FROM doctors WHERE id='".(int)$docid."' LIMIT 1");
+			if ($docRowQ && ($docRow = hms_fetch_assoc($docRowQ))) {
+				$doctorSpecialization = (string)($docRow['dspec'] ?? 'General');
+				if (is_numeric($doctorSpecialization)) {
+					$sp = hms_query($con, "SELECT specialization FROM doctorspecialization WHERE id='".(int)$doctorSpecialization."' LIMIT 1");
+					if ($sp && ($spRow = hms_fetch_assoc($sp))) {
+						$doctorSpecialization = (string)$spRow['specialization'];
+					}
+				}
+			}
+
+			$today = date('Y-m-d');
+			$nowTime = date('H:i');
+			$feesValue = 0;
+			$feesQ = hms_query($con, "SELECT docFees FROM doctors WHERE id='".(int)$docid."' LIMIT 1");
+			if ($feesQ && ($fr = hms_fetch_assoc($feesQ))) {
+				$feesValue = (int)($fr['docFees'] ?? 0);
+			}
+
+			$insertCols = ['doctorSpecialization','doctorId','userId','consultancyFees','appointmentDate','appointmentTime','userStatus','doctorStatus'];
+			$insertVals = [
+				"'" . hms_escape($con, $doctorSpecialization) . "'",
+				"'" . (int)$docid . "'",
+				"'" . (int)$userId . "'",
+				"'" . (int)$feesValue . "'",
+				"'" . hms_escape($con, $today) . "'",
+				"'" . hms_escape($con, $nowTime) . "'",
+				"'1'",
+				"'1'"
+			];
+
+			if (in_array('patientId', $columns)) {
+				$insertCols[] = 'patientId';
+				$insertVals[] = "'" . (int)$newPatientId . "'";
+			}
+			if (in_array('appointmentType', $columns)) {
+				$insertCols[] = 'appointmentType';
+				$insertVals[] = "'Consultancy'";
+			}
+			if (in_array('paymentOption', $columns)) {
+				$insertCols[] = 'paymentOption';
+				$insertVals[] = "'PayLater'";
+			}
+			if (in_array('paymentStatus', $columns)) {
+				$insertCols[] = 'paymentStatus';
+				$insertVals[] = "'Pay at Hospital'";
+			}
+			if (in_array('visitStatus', $columns)) {
+				$insertCols[] = 'visitStatus';
+				$insertVals[] = "'Scheduled'";
+			}
+
+			hms_query($con, "INSERT INTO $appointmentTable(" . implode(',', $insertCols) . ") VALUES(" . implode(',', $insertVals) . ")");
+		}
+
+		if (strtolower($patientType) === 'consultancy') {
+			$_SESSION['msg'] = 'Consultancy patient added successfully and moved to Visit Management.';
+			header('location:visit-management.php');
+		} else {
+			$_SESSION['msg'] = 'Patient added successfully.';
+			header('location:add-patient.php');
+		}
 		exit();
 	} else {
-		$_SESSION['error'] = "Error adding patient: " . mysqli_error($con);
+		$_SESSION['error'] = "Error adding patient: " . hms_last_error($con);
 	}
 }
 ?>

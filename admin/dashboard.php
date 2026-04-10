@@ -112,34 +112,45 @@ check_login();
     <div class="stats-grid">
       <?php
 
-      $tableCheck = mysqli_query($con,"SHOW TABLES LIKE 'current_appointments'");
-      $appointmentTable = ($tableCheck && mysqli_num_rows($tableCheck) > 0) ? 'current_appointments' : 'appointment';
+      $tableCheck = hms_query($con,"SHOW TABLES LIKE 'current_appointments'");
+      $appointmentTable = ($tableCheck && hms_num_rows($tableCheck) > 0) ? 'current_appointments' : 'appointment';
 
-      $result = mysqli_query($con,"SELECT * FROM users ");
-      $num_rows = mysqli_num_rows($result);
+      $result = hms_query($con,"SELECT * FROM users ");
+      $num_rows = hms_num_rows($result);
       $total_users = htmlentities($num_rows);
 
-      $result1 = mysqli_query($con,"SELECT * FROM doctors ");
-      $num_rows1 = mysqli_num_rows($result1);
+      $result1 = hms_query($con,"SELECT * FROM doctors ");
+      $num_rows1 = hms_num_rows($result1);
       $total_doctors = htmlentities($num_rows1);
 
-      $sql= mysqli_query($con,"SELECT * FROM $appointmentTable");
-      $num_rows2 = mysqli_num_rows($sql);
+      $sql= hms_query($con,"SELECT * FROM $appointmentTable");
+      $num_rows2 = hms_num_rows($sql);
       $total_appointments = htmlentities($num_rows2);
 
-      $result = mysqli_query($con,"SELECT * FROM tblpatient ");
-      $num_rows = mysqli_num_rows($result);
+      $result = hms_query($con,"SELECT * FROM tblpatient ");
+      $num_rows = hms_num_rows($result);
       $total_patients = htmlentities($num_rows);
 
-      $sql= mysqli_query($con,"SELECT * FROM tblcontactus where  IsRead is null");
-      $num_rows22 = mysqli_num_rows($sql);
-      $total_queries = htmlentities($num_rows22);
+      $sql= hms_query($con,"SELECT * FROM $appointmentTable where visitStatus='Completed'");
+      $total_completed = htmlentities(hms_num_rows($sql));
 
-      $sql= mysqli_query($con,"SELECT * FROM $appointmentTable where visitStatus='Completed'");
-      $total_completed = htmlentities(mysqli_num_rows($sql));
+      $sql= hms_query($con,"SELECT * FROM $appointmentTable where paymentStatus IN ('Paid','Paid at Hospital')");
+      $total_paid = htmlentities(hms_num_rows($sql));
 
-      $sql= mysqli_query($con,"SELECT * FROM $appointmentTable where paymentStatus='Paid'");
-      $total_paid = htmlentities(mysqli_num_rows($sql));
+      $total_contact_queries = 0;
+      $total_feedbacks = 0;
+      $cqCheck = hms_query($con, "SHOW TABLES LIKE 'contact_queries'");
+      if ($cqCheck && hms_num_rows($cqCheck) > 0) {
+        $cqRes = hms_query($con, "SELECT COUNT(*) as total FROM contact_queries");
+        $cqRow = ($cqRes) ? hms_fetch_assoc($cqRes) : null;
+        $total_contact_queries = (int)($cqRow['total'] ?? 0);
+      }
+      $fbCheck = hms_query($con, "SHOW TABLES LIKE 'feedback_entries'");
+      if ($fbCheck && hms_num_rows($fbCheck) > 0) {
+        $fbRes = hms_query($con, "SELECT COUNT(*) as total FROM feedback_entries");
+        $fbRow = ($fbRes) ? hms_fetch_assoc($fbRes) : null;
+        $total_feedbacks = (int)($fbRow['total'] ?? 0);
+      }
 
       ?>
       <div class="stat-col">
@@ -186,9 +197,16 @@ check_login();
       </div>
       <div class="stat-col">
         <div class="stat-card">
-          <div class="stat-top"><i class="fa fa-copy"></i> Open Queries</div>
-          <div class="stat-count"><?php echo $total_queries; ?></div>
-          <div class="stat-link"><a href="read-query.php">View all queries</a></div>
+          <div class="stat-top"><i class="fa fa-envelope"></i> Contact Queries</div>
+          <div class="stat-count"><?php echo (int)$total_contact_queries; ?></div>
+          <div class="stat-link"><a href="contact-queries.php">View all contact queries</a></div>
+        </div>
+      </div>
+      <div class="stat-col">
+        <div class="stat-card">
+          <div class="stat-top"><i class="fa fa-commenting"></i> Feedback Entries</div>
+          <div class="stat-count"><?php echo (int)$total_feedbacks; ?></div>
+          <div class="stat-link"><a href="feedbacks.php">View all feedbacks</a></div>
         </div>
       </div>
     </div>

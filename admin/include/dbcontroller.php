@@ -1,15 +1,20 @@
 <?php
 $DB_host = "localhost";
+$DB_port = "3306";
 $DB_user = "root";
 $DB_pass = "";
-$DB_name = "ingram";
+$DB_name = "hms";
 try
 {
- $DB_con = new PDO("mysql:host={$DB_host};dbname={$DB_name}",$DB_user,$DB_pass);
- $DB_con->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+	$dsn = "mysql:host={$DB_host};port={$DB_port};dbname={$DB_name};charset=utf8";
+	$DB_con = new PDO($dsn, $DB_user, $DB_pass, [
+		PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+		PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+	]);
 }
 catch(PDOException $e)
 {
- $e->getMessage();
+	// For debugging, you can echo or log $e->getMessage();
+	die('Database connection failed: ' . $e->getMessage());
 }
 ?>

@@ -24,6 +24,9 @@
 			</li>
 			<li><a href="appointment-history.php"><i class="fa fa-folder-open"></i> Appointments</a></li>
 			<li><a href="payments.php"><i class="fa fa-credit-card"></i> Payments</a></li>
+			<li><a href="search.php"><i class="fa fa-search"></i> Search</a></li>
+			<li><a href="contact-queries.php"><i class="fa fa-envelope"></i> Contact Queries</a></li>
+			<li><a href="feedbacks.php"><i class="fa fa-commenting"></i> Feedbacks</a></li>
 
 
 		</ul>

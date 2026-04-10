@@ -58,14 +58,14 @@ check_login();
 	$doctorId = (int)($_SESSION['id'] ?? 0);
 	$completedCount = 0;
 	$activeCount = 0;
-	$tableCheck = mysqli_query($con, "SHOW TABLES LIKE 'current_appointments'");
-	$appointmentTable = ($tableCheck && mysqli_num_rows($tableCheck) > 0) ? 'current_appointments' : 'appointment';
+	$tableCheck = hms_query($con, "SHOW TABLES LIKE 'current_appointments'");
+	$appointmentTable = ($tableCheck && hms_num_rows($tableCheck) > 0) ? 'current_appointments' : 'appointment';
 	if($doctorId > 0) {
-		$res1 = mysqli_query($con, "SELECT COUNT(*) as total FROM $appointmentTable WHERE doctorId='$doctorId' AND visitStatus='Completed'");
-		$row1 = mysqli_fetch_assoc($res1);
+		$res1 = hms_query($con, "SELECT COUNT(*) as total FROM $appointmentTable WHERE doctorId='$doctorId' AND visitStatus='Completed'");
+		$row1 = hms_fetch_assoc($res1);
 		$completedCount = (int)($row1['total'] ?? 0);
-		$res2 = mysqli_query($con, "SELECT COUNT(*) as total FROM $appointmentTable WHERE doctorId='$doctorId' AND userStatus='1' AND doctorStatus='1' AND visitStatus!='Completed'");
-		$row2 = mysqli_fetch_assoc($res2);
+		$res2 = hms_query($con, "SELECT COUNT(*) as total FROM $appointmentTable WHERE doctorId='$doctorId' AND userStatus='1' AND doctorStatus='1' AND visitStatus!='Completed'");
+		$row2 = hms_fetch_assoc($res2);
 		$activeCount = (int)($row2['total'] ?? 0);
 	}
 	?>
@@ -147,6 +147,56 @@ check_login();
 								<a href="appointment-history.php">
 									View Completed with Prescription
 								</a>
+							</p>
+						</div>
+					</div>
+
+				</div>
+			</div>
+		</div>
+		<div class="col-md-4 col-sm-4 ">
+			<div class="x_panel tile fixed_height_320">
+				<div class="x_title">
+					<h2>Contact Us</h2>
+					<ul class="nav navbar-right panel_toolbox">
+						<li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
+						</li>
+						<li><a class="close-link"><i class="fa fa-close"></i></a>
+						</li>
+					</ul>
+					<div class="clearfix"></div>
+				</div>
+				<div class="x_content">
+					<div class="panel panel-white no-radius text-center">
+						<div class="panel-body">
+							<span class="fa-stack fa-2x"> <i class="fa fa-square fa-stack-2x text-primary"></i> <i class="fa fa-envelope fa-stack-1x fa-inverse"></i> </span>
+							<p class="cl-effect-1">
+								<a href="contact-us.php">Send Contact Query</a>
+							</p>
+						</div>
+					</div>
+
+				</div>
+			</div>
+		</div>
+		<div class="col-md-4 col-sm-4 ">
+			<div class="x_panel tile fixed_height_320">
+				<div class="x_title">
+					<h2>Feedback</h2>
+					<ul class="nav navbar-right panel_toolbox">
+						<li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
+						</li>
+						<li><a class="close-link"><i class="fa fa-close"></i></a>
+						</li>
+					</ul>
+					<div class="clearfix"></div>
+				</div>
+				<div class="x_content">
+					<div class="panel panel-white no-radius text-center">
+						<div class="panel-body">
+							<span class="fa-stack fa-2x"> <i class="fa fa-square fa-stack-2x text-primary"></i> <i class="fa fa-commenting fa-stack-1x fa-inverse"></i> </span>
+							<p class="cl-effect-1">
+								<a href="feedback.php">Share Feedback</a>
 							</p>
 						</div>
 					</div>

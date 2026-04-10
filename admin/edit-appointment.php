@@ -12,20 +12,23 @@ if ($aid <= 0) {
 }
 
 if (isset($_POST['submit'])) {
-	$appDate = mysqli_real_escape_string($con, $_POST['appointmentDate']);
-	$appTime = mysqli_real_escape_string($con, $_POST['appointmentTime']);
+	$appDate = hms_escape($con, $_POST['appointmentDate']);
+	$appTime = hms_escape($con, $_POST['appointmentTime']);
 	$fees = (int)$_POST['consultancyFees'];
-	$paymentStatus = mysqli_real_escape_string($con, $_POST['paymentStatus']);
-	$visitStatus = mysqli_real_escape_string($con, $_POST['visitStatus']);
+	$paymentStatus = hms_escape($con, $_POST['paymentStatus']);
+	$visitStatus = hms_escape($con, $_POST['visitStatus']);
 
-	mysqli_query($con, "UPDATE appointment SET appointmentDate='$appDate', appointmentTime='$appTime', consultancyFees='$fees', paymentStatus='$paymentStatus', visitStatus='$visitStatus' WHERE id='$aid'");
+	hms_query($con, "UPDATE appointment SET appointmentDate='$appDate', appointmentTime='$appTime', consultancyFees='$fees', paymentStatus='$paymentStatus', visitStatus='$visitStatus' WHERE id='$aid'");
+	if (in_array($visitStatus, ['Completed', 'Cancelled'], true)) {
+		hms_archive_appointment($con, 'appointment', $aid);
+	}
 	$_SESSION['msg'] = 'Appointment updated successfully.';
 	header('location:appointment-history.php');
 	exit();
 }
 
-$q = mysqli_query($con, "SELECT appointment.*, users.fullName as patientName, doctors.doctorName as doctorName FROM appointment JOIN users ON users.id=appointment.userId JOIN doctors ON doctors.id=appointment.doctorId WHERE appointment.id='$aid'");
-$row = mysqli_fetch_array($q);
+$q = hms_query($con, "SELECT appointment.*, users.fullName as patientName, doctors.doctorName as doctorName FROM appointment JOIN users ON users.id=appointment.userId JOIN doctors ON doctors.id=appointment.doctorId WHERE appointment.id='$aid'");
+$row = hms_fetch_array($q);
 if (!$row) {
 	header('location:appointment-history.php');
 	exit();

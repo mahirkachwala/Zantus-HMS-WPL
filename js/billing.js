@@ -1,9 +1,7 @@
-// Load theme on page load
 if(localStorage.getItem("theme") === "dark"){
 	document.body.classList.add("dark-mode");
 }
 
-// Task 10: Calculate Total Billing
 let billingArray = [1500, 3000, 900];
 function calculateTotalBill(){
 let sum = 0;
@@ -14,7 +12,6 @@ document.getElementById("billingTotal").innerText =
 "Total Hospital Bill = " + sum;
 }
 
-// Task 4: Patient Bill Calculator
 function createPatientBill() {
     var name = document.getElementById("billPatientName").value;
     var days = parseInt(document.getElementById("billDays").value);
@@ -26,7 +23,7 @@ function createPatientBill() {
     document.getElementById("patientBillFinal").innerHTML =
         "Final Bill After Insurance: ₹" + finalAmount;
 }
-// Attach event listener for patient bill calculation
+// Button click event triggers billing calculation and DOM update.
 if (document.getElementById("billCalcBtn")) {
     document.getElementById("billCalcBtn").addEventListener("click", createPatientBill);
 }

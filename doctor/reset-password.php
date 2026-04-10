@@ -1,18 +1,27 @@
 <?php
 session_start();
-//error_reporting(0);
 include("include/config.php");
-// Code for updating Password
+
+function isStrongPassword($password) {
+	return (bool)preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/', (string)$password);
+}
+
 if(isset($_POST['change']))
 {
 $cno=$_SESSION['cnumber'];
 $email=$_SESSION['email'];
-$newpassword=md5($_POST['password']);
-$query=mysqli_query($con,"update doctors set password='$newpassword' where contactno='$cno' and docEmail='$email'");
-if ($query) {
-echo "<script>alert('Password successfully updated.');</script>";
-echo "<script>window.location.href ='index.php'</script>";
-}
+$newpassword=$_POST['password'];
+	if(($_POST['password'] ?? '') !== ($_POST['password_again'] ?? '')) {
+		echo "<script>alert('Password and Confirm Password Field do not match.');</script>";
+	} elseif(!isStrongPassword($newpassword)) {
+		echo "<script>alert('Password must be minimum 8 characters with uppercase, lowercase, number and special character.');</script>";
+	} else {
+		$query=hms_query($con,"update doctors set password='$newpassword' where contactno='$cno' and docEmail='$email'");
+		if ($query) {
+		echo "<script>alert('Password successfully updated.');</script>";
+		echo "<script>window.location.href ='index.php'</script>";
+		}
+	}
 
 }
 
@@ -24,7 +33,7 @@ echo "<script>window.location.href ='index.php'</script>";
 <html lang="en">
 	<head>
 		<title>Password Reset</title>
-		
+
 		<link href="http://fonts.googleapis.com/css?family=Lato:300,400,400italic,600,700|Raleway:300,400,500,600,700|Crete+Round:400italic" rel="stylesheet" type="text/css" />
 		<link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
 		<link rel="stylesheet" href="vendor/fontawesome/css/font-awesome.min.css">
@@ -39,6 +48,12 @@ echo "<script>window.location.href ='index.php'</script>";
 				<script type="text/javascript">
 function valid()
 {
+ if(!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(document.passwordreset.password.value || ''))
+{
+alert("Password must be minimum 8 characters with uppercase, lowercase, number and special character.");
+document.passwordreset.password.focus();
+return false;
+}
  if(document.passwordreset.password.value!= document.passwordreset.password_again.value)
 {
 alert("Password and Confirm Password Field do not match  !!");
@@ -69,20 +84,20 @@ return true;
 
 <div class="form-group">
 <span class="input-icon">
-<input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+<input type="password" class="form-control" id="password" name="password" placeholder="Password" minlength="8" required>
 <i class="fa fa-lock"></i> </span>
 </div>
-	
+
 
 <div class="form-group">
 <span class="input-icon">
 <input type="password" class="form-control"  id="password_again" name="password_again" placeholder="Password Again" required>
 <i class="fa fa-lock"></i> </span>
 </div>
-							
+
 
 							<div class="form-actions">
-								
+
 								<button type="submit" class="btn btn-primary pull-right" name="change">
 									Change <i class="fa fa-arrow-circle-right"></i>
 								</button>
@@ -99,7 +114,7 @@ return true;
 					<div class="copyright">
 						&copy; <span class="current-year"></span><span class="text-bold text-uppercase"> HMS</span>. <span>All rights reserved</span>
 					</div>
-			
+
 				</div>
 
 			</div>
@@ -111,7 +126,7 @@ return true;
 		<script src="vendor/perfect-scrollbar/perfect-scrollbar.min.js"></script>
 		<script src="vendor/switchery/switchery.min.js"></script>
 		<script src="vendor/jquery-validation/jquery.validate.min.js"></script>
-	
+
 		<script src="assets/js/main.js"></script>
 
 		<script src="assets/js/login.js"></script>
@@ -121,7 +136,7 @@ return true;
 				Login.init();
 			});
 		</script>
-	
+
 	</body>
-	<!-- end: BODY -->
+
 </html>

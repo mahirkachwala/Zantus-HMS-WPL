@@ -6,13 +6,13 @@ include('include/checklogin.php');
 check_login();
 
 function tableExists($con, $tableName) {
-	$check = mysqli_query($con, "SHOW TABLES LIKE '" . mysqli_real_escape_string($con, $tableName) . "'");
-	return ($check && mysqli_num_rows($check) > 0);
+	$check = hms_query($con, "SHOW TABLES LIKE '" . hms_escape($con, $tableName) . "'");
+	return ($check && hms_num_rows($check) > 0);
 }
 
 function appointmentColumnExists($con, $table, $columnName) {
-	$check = mysqli_query($con, "SHOW COLUMNS FROM $table LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
-	return ($check && mysqli_num_rows($check) > 0);
+	$check = hms_query($con, "SHOW COLUMNS FROM $table LIKE '" . hms_escape($con, $columnName) . "'");
+	return ($check && hms_num_rows($check) > 0);
 }
 
 // Determine which appointment table to use
@@ -22,10 +22,31 @@ $appointmentTable = $useCurrentAppointments ? 'current_appointments' : 'appointm
 $hasVisitStatus = appointmentColumnExists($con, $appointmentTable, 'visitStatus');
 $hasPaymentStatus = appointmentColumnExists($con, $appointmentTable, 'paymentStatus');
 $hasPaymentOption = appointmentColumnExists($con, $appointmentTable, 'paymentOption');
+$hasPaymentRef = appointmentColumnExists($con, $appointmentTable, 'paymentRef');
+$hasPaidAt = appointmentColumnExists($con, $appointmentTable, 'paidAt');
+$hasCheckOutTime = appointmentColumnExists($con, $appointmentTable, 'checkOutTime');
 
 if(isset($_GET['cancel']))
 {
-	mysqli_query($con,"update $appointmentTable set userStatus='0' where id = '".$_GET['id']."'");
+	$aid = (int)($_GET['id'] ?? 0);
+	$apptRow = hms_query($con, "SELECT * FROM $appointmentTable WHERE id='$aid' AND userId='".(int)$_SESSION['id']."' LIMIT 1");
+	$apptData = ($apptRow) ? hms_fetch_array($apptRow) : null;
+	$isPaid = ($hasPaymentStatus && in_array(strtolower((string)($apptData['paymentStatus'] ?? '')), ['paid','paid at hospital'], true))
+		|| ($hasPaymentRef && !empty($apptData['paymentRef']))
+		|| ($hasPaidAt && !empty($apptData['paidAt']));
+
+	$updates = ["userStatus='0'"];
+	if($hasVisitStatus) {
+		$updates[] = "visitStatus='Cancelled'";
+	}
+	if($hasPaymentStatus && !$isPaid) {
+		$updates[] = "paymentStatus='Cancelled'";
+	}
+	if($hasCheckOutTime) {
+		$updates[] = "checkOutTime=NOW()";
+	}
+	hms_query($con,"update $appointmentTable set ".implode(', ', $updates)." where id = '$aid' and userId='".(int)$_SESSION['id']."'");
+	hms_archive_appointment($con, $appointmentTable, $aid);
 	$_SESSION['msg']="Your appointment canceled !!";
 	header("location:appointments.php");
 	exit();
@@ -82,9 +103,9 @@ if(isset($_GET['cancel']))
 					if($hasVisitStatus) {
 						$activeWhere .= " AND COALESCE($appointmentTable.visitStatus,'Scheduled')='Scheduled'";
 					}
-					$sql=mysqli_query($con,"select doctors.doctorName as docname,$appointmentTable.* from $appointmentTable join doctors on doctors.id=$appointmentTable.doctorId where $appointmentTable.userId='".$_SESSION['id']."' and (".$activeWhere.") order by $appointmentTable.id desc");
+					$sql=hms_query($con,"select doctors.doctorName as docname,$appointmentTable.* from $appointmentTable join doctors on doctors.id=$appointmentTable.doctorId where $appointmentTable.userId='".$_SESSION['id']."' and (".$activeWhere.") order by $appointmentTable.id desc");
 					$cnt=1;
-					while($row=mysqli_fetch_array($sql)) {
+					while($row=hms_fetch_array($sql)) {
 					?>
 					<tr>
 						<td><?php echo $cnt; ?>.</td>
@@ -93,22 +114,31 @@ if(isset($_GET['cancel']))
 						<td><?php echo htmlentities($row['consultancyFees']); ?></td>
 						<td>
 							<?php 
-							$paymentStatus = $row['paymentStatus'] ?? 'Pending';
-							if($paymentStatus === 'Paid'): ?>
+							$paymentStatus = (string)($row['paymentStatus'] ?? 'Pending');
+							$isPaid = ($hasPaymentStatus && in_array(strtolower($paymentStatus), ['paid','paid at hospital'], true))
+								|| ($hasPaymentRef && !empty($row['paymentRef']))
+								|| ($hasPaidAt && !empty($row['paidAt']));
+							$isHospitalPayment = $isPaid && (
+								($hasPaymentOption && (string)($row['paymentOption'] ?? '') === 'PayLater')
+								|| in_array(strtolower($paymentStatus), ['pay at hospital', 'paid at hospital'], true)
+							);
+							if($isHospitalPayment): ?>
+								<span class="status-active">Paid at Hospital</span>
+							<?php elseif($isPaid): ?>
 								<span class="status-active">Paid</span>
-							<?php elseif($paymentStatus === 'Pay at Hospital'): ?>
-								<span style="color:#1d4ed8;font-weight:700;">Pay at Hospital</span>
+							<?php elseif(strcasecmp($paymentStatus, 'Pay at Hospital') === 0): ?>
+								<span class="status-info">Pay at Hospital</span>
 							<?php else: ?>
-								<span class="status-cancelled">Pending</span>
+								<span class="status-warning">Pending</span>
 							<?php endif; ?>
 						</td>
 						<td><?php echo htmlentities($row['appointmentDate'].' / '.$row['appointmentTime']); ?></td>
 						<td><span class="status-active">Active</span></td>
 						<td>
 							<div style="display:flex; gap:5px; flex-wrap:wrap;">
-								<a href="appointments.php?id=<?php echo (int)$row['id']; ?>&cancel=update" onClick="return confirm('Are you sure you want to cancel this appointment ?')" class="btn btn-danger btn-sm">Cancel</a>
-								<?php if(($row['paymentStatus'] ?? 'Pending') !== 'Paid' && ($row['paymentStatus'] ?? 'Pending') !== 'Pay at Hospital'): ?>
-									<a href="pay-fees.php?appointment_id=<?php echo (int)$row['id']; ?>" class="btn btn-success btn-sm">Pay Now</a>
+								<a href="appointments.php?id=<?php echo (int)$row['id']; ?>&cancel=update" onClick="return confirm('Are you sure you want to cancel this appointment ?')" class="btn btn-cancel btn-sm">Cancel</a>
+								<?php if(!$isPaid && strcasecmp((string)($row['paymentStatus'] ?? 'Pending'), 'Pay at Hospital') !== 0): ?>
+									<a href="pay-fees.php?appointment_id=<?php echo (int)$row['id']; ?>" class="btn btn-primary btn-sm">Pay Now</a>
 								<?php endif; ?>
 							</div>
 						</td>

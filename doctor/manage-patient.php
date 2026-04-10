@@ -6,8 +6,13 @@ include('include/checklogin.php');
 check_login();
 
 function tableExists($con, $tableName) {
-	$check = mysqli_query($con, "SHOW TABLES LIKE '" . mysqli_real_escape_string($con, $tableName) . "'");
-	return ($check && mysqli_num_rows($check) > 0);
+	$check = hms_query($con, "SHOW TABLES LIKE '" . hms_escape($con, $tableName) . "'");
+	return ($check && hms_num_rows($check) > 0);
+}
+
+function appointmentColumnExists($con, $table, $columnName) {
+	$check = hms_query($con, "SHOW COLUMNS FROM $table LIKE '" . hms_escape($con, $columnName) . "'");
+	return ($check && hms_num_rows($check) > 0);
 }
 
 $doctorId = (int)($_SESSION['doctor_id'] ?? $_SESSION['id'] ?? 0);
@@ -18,6 +23,12 @@ if (!in_array($patientType, ['consultancy', 'admitted'])) {
 
 $useNewPatientsTable = tableExists($con, 'patients');
 $viewTitle = ($patientType === 'admitted') ? 'Admitted Patients' : 'Consultancy Patients';
+
+$appointmentTable = tableExists($con, 'current_appointments') ? 'current_appointments' : 'appointment';
+$hasPaymentStatus = appointmentColumnExists($con, $appointmentTable, 'paymentStatus');
+$hasPaymentOption = appointmentColumnExists($con, $appointmentTable, 'paymentOption');
+$hasVisitStatus = appointmentColumnExists($con, $appointmentTable, 'visitStatus');
+$hasPrescription = appointmentColumnExists($con, $appointmentTable, 'prescription');
 
 ?>
 <!DOCTYPE html>
@@ -77,18 +88,43 @@ $viewTitle = ($patientType === 'admitted') ? 'Admitted Patients' : 'Consultancy 
 						<th>Type</th>
 						<th>Patient Contact Number</th>
 						<th>Patient Gender </th>
+						<th>Payment</th>
+						<th>Visit</th>
 						<th>Creation Date </th>
 						<th>Updation Date </th>
-						<th>Action</th>
+						<th>Workflow Action</th>
 					</tr>
 				</thead>
 				<tbody>
 					<?php
 					$cnt=1;
 					if($useNewPatientsTable) {
-						$sql = mysqli_query($con, "SELECT * FROM patients WHERE doctorId='$doctorId' AND LOWER(patientType)='" . mysqli_real_escape_string($con, $patientType) . "' ORDER BY id DESC");
+						$sql = hms_query($con, "SELECT * FROM patients WHERE doctorId='$doctorId' AND LOWER(patientType)='" . hms_escape($con, $patientType) . "' ORDER BY id DESC");
 						if($sql) {
-							while($row=mysqli_fetch_array($sql)) {
+							while($row=hms_fetch_array($sql)) {
+								$apptRow = null;
+								if ($patientType === 'consultancy') {
+									$uid = (int)($row['userId'] ?? 0);
+									$pid = (int)($row['id'] ?? 0);
+									$apptQ = hms_query($con, "SELECT * FROM $appointmentTable WHERE doctorId='".(int)$doctorId."' AND (" .
+										($pid > 0 ? "patientId='".$pid."' OR " : "") .
+										"userId='".$uid."') ORDER BY id DESC LIMIT 1");
+									if ($apptQ) {
+										$apptRow = hms_fetch_array($apptQ);
+									}
+								}
+
+								$paymentStatus = $apptRow['paymentStatus'] ?? 'Pending';
+								$paymentOption = $apptRow['paymentOption'] ?? '';
+								$visitStatus = $apptRow['visitStatus'] ?? 'Scheduled';
+								$hasPrescriptionData = !empty(trim((string)($apptRow['prescription'] ?? '')));
+								$isPaid = in_array(strtolower((string)$paymentStatus), ['paid', 'paid at hospital'], true)
+									|| !empty($apptRow['paymentRef'])
+									|| !empty($apptRow['paidAt']);
+								$isHospitalPaid = $isPaid && (
+									(strtolower((string)$paymentStatus) === 'paid at hospital')
+									|| ($paymentOption === 'PayLater')
+								);
 								?>
 								<tr>
 									<td class="center"><?php echo $cnt;?>.</td>
@@ -96,9 +132,62 @@ $viewTitle = ($patientType === 'admitted') ? 'Admitted Patients' : 'Consultancy 
 									<td><?php echo ucfirst(htmlentities($row['patientType'] ?? 'consultancy')); ?></td>
 									<td><?php echo htmlentities($row['patientPhone'] ?? ''); ?></td>
 									<td><?php echo htmlentities($row['patientGender'] ?? ''); ?></td>
+									<td>
+										<?php if($patientType !== 'consultancy'): ?>
+											--
+										<?php elseif($isHospitalPaid): ?>
+											<span style="color:#16a34a;font-weight:700;">Paid at Hospital</span>
+										<?php elseif($isPaid): ?>
+											<span style="color:#16a34a;font-weight:700;">Paid</span>
+										<?php elseif(($paymentStatus === 'Pay at Hospital') || ($paymentOption === 'PayLater')): ?>
+											<span style="color:#1d4ed8;font-weight:700;">Pay at Hospital</span>
+										<?php else: ?>
+											<span style="color:#dc2626;font-weight:700;">Pending</span>
+										<?php endif; ?>
+									</td>
+									<td>
+										<?php if($patientType !== 'consultancy'): ?>
+											--
+										<?php elseif(!$apptRow): ?>
+											<span class="text-muted">No appointment</span>
+										<?php elseif($visitStatus === 'Completed'): ?>
+											<span style="color:#16a34a;font-weight:700;">Completed</span>
+										<?php elseif($visitStatus === 'Checked In'): ?>
+											<span style="color:#1d4ed8;font-weight:700;">Checked In</span>
+										<?php else: ?>
+											Scheduled
+										<?php endif; ?>
+									</td>
 									<td><?php echo htmlentities($row['createdAt'] ?? $row['admissionDate'] ?? '--'); ?></td>
 									<td><?php echo htmlentities($row['updatedAt'] ?? '--'); ?></td>
-									<td><span class="text-muted">View in patient registry</span></td>
+									<td>
+										<?php if($patientType !== 'consultancy' || !$apptRow): ?>
+											<span class="text-muted">View in patient registry</span>
+										<?php else: ?>
+											<?php if(($visitStatus ?? 'Scheduled') === 'Scheduled'): ?>
+												<a href="visit-management.php?checkin=<?php echo (int)$apptRow['id']; ?>" class="btn btn-primary btn-xs">Check In</a>
+												<a href="visit-management.php?transfer=<?php echo (int)$apptRow['id']; ?>" class="btn btn-cancel btn-xs">Transfer to Admitted</a>
+												<a href="visit-management.php?cancelappt=<?php echo (int)$apptRow['id']; ?>" class="btn btn-cancel btn-xs">Cancel Appointment</a>
+												<?php if(!$isPaid): ?>
+													<div style="margin-top:4px;color:#dc2626;font-weight:700;">Payment Pending (complete after check-in)</div>
+												<?php endif; ?>
+											<?php elseif(($visitStatus ?? '') === 'Checked In'): ?>
+												<?php if(!$isPaid): ?>
+													<a href="visit-management.php?markpaid=<?php echo (int)$apptRow['id']; ?>" class="btn btn-success btn-xs">Mark Payment Complete</a>
+													<?php if(!$hasPrescriptionData): ?>
+														<button type="button" class="btn btn-default btn-xs" disabled style="opacity:.65;cursor:not-allowed;">Add Prescription (Locked)</button>
+														<div style="margin-top:4px;color:#6b7280;">Receive payment first to enable prescription.</div>
+													<?php endif; ?>
+												<?php elseif(!$hasPrescriptionData): ?>
+													<a href="add-prescription.php?appointment_id=<?php echo (int)$apptRow['id']; ?>" class="btn btn-primary btn-xs">Add Prescription</a>
+												<?php endif; ?>
+												<a href="visit-management.php?transfer=<?php echo (int)$apptRow['id']; ?>" class="btn btn-cancel btn-xs">Transfer to Admitted</a>
+												<a href="visit-management.php?cancelappt=<?php echo (int)$apptRow['id']; ?>" class="btn btn-cancel btn-xs">Cancel Appointment</a>
+											<?php else: ?>
+												<span style="color:#16a34a;font-weight:700;">Completed</span>
+											<?php endif; ?>
+										<?php endif; ?>
+									</td>
 								</tr>
 								<?php
 								$cnt=$cnt+1;
@@ -106,8 +195,8 @@ $viewTitle = ($patientType === 'admitted') ? 'Admitted Patients' : 'Consultancy 
 						}
 					} else {
 						if($patientType === 'consultancy') {
-							$sql=mysqli_query($con,"select * from tblpatient where Docid='$doctorId' order by ID desc");
-							if($sql) while($row=mysqli_fetch_array($sql)) {
+							$sql=hms_query($con,"select * from tblpatient where Docid='$doctorId' order by ID desc");
+							if($sql) while($row=hms_fetch_array($sql)) {
 								?>
 								<tr>
 									<td class="center"><?php echo $cnt;?>.</td>
@@ -131,7 +220,7 @@ $viewTitle = ($patientType === 'admitted') ? 'Admitted Patients' : 'Consultancy 
 					if($cnt === 1) {
 						?>
 						<tr>
-							<td colspan="8" class="text-center text-muted">No <?php echo htmlentities($viewTitle); ?> found.</td>
+							<td colspan="10" class="text-center text-muted">No <?php echo htmlentities($viewTitle); ?> found.</td>
 						</tr>
 						<?php
 					}

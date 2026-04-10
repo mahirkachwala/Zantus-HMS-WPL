@@ -6,27 +6,65 @@ include('include/checklogin.php');
 check_login();
 
 function tableExists($con, $tableName) {
-	$check = mysqli_query($con, "SHOW TABLES LIKE '" . mysqli_real_escape_string($con, $tableName) . "'");
-	return ($check && mysqli_num_rows($check) > 0);
+	$check = hms_query($con, "SHOW TABLES LIKE '" . hms_escape($con, $tableName) . "'");
+	return ($check && hms_num_rows($check) > 0);
 }
 
-if (!tableExists($con, 'prescriptions') || !tableExists($con, 'prescription_medicines')) {
+if (!tableExists($con, 'prescriptions')) {
 	$_SESSION['msg'] = 'Structured prescription tables are not available.';
 	header('location:appointment-history.php');
 	exit();
 }
 
 $appointmentId = (int)($_GET['appointment_id'] ?? 0);
+$prescriptionId = (int)($_GET['prescription_id'] ?? 0);
 $userId = (int)($_SESSION['id'] ?? 0);
 
-$q = mysqli_query($con, "SELECT p.*, a.userId, a.doctorId, a.appointmentDate, a.appointmentTime, u.fullName AS patientName, d.doctorName
-	FROM prescriptions p
-	JOIN appointment a ON a.id=p.appointment_id
-	JOIN users u ON u.id=a.userId
-	JOIN doctors d ON d.id=a.doctorId
-	WHERE p.appointment_id='$appointmentId' AND a.userId='$userId'
-	ORDER BY p.id DESC LIMIT 1");
-$prescription = ($q) ? mysqli_fetch_array($q) : null;
+$q = null;
+if($prescriptionId > 0) {
+	$q = hms_query($con, "SELECT p.*, u.fullName AS patientName, d.doctorName
+		FROM prescriptions p
+		JOIN users u ON u.id=p.patient_id
+		JOIN doctors d ON d.id=p.doctor_id
+		WHERE p.id='$prescriptionId' AND p.patient_id='$userId'
+		LIMIT 1");
+} elseif($appointmentId > 0) {
+	$q = hms_query($con, "SELECT p.*, u.fullName AS patientName, d.doctorName
+		FROM prescriptions p
+		JOIN users u ON u.id=p.patient_id
+		JOIN doctors d ON d.id=p.doctor_id
+		WHERE p.appointment_id='$appointmentId' AND p.patient_id='$userId'
+		ORDER BY p.id DESC LIMIT 1");
+}
+$prescription = ($q) ? hms_fetch_array($q) : null;
+
+if(!$prescription && $appointmentId > 0) {
+	// Fallback for migrated/mismatched appointment IDs across legacy and new tables.
+	$apptTables = ['current_appointments', 'past_appointments', 'appointment'];
+	$doctorIdFromAppointment = 0;
+	foreach($apptTables as $tableName) {
+		if(!tableExists($con, $tableName)) {
+			continue;
+		}
+		$aq = hms_query($con, "SELECT doctorId FROM $tableName WHERE id='$appointmentId' AND userId='$userId' LIMIT 1");
+		if($aq && hms_num_rows($aq) > 0) {
+			$ar = hms_fetch_assoc($aq);
+			$doctorIdFromAppointment = (int)($ar['doctorId'] ?? 0);
+			break;
+		}
+	}
+	if($doctorIdFromAppointment > 0) {
+		$q2 = hms_query($con, "SELECT p.*, u.fullName AS patientName, d.doctorName
+			FROM prescriptions p
+			JOIN users u ON u.id=p.patient_id
+			JOIN doctors d ON d.id=p.doctor_id
+			WHERE p.patient_id='$userId' AND p.doctor_id='$doctorIdFromAppointment'
+			ORDER BY p.id DESC LIMIT 1");
+		if($q2 && hms_num_rows($q2) > 0) {
+			$prescription = hms_fetch_array($q2);
+		}
+	}
+}
 
 if (!$prescription) {
 	$_SESSION['msg'] = 'Prescription not found for this appointment.';
@@ -34,7 +72,53 @@ if (!$prescription) {
 	exit();
 }
 
-$meds = mysqli_query($con, "SELECT * FROM prescription_medicines WHERE prescription_id='".(int)$prescription['id']."' ORDER BY id ASC");
+$appointmentDateTime = '-';
+$apptId = (int)($prescription['appointment_id'] ?? 0);
+if($apptId > 0) {
+	$appointmentTables = ['current_appointments', 'past_appointments', 'appointment'];
+	foreach($appointmentTables as $tableName) {
+		if(!tableExists($con, $tableName)) {
+			continue;
+		}
+		$aq = hms_query($con, "SELECT appointmentDate, appointmentTime FROM $tableName WHERE id='$apptId' AND userId='$userId' LIMIT 1");
+		if($aq && hms_num_rows($aq) > 0) {
+			$ar = hms_fetch_assoc($aq);
+			$appointmentDateTime = trim((string)($ar['appointmentDate'] ?? '') . ' ' . (string)($ar['appointmentTime'] ?? ''));
+			if($appointmentDateTime === '') {
+				$appointmentDateTime = '-';
+			}
+			break;
+		}
+	}
+}
+
+$medRows = [];
+$medicinesText = trim((string)($prescription['medicines'] ?? ''));
+if ($medicinesText !== '') {
+	$lines = preg_split('/\r\n|\r|\n/', $medicinesText);
+	foreach ($lines as $line) {
+		$line = trim($line);
+		if ($line === '') {
+			continue;
+		}
+		$item = ['medicine_name' => '-', 'dosage' => '-', 'frequency' => '-', 'duration' => '-', 'instructions' => '-'];
+		$parts = array_map('trim', explode('|', $line));
+		foreach ($parts as $part) {
+			if (stripos($part, 'Medicine:') === 0) {
+				$item['medicine_name'] = trim(substr($part, strlen('Medicine:')));
+			} elseif (stripos($part, 'Dosage:') === 0) {
+				$item['dosage'] = trim(substr($part, strlen('Dosage:')));
+			} elseif (stripos($part, 'Frequency:') === 0) {
+				$item['frequency'] = trim(substr($part, strlen('Frequency:')));
+			} elseif (stripos($part, 'Duration:') === 0) {
+				$item['duration'] = trim(substr($part, strlen('Duration:')));
+			} elseif (stripos($part, 'Instructions:') === 0) {
+				$item['instructions'] = trim(substr($part, strlen('Instructions:')));
+			}
+		}
+		$medRows[] = $item;
+	}
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -61,7 +145,7 @@ $meds = mysqli_query($con, "SELECT * FROM prescription_medicines WHERE prescript
 		<div class="row">
 			<div class="col-md-3"><strong>Patient:</strong> <?php echo htmlentities($prescription['patientName']); ?></div>
 			<div class="col-md-3"><strong>Doctor:</strong> <?php echo htmlentities($prescription['doctorName']); ?></div>
-			<div class="col-md-3"><strong>Appointment:</strong> <?php echo htmlentities($prescription['appointmentDate'].' '.$prescription['appointmentTime']); ?></div>
+			<div class="col-md-3"><strong>Appointment:</strong> <?php echo htmlentities($appointmentDateTime); ?></div>
 			<div class="col-md-3"><strong>Created:</strong> <?php echo htmlentities($prescription['created_at']); ?></div>
 		</div>
 	</div>
@@ -84,15 +168,15 @@ $meds = mysqli_query($con, "SELECT * FROM prescription_medicines WHERE prescript
 		<table class="table table-bordered table-hover">
 			<thead><tr><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Instructions</th></tr></thead>
 			<tbody>
-			<?php if($meds && mysqli_num_rows($meds)>0): while($m=mysqli_fetch_array($meds)): ?>
+			<?php if(!empty($medRows)): foreach($medRows as $m): ?>
 			<tr>
-				<td><?php echo htmlentities($m['medicine_name']); ?></td>
+				<td><?php echo htmlentities($m['medicine_name'] ?: '-'); ?></td>
 				<td><?php echo htmlentities($m['dosage'] ?: '-'); ?></td>
 				<td><?php echo htmlentities($m['frequency'] ?: '-'); ?></td>
 				<td><?php echo htmlentities($m['duration'] ?: '-'); ?></td>
 				<td><?php echo htmlentities($m['instructions'] ?: '-'); ?></td>
 			</tr>
-			<?php endwhile; else: ?>
+			<?php endforeach; else: ?>
 			<tr><td colspan="5" class="text-center text-muted">No medicines added.</td></tr>
 			<?php endif; ?>
 			</tbody>

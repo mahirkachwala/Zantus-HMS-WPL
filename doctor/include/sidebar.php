@@ -6,15 +6,16 @@
 			<li><a href="dashboard.php"><i class="fa fa-home"></i> Dashboard</a></li>
 			<li><a href="appointment-history.php"><i class="fa fa-line-chart"></i> Appointment History</a></li>
 			<li><a href="visit-management.php"><i class="fa fa-stethoscope"></i> Visit Management</a></li>
+			<li><a href="contact-us.php"><i class="fa fa-envelope"></i> Contact Us</a></li>
+			<li><a href="feedback.php"><i class="fa fa-commenting"></i> Feedback</a></li>
 
 			<li><a><i class="fa fa-user-md"></i> Patients <span class="fa fa-chevron-down"></span></a>
 				<ul class="nav child_menu">
 					<li><a href="add-patient.php">Add Patient</a></li>
-					<li><a href="manage-patient.php?patientType=consultancy">Consultancy Patients</a></li>
 					<li><a href="manage-patient.php?patientType=admitted">Admitted Patients</a></li>
 				</ul>
 			</li>
-			<li><a href="search.php"><i class="fa fa-home"></i> Search</a></li>
+			<li><a href="search.php"><i class="fa fa-search"></i> Search</a></li>
 
 
 		</ul>

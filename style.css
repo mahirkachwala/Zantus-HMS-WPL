@@ -1,4 +1,4 @@
-/* Global Theme */
+
 body {
 	font-family: Arial, sans-serif;
 	background: #f4f7fb;
@@ -10,7 +10,7 @@ h2 {
 	margin-bottom: 20px;
 }
 
-/* Layout (white-card based) */
+
 .layout {
 	display: flex;
 	gap: 30px;
@@ -38,7 +38,7 @@ h2 {
 	box-shadow: 0 4px 10px rgba(0,0,0,0.08);
 }
 
-/* Doctor Cards */
+
 .doctor-card {
 	display: inline-block;
 	width: 220px;
@@ -51,7 +51,7 @@ h2 {
 	box-shadow: 0 4px 8px rgba(0,0,0,0.06);
 }
 
-/* Table Styling */
+
 table {
 	width: 100%;
 	border-collapse: collapse;
@@ -74,7 +74,7 @@ tr:nth-child(even) {
 	background: #f2f2f2;
 }
 
-/* Hospital Gallery */
+
 .gallery {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -90,7 +90,7 @@ tr:nth-child(even) {
 	box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-/* Form Styling */
+
 .form-card {
 	width: 450px;
 	margin: 20px auto;
@@ -126,7 +126,7 @@ tr:nth-child(even) {
 	cursor: pointer;
 }
 
-/* Footer */
+
 footer {
 	background: #1f2937;
 	color: white;
@@ -135,7 +135,7 @@ footer {
 	margin-top: 40px;
 }
 
-/* Appointment form container (centered) */
+
 .appointment-container {
 	width: 400px;
 	margin: 30px auto;
@@ -172,14 +172,14 @@ footer {
 	cursor: pointer;
 }
 
-/* Billing container for centered table */
+
 .billing-container {
 	width: 90%;
 	max-width: 1000px;
 	margin: 30px auto;
 }
 
-/* Offer Highlight Box */
+
 .offer-box {
 	background: #ffeb3b;
 	color: #000;
@@ -192,7 +192,7 @@ footer {
 	animation: glow 1.5s infinite alternate;
 }
 
-/* Glow Animation */
+
 @keyframes glow {
 	from {
 		box-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
@@ -202,9 +202,9 @@ footer {
 	}
 }
 
-/* Hero Header with Cover */
+
 .hero-header {
-	/* cover removed — use solid header color */
+
 	background: #1e3a8a;
 	padding: 40px 0;
 	border-bottom: 4px solid #0f172a;
@@ -219,7 +219,7 @@ footer {
 	gap: 30px;
 }
 
-/* Logo on Left */
+
 .logo-box img {
 	width: 110px;
 	background: white;
@@ -227,7 +227,7 @@ footer {
 	border-radius: 10px;
 }
 
-/* Text Section */
+
 .hero-text {
 	color: white;
 }
@@ -242,20 +242,20 @@ footer {
 	font-size: 16px;
 }
 
-/*Dark Mode */
+
 
 .dark-mode {
     background: #0f172a;
     color: white;
 }
 
-/* Header */
+
 .dark-mode .hero-header {
     background: #0f172a;
     border-bottom: 4px solid #1e293b;
 }
 
-/* Cards & Sidebar */
+
 .dark-mode .sidebar,
 .dark-mode .content-card,
 .dark-mode .doctor-card,
@@ -265,7 +265,7 @@ footer {
     border: 1px solid #334155;
 }
 
-/* Navigation */
+
 .dark-mode nav ul {
     background: #0f172a;
 }
@@ -278,7 +278,7 @@ footer {
     color: #38bdf8;
 }
 
-/* Tables */
+
 .dark-mode table {
     background: #1e293b;
     color: white;
@@ -293,7 +293,7 @@ footer {
     color: white;
 }
 
-/* Footer */
+
 .dark-mode footer {
     background: #0f172a;
     color: white;

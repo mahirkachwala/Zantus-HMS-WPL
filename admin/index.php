@@ -5,10 +5,13 @@ include("include/config.php");
 if(isset($_POST['submit']))
 {
 	// PHP session-based admin authentication with database lookup.
-	$password = md5($_POST['password']);
-	$ret=mysqli_query($con,"SELECT * FROM admin WHERE username='".$_POST['username']."' and password='".$password."'");
-	$num=mysqli_fetch_array($ret);
-	if($num>0)
+	$username = hms_escape($con, trim($_POST['username'] ?? ''));
+	$password = $_POST['password'] ?? '';
+	$ret=hms_query($con,"SELECT * FROM admin WHERE username='".$username."' LIMIT 1");
+	$num=hms_fetch_array($ret);
+	$storedPassword = $num['password'] ?? '';
+	$isPasswordValid = ($storedPassword === $password);
+	if($num && $isPasswordValid)
 	{
 		session_regenerate_id(true);
 $extra="dashboard.php";

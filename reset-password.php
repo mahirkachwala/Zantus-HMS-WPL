@@ -1,18 +1,27 @@
 <?php
 session_start();
-//error_reporting(0);
 include("include/config.php");
-// Code for updating Password
+
+function isStrongPassword($password) {
+	return (bool)preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/', (string)$password);
+}
+
 if(isset($_POST['change']))
 {
 $name=$_SESSION['name'];
 $email=$_SESSION['email'];
-$newpassword=md5($_POST['password']);
-$query=mysqli_query($con,"update users set password='$newpassword' where fullName='$name' and email='$email'");
-if ($query) {
-echo "<script>alert('Password successfully updated.');</script>";
-echo "<script>window.location.href ='index.php'</script>";
-}
+$newpassword=$_POST['password'];
+	if(($_POST['password'] ?? '') !== ($_POST['password_again'] ?? '')) {
+		echo "<script>alert('Password and Confirm Password Field do not match.');</script>";
+	} elseif(!isStrongPassword($newpassword)) {
+		echo "<script>alert('Password must be minimum 8 characters with uppercase, lowercase, number and special character.');</script>";
+	} else {
+		$query=hms_query($con,"update users set password='$newpassword' where fullName='$name' and email='$email'");
+		if ($query) {
+		echo "<script>alert('Password successfully updated.');</script>";
+		echo "<script>window.location.href ='index.php'</script>";
+		}
+	}
 
 }
 
@@ -39,6 +48,12 @@ echo "<script>window.location.href ='index.php'</script>";
 				<script type="text/javascript">
 function valid()
 {
+ if(!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(document.passwordreset.password.value || ''))
+{
+alert("Password must be minimum 8 characters with uppercase, lowercase, number and special character.");
+document.passwordreset.password.focus();
+return false;
+}
  if(document.passwordreset.password.value!= document.passwordreset.password_again.value)
 {
 alert("Password and Confirm Password Field do not match  !!");
@@ -69,7 +84,7 @@ return true;
 
 <div class="form-group">
 <span class="input-icon">
-<input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+<input type="password" class="form-control" id="password" name="password" placeholder="Password" minlength="8" required>
 <i class="fa fa-lock"></i> </span>
 </div>
 
@@ -123,5 +138,5 @@ return true;
 		</script>
 
 	</body>
-	<!-- end: BODY -->
+
 </html>

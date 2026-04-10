@@ -16,15 +16,15 @@ function ensureAppointmentColumns($con, $table) {
 	];
 
 	foreach ($requiredColumns as $columnName => $ddl) {
-		$check = mysqli_query($con, "SHOW COLUMNS FROM $table LIKE '" . $columnName . "'");
-		if ($check && mysqli_num_rows($check) === 0) {
-			mysqli_query($con, $ddl);
+		$check = hms_query($con, "SHOW COLUMNS FROM $table LIKE '" . $columnName . "'");
+		if ($check && hms_num_rows($check) === 0) {
+			hms_query($con, $ddl);
 		}
 	}
 }
 
-$tableCheck = mysqli_query($con, "SHOW TABLES LIKE 'current_appointments'");
-$appointmentTable = ($tableCheck && mysqli_num_rows($tableCheck) > 0) ? 'current_appointments' : 'appointment';
+$tableCheck = hms_query($con, "SHOW TABLES LIKE 'current_appointments'");
+$appointmentTable = ($tableCheck && hms_num_rows($tableCheck) > 0) ? 'current_appointments' : 'appointment';
 
 ensureAppointmentColumns($con, $appointmentTable);
 
@@ -54,13 +54,20 @@ $errors = [];
 $successMsg = '';
 
 if ($appointmentId > 0) {
-	$stmt = mysqli_prepare($con, "SELECT id, consultancyFees, appointmentDate, appointmentTime, paymentStatus FROM $appointmentTable WHERE id=? AND userId=?");
-	if ($stmt) {
-		mysqli_stmt_bind_param($stmt, 'ii', $appointmentId, $userId);
-		mysqli_stmt_execute($stmt);
-		$result = mysqli_stmt_get_result($stmt);
-		$appointment = mysqli_fetch_assoc($result);
-		mysqli_stmt_close($stmt);
+	$result = hms_query_params($con, "SELECT id, consultancyFees, appointmentDate, appointmentTime, paymentStatus, userStatus, doctorStatus, visitStatus FROM $appointmentTable WHERE id=$1 AND userId=$2", [$appointmentId, $userId]);
+	if ($result) {
+		$appointment = hms_fetch_assoc($result);
+	}
+
+	if ($appointment) {
+		$visitStatusNow = (string)($appointment['visitStatus'] ?? 'Scheduled');
+		$isCancelledNow = ((int)($appointment['userStatus'] ?? 1) === 0 || (int)($appointment['doctorStatus'] ?? 1) === 0 || strcasecmp($visitStatusNow, 'Cancelled') === 0);
+		$isTransferredNow = (stripos((string)($appointment['paymentStatus'] ?? ''), 'Transferred') !== false);
+		if ($isCancelledNow || $isTransferredNow) {
+			$appointment = null;
+			$appointmentId = 0;
+			$errors[] = 'This appointment is not payable because it is cancelled or transferred.';
+		}
 	}
 
 	if ($appointment) {
@@ -104,13 +111,9 @@ if (isset($_POST['submit_payment'])) {
 	}
 
 	if ($appointmentId > 0) {
-		$stmt = mysqli_prepare($con, "SELECT consultancyFees FROM $appointmentTable WHERE id=? AND userId=?");
-		if ($stmt) {
-			mysqli_stmt_bind_param($stmt, 'ii', $appointmentId, $userId);
-			mysqli_stmt_execute($stmt);
-			$result = mysqli_stmt_get_result($stmt);
-			$row = mysqli_fetch_assoc($result);
-			mysqli_stmt_close($stmt);
+		$result = hms_query_params($con, "SELECT consultancyFees, userStatus, doctorStatus, visitStatus, paymentStatus FROM $appointmentTable WHERE id=$1 AND userId=$2", [$appointmentId, $userId]);
+		if ($result) {
+			$row = hms_fetch_assoc($result);
 		} else {
 			$row = null;
 		}
@@ -118,6 +121,12 @@ if (isset($_POST['submit_payment'])) {
 		if (!$row) {
 			$errors[] = 'Selected appointment is invalid.';
 		} else {
+			$visitStatusNow = (string)($row['visitStatus'] ?? 'Scheduled');
+			$isCancelledNow = ((int)($row['userStatus'] ?? 1) === 0 || (int)($row['doctorStatus'] ?? 1) === 0 || strcasecmp($visitStatusNow, 'Cancelled') === 0);
+			$isTransferredNow = (stripos((string)($row['paymentStatus'] ?? ''), 'Transferred') !== false);
+			if ($isCancelledNow || $isTransferredNow) {
+				$errors[] = 'This appointment is not payable because it is cancelled or transferred.';
+			}
 			$amountInput = (string)$row['consultancyFees'];
 		}
 	}
@@ -132,14 +141,8 @@ if (isset($_POST['submit_payment'])) {
 			'cardLast4' => substr($cardNumber, -4)
 		];
 		if ($appointmentId > 0) {
-			$stmt = mysqli_prepare($con, "UPDATE $appointmentTable SET paymentStatus='Paid', paymentRef=?, paidAt=NOW(), userStatus=1, doctorStatus=1, visitStatus=CASE WHEN visitStatus IS NULL OR visitStatus='' OR visitStatus='Cancelled' THEN 'Scheduled' ELSE visitStatus END WHERE id=? AND userId=?");
-			if ($stmt) {
-				mysqli_stmt_bind_param($stmt, 'sii', $txnRef, $appointmentId, $userId);
-				$ok = mysqli_stmt_execute($stmt);
-				mysqli_stmt_close($stmt);
-			} else {
-				$ok = false;
-			}
+			$updateResult = hms_query_params($con, "UPDATE $appointmentTable SET paymentStatus='Paid', paymentRef=$1, paidAt=NOW() WHERE id=$2 AND userId=$3", [$txnRef, $appointmentId, $userId]);
+			$ok = (bool)$updateResult;
 
 			if ($ok) {
 				$_SESSION['msg'] = 'Payment successful for appointment #'.$appointmentId.'.';

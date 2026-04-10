@@ -6,12 +6,12 @@ include('include/checklogin.php');
 check_login();
 
 function appointmentColumnExists($con, $tableName, $columnName) {
-	$check = mysqli_query($con, "SHOW COLUMNS FROM `$tableName` LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
-	return ($check && mysqli_num_rows($check) > 0);
+	$check = hms_query($con, "SHOW COLUMNS FROM `$tableName` LIKE '" . hms_escape($con, $columnName) . "'");
+	return ($check && hms_num_rows($check) > 0);
 }
 
-$tableCheck = mysqli_query($con, "SHOW TABLES LIKE 'current_appointments'");
-$appointmentTable = ($tableCheck && mysqli_num_rows($tableCheck) > 0) ? 'current_appointments' : 'appointment';
+$tableCheck = hms_query($con, "SHOW TABLES LIKE 'current_appointments'");
+$appointmentTable = ($tableCheck && hms_num_rows($tableCheck) > 0) ? 'current_appointments' : 'appointment';
 
 $hasPaymentStatus = appointmentColumnExists($con, $appointmentTable, 'paymentStatus');
 $hasPaymentRef = appointmentColumnExists($con, $appointmentTable, 'paymentRef');
@@ -21,14 +21,14 @@ $statusFilter = trim($_GET['status'] ?? 'all');
 $where = "1=1";
 if ($statusFilter === 'paid') {
 	if ($hasPaymentStatus || $hasPaymentRef || $hasPaidAt) {
-		$where .= " AND ((COALESCE($appointmentTable.paymentStatus,'')='Paid')";
+		$where .= " AND ((COALESCE($appointmentTable.paymentStatus,'') IN ('Paid','Paid at Hospital'))";
 		if ($hasPaymentRef) { $where .= " OR COALESCE($appointmentTable.paymentRef,'')<>''"; }
 		if ($hasPaidAt) { $where .= " OR $appointmentTable.paidAt IS NOT NULL"; }
 		$where .= ")";
 	}
 } elseif ($statusFilter === 'pending') {
 	if ($hasPaymentStatus || $hasPaymentRef || $hasPaidAt) {
-		$where .= " AND NOT ((COALESCE($appointmentTable.paymentStatus,'')='Paid')";
+		$where .= " AND NOT ((COALESCE($appointmentTable.paymentStatus,'') IN ('Paid','Paid at Hospital'))";
 		if ($hasPaymentRef) { $where .= " OR COALESCE($appointmentTable.paymentRef,'')<>''"; }
 		if ($hasPaidAt) { $where .= " OR $appointmentTable.paidAt IS NOT NULL"; }
 		$where .= ")";
@@ -37,10 +37,10 @@ if ($statusFilter === 'paid') {
 
 $paidCount = 0;
 $pendingCount = 0;
-$totQ = mysqli_query($con, "SELECT $appointmentTable.* FROM $appointmentTable");
+$totQ = hms_query($con, "SELECT $appointmentTable.* FROM $appointmentTable");
 if ($totQ) {
-	while($r = mysqli_fetch_array($totQ)) {
-		$isPaid = (($r['paymentStatus'] ?? '') === 'Paid') || (!empty($r['paymentRef'])) || (!empty($r['paidAt']));
+	while($r = hms_fetch_array($totQ)) {
+		$isPaid = in_array(strtolower((string)($r['paymentStatus'] ?? '')), ['paid', 'paid at hospital'], true) || (!empty($r['paymentRef'])) || (!empty($r['paidAt']));
 		if ($isPaid) { $paidCount++; } else { $pendingCount++; }
 	}
 }
@@ -95,9 +95,11 @@ if ($totQ) {
 			<tbody>
 			<?php
 			$cnt=1;
-			$sql = mysqli_query($con, "SELECT $appointmentTable.*, users.fullName AS pname, doctors.doctorName AS dname FROM $appointmentTable JOIN users ON users.id=$appointmentTable.userId JOIN doctors ON doctors.id=$appointmentTable.doctorId WHERE $where ORDER BY $appointmentTable.id DESC");
-			if($sql) while($row=mysqli_fetch_array($sql)) {
-				$isPaid = (($row['paymentStatus'] ?? '') === 'Paid') || (!empty($row['paymentRef'])) || (!empty($row['paidAt']));
+			$sql = hms_query($con, "SELECT $appointmentTable.*, users.fullName AS pname, doctors.doctorName AS dname FROM $appointmentTable JOIN users ON users.id=$appointmentTable.userId JOIN doctors ON doctors.id=$appointmentTable.doctorId WHERE $where ORDER BY $appointmentTable.id DESC");
+			if($sql) while($row=hms_fetch_array($sql)) {
+				$isPaid = in_array(strtolower((string)($row['paymentStatus'] ?? '')), ['paid', 'paid at hospital'], true) || (!empty($row['paymentRef'])) || (!empty($row['paidAt']));
+				$paymentStatusText = (string)($row['paymentStatus'] ?? 'Pending');
+				$isHospitalPaid = $isPaid && (strcasecmp($paymentStatusText, 'Paid at Hospital') === 0 || strcasecmp((string)($row['paymentOption'] ?? ''), 'PayLater') === 0);
 			?>
 			<tr>
 				<td><?php echo $cnt; ?>.</td>
@@ -105,7 +107,23 @@ if ($totQ) {
 				<td><?php echo htmlentities($row['pname']); ?></td>
 				<td><?php echo htmlentities($row['dname']); ?></td>
 				<td><?php echo htmlentities($row['consultancyFees']); ?></td>
-				<td><?php echo $isPaid ? '<span class="status-active">Paid</span>' : '<span class="status-cancelled">Pending</span>'; ?></td>
+				<td>
+					<?php
+					if ($isHospitalPaid) {
+						echo '<span class="status-active">Paid at Hospital</span>';
+					} elseif ($isPaid) {
+						echo '<span class="status-active">Paid</span>';
+					} elseif (strcasecmp($paymentStatusText, 'Cancelled') === 0) {
+						echo '<span class="status-cancelled">Cancelled</span>';
+					} elseif (stripos($paymentStatusText, 'Transferred') !== false) {
+						echo '<span class="status-warning">'.htmlentities($paymentStatusText).'</span>';
+					} elseif (strcasecmp($paymentStatusText, 'Pay at Hospital') === 0) {
+						echo '<span class="status-info">Pay at Hospital</span>';
+					} else {
+						echo '<span class="status-cancelled">'.htmlentities($paymentStatusText).'</span>';
+					}
+					?>
+				</td>
 				<td><?php echo htmlentities(($row['paymentRef'] ?? '') ?: '-'); ?></td>
 				<td><?php echo htmlentities(($row['paidAt'] ?? '') ?: '-'); ?></td>
 				<td><?php echo htmlentities($row['appointmentDate'].' '.$row['appointmentTime']); ?></td>

@@ -11,8 +11,8 @@ if (!isset($_SESSION['doctor_id']) && !isset($_SESSION['id'])) {
 }
 
 // Check which appointment table to use
-$currentApptCheck = mysqli_query($con, "SHOW TABLES LIKE 'current_appointments'");
-$useCurrentAppointments = mysqli_num_rows($currentApptCheck) > 0;
+$currentApptCheck = hms_query($con, "SHOW TABLES LIKE 'current_appointments'");
+$useCurrentAppointments = hms_num_rows($currentApptCheck) > 0;
 $appointmentTable = $useCurrentAppointments ? 'current_appointments' : 'appointment';
 
 function ensureAppointmentColumns($con, $table) {
@@ -27,16 +27,16 @@ function ensureAppointmentColumns($con, $table) {
 	];
 
 	foreach ($requiredColumns as $columnName => $ddl) {
-		$check = mysqli_query($con, "SHOW COLUMNS FROM $table LIKE '" . $columnName . "'");
-		if ($check && mysqli_num_rows($check) === 0) {
-			mysqli_query($con, $ddl);
+		$check = hms_query($con, "SHOW COLUMNS FROM $table LIKE '" . $columnName . "'");
+		if ($check && hms_num_rows($check) === 0) {
+			hms_query($con, $ddl);
 		}
 	}
 }
 
 function appointmentColumnExists($con, $table, $columnName) {
-	$check = mysqli_query($con, "SHOW COLUMNS FROM $table LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
-	return ($check && mysqli_num_rows($check) > 0);
+	$check = hms_query($con, "SHOW COLUMNS FROM $table LIKE '" . hms_escape($con, $columnName) . "'");
+	return ($check && hms_num_rows($check) > 0);
 }
 
 ensureAppointmentColumns($con, $appointmentTable);
@@ -46,8 +46,19 @@ $hasCheckInTime = appointmentColumnExists($con, $appointmentTable, 'checkInTime'
 $hasCheckOutTime = appointmentColumnExists($con, $appointmentTable, 'checkOutTime');
 $hasPrescription = appointmentColumnExists($con, $appointmentTable, 'prescription');
 $hasPaymentStatus = appointmentColumnExists($con, $appointmentTable, 'paymentStatus');
+$hasPaymentOption = appointmentColumnExists($con, $appointmentTable, 'paymentOption');
 $hasPaymentRef = appointmentColumnExists($con, $appointmentTable, 'paymentRef');
 $hasPaidAt = appointmentColumnExists($con, $appointmentTable, 'paidAt');
+$hasTransferTable = false;
+$hasStructuredPrescriptionsTable = false;
+$transferTableCheck = hms_query($con, "SHOW TABLES LIKE 'appointment_transfers'");
+if ($transferTableCheck && hms_num_rows($transferTableCheck) > 0) {
+	$hasTransferTable = true;
+}
+$structuredPrescriptionsCheck = hms_query($con, "SHOW TABLES LIKE 'prescriptions'");
+if ($structuredPrescriptionsCheck && hms_num_rows($structuredPrescriptionsCheck) > 0) {
+	$hasStructuredPrescriptionsTable = true;
+}
 
 $doctorId = (int)($_SESSION['doctor_id'] ?? $_SESSION['id'] ?? 0);
 
@@ -55,30 +66,45 @@ if (isset($_GET['markpaid'])) {
 	$aid = (int)$_GET['markpaid'];
 	$txnRef = 'HOSPITAL-' . date('YmdHis') . '-' . $aid;
 	$updates = [];
-	$apptRow = mysqli_query($con, "SELECT * FROM $appointmentTable WHERE id='$aid' AND doctorId='$doctorId' LIMIT 1");
-	$apptData = ($apptRow) ? mysqli_fetch_array($apptRow) : null;
-	$hasPrescriptionData = !empty(trim((string)($apptData['prescription'] ?? '')));
 	if ($hasPaymentStatus) {
-		$updates[] = "paymentStatus='Paid'";
+		$updates[] = "paymentStatus='Paid at Hospital'";
 	}
 	if ($hasPaymentRef) {
-		$updates[] = "paymentRef='" . mysqli_real_escape_string($con, $txnRef) . "'";
+		$updates[] = "paymentRef='" . hms_escape($con, $txnRef) . "'";
 	}
 	if ($hasPaidAt) {
 		$updates[] = "paidAt=NOW()";
 	}
-	if ($hasPrescriptionData && $hasVisitStatus) {
-		$updates[] = "visitStatus='Completed'";
+	if (!empty($updates)) {
+		hms_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
+		$_SESSION['msg'] = 'Payment marked as received successfully.';
 	}
-	if ($hasPrescriptionData && $hasCheckOutTime) {
+	header('location:visit-management.php');
+	exit();
+}
+
+// Cancel appointment from visit management
+if (isset($_GET['cancelappt'])) {
+	$aid = (int)$_GET['cancelappt'];
+	$apptRow = hms_query($con, "SELECT * FROM $appointmentTable WHERE id='$aid' AND doctorId='$doctorId' LIMIT 1");
+	$apptData = ($apptRow) ? hms_fetch_array($apptRow) : null;
+	$isPaid = ($hasPaymentStatus && in_array(strtolower((string)($apptData['paymentStatus'] ?? '')), ['paid','paid at hospital'], true))
+		|| ($hasPaymentRef && !empty($apptData['paymentRef']))
+		|| ($hasPaidAt && !empty($apptData['paidAt']));
+
+	$updates = ["doctorStatus='0'"];
+	if ($hasVisitStatus) {
+		$updates[] = "visitStatus='Cancelled'";
+	}
+	if ($hasPaymentStatus && !$isPaid) {
+		$updates[] = "paymentStatus='Cancelled'";
+	}
+	if ($hasCheckOutTime) {
 		$updates[] = "checkOutTime=NOW()";
 	}
-	if (!empty($updates)) {
-		mysqli_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
-		$_SESSION['msg'] = $hasPrescriptionData
-			? 'Payment marked as received and appointment moved to history.'
-			: 'Payment marked as received.';
-	}
+	hms_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
+	hms_archive_appointment($con, $appointmentTable, $aid);
+	$_SESSION['msg'] = 'Appointment cancelled successfully.';
 	header('location:visit-management.php');
 	exit();
 }
@@ -94,7 +120,7 @@ if (isset($_GET['checkin'])) {
 		$updates[] = "checkInTime=NOW()";
 	}
 	if (!empty($updates)) {
-		mysqli_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
+		hms_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
 		$_SESSION['msg'] = 'Patient checked in successfully.';
 	}
 	header('location:visit-management.php');
@@ -104,6 +130,29 @@ if (isset($_GET['checkin'])) {
 // Check-out functionality
 if (isset($_GET['checkout'])) {
 	$aid = (int)$_GET['checkout'];
+	$apptRow = hms_query($con, "SELECT * FROM $appointmentTable WHERE id='$aid' AND doctorId='$doctorId' LIMIT 1");
+	$apptData = ($apptRow) ? hms_fetch_array($apptRow) : null;
+
+	$isPaid = ($hasPaymentStatus && in_array(strtolower((string)($apptData['paymentStatus'] ?? '')), ['paid','paid at hospital'], true))
+		|| ($hasPaymentRef && !empty($apptData['paymentRef']))
+		|| ($hasPaidAt && !empty($apptData['paidAt']));
+	$hasPrescriptionData = !empty(trim((string)($apptData['prescription'] ?? '')));
+	if (!$hasPrescriptionData && $hasStructuredPrescriptionsTable) {
+		$ps = hms_query($con, "SELECT id FROM prescriptions WHERE appointment_id='$aid' ORDER BY id DESC LIMIT 1");
+		$hasPrescriptionData = ($ps && hms_num_rows($ps) > 0);
+	}
+	$isTransferred = false;
+	if ($hasTransferTable) {
+		$tr = hms_query($con, "SELECT id FROM appointment_transfers WHERE originalAppointmentId='$aid' ORDER BY id DESC LIMIT 1");
+		$isTransferred = ($tr && hms_num_rows($tr) > 0);
+	}
+
+	if (!$isPaid && !$hasPrescriptionData && !$isTransferred) {
+		$_SESSION['msg'] = 'Cannot complete appointment yet. Complete any one: Payment Received, Prescription Added, or Transfer to Admitted.';
+		header('location:visit-management.php');
+		exit();
+	}
+
 	$updates = [];
 	if ($hasVisitStatus) {
 		$updates[] = "visitStatus='Completed'";
@@ -112,9 +161,68 @@ if (isset($_GET['checkout'])) {
 		$updates[] = "checkOutTime=NOW()";
 	}
 	if (!empty($updates)) {
-		mysqli_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
+		hms_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
+		hms_archive_appointment($con, $appointmentTable, $aid);
 		$_SESSION['msg'] = 'Patient checked out successfully.';
 	}
+	header('location:visit-management.php');
+	exit();
+}
+
+// Quick transfer action (used from consultancy patient workflow page)
+if (isset($_GET['transfer'])) {
+	$appointmentId = (int)$_GET['transfer'];
+	$transferReason = trim($_GET['reason'] ?? 'Transferred from consultancy patient workflow');
+	$transferReasonEscaped = hms_escape($con, $transferReason);
+
+	$transferTableCheck = hms_query($con, "SHOW TABLES LIKE 'appointment_transfers'");
+	if (hms_num_rows($transferTableCheck) > 0) {
+		$apptDetails = hms_query($con, "SELECT * FROM $appointmentTable WHERE id='$appointmentId' AND doctorId='$doctorId'");
+		if ($apptDetails && $row = hms_fetch_array($apptDetails)) {
+			$transferQuery = "INSERT INTO appointment_transfers(
+				originalAppointmentId,
+				patientId,
+				doctorId,
+				fromType,
+				toType,
+				transferReason,
+				transferDate
+			) VALUES(
+				'$appointmentId',
+				'" . ($row['patientId'] ?? 0) . "',
+				'$doctorId',
+				'consultancy',
+				'admitted',
+				'$transferReasonEscaped',
+				NOW()
+			)";
+			if (hms_query($con, $transferQuery)) {
+				$disposeUpdates = [];
+				$isPaid = ($hasPaymentStatus && in_array(strtolower((string)($row['paymentStatus'] ?? '')), ['paid','paid at hospital'], true))
+					|| ($hasPaymentRef && !empty($row['paymentRef']))
+					|| ($hasPaidAt && !empty($row['paidAt']));
+				if ($hasVisitStatus) {
+					$disposeUpdates[] = "visitStatus='Completed'";
+				}
+				if ($hasPaymentStatus && !$isPaid) {
+					$disposeUpdates[] = "paymentStatus='Transferred to Admitted'";
+				}
+				if ($hasCheckOutTime) {
+					$disposeUpdates[] = "checkOutTime=NOW()";
+				}
+				if ($hasPrescription) {
+					$transferNote = 'Transferred to Admitted: ' . ($transferReason !== '' ? $transferReason : 'Reason not specified');
+					$disposeUpdates[] = "prescription='" . hms_escape($con, $transferNote) . "'";
+				}
+				if (!empty($disposeUpdates)) {
+					hms_query($con, "UPDATE $appointmentTable SET " . implode(', ', $disposeUpdates) . " WHERE id='$appointmentId' AND doctorId='$doctorId'");
+					hms_archive_appointment($con, $appointmentTable, $appointmentId);
+				}
+				$_SESSION['msg'] = 'Patient transferred to Admitted and appointment moved to history.';
+			}
+		}
+	}
+
 	header('location:visit-management.php');
 	exit();
 }
@@ -123,14 +231,14 @@ if (isset($_GET['checkout'])) {
 if (isset($_POST['transferToAdmitted'])) {
 	$appointmentId = (int)$_POST['appointmentId'];
 	$transferReason = trim($_POST['transferReason'] ?? '');
-	$transferReasonEscaped = mysqli_real_escape_string($con, $transferReason);
+	$transferReasonEscaped = hms_escape($con, $transferReason);
 	
 	// Check if appointment_transfers table exists
-	$transferTableCheck = mysqli_query($con, "SHOW TABLES LIKE 'appointment_transfers'");
-	if (mysqli_num_rows($transferTableCheck) > 0) {
+	$transferTableCheck = hms_query($con, "SHOW TABLES LIKE 'appointment_transfers'");
+	if (hms_num_rows($transferTableCheck) > 0) {
 		// Get appointment details
-		$apptDetails = mysqli_query($con, "SELECT * FROM $appointmentTable WHERE id='$appointmentId' AND doctorId='$doctorId'");
-		if ($apptDetails && $row = mysqli_fetch_array($apptDetails)) {
+		$apptDetails = hms_query($con, "SELECT * FROM $appointmentTable WHERE id='$appointmentId' AND doctorId='$doctorId'");
+		if ($apptDetails && $row = hms_fetch_array($apptDetails)) {
 			// Insert transfer record
 			$transferQuery = "INSERT INTO appointment_transfers(
 				originalAppointmentId, 
@@ -149,21 +257,28 @@ if (isset($_POST['transferToAdmitted'])) {
 				'$transferReasonEscaped', 
 				NOW()
 			)";
-			if (mysqli_query($con, $transferQuery)) {
+			if (hms_query($con, $transferQuery)) {
 				$disposeUpdates = [];
+				$isPaid = ($hasPaymentStatus && in_array(strtolower((string)($row['paymentStatus'] ?? '')), ['paid','paid at hospital'], true))
+					|| ($hasPaymentRef && !empty($row['paymentRef']))
+					|| ($hasPaidAt && !empty($row['paidAt']));
 				if ($hasVisitStatus) {
 					$disposeUpdates[] = "visitStatus='Completed'";
+				}
+				if ($hasPaymentStatus && !$isPaid) {
+					$disposeUpdates[] = "paymentStatus='Transferred to Admitted'";
 				}
 				if ($hasCheckOutTime) {
 					$disposeUpdates[] = "checkOutTime=NOW()";
 				}
 				if ($hasPrescription) {
 					$transferNote = 'Transferred to Admitted: ' . ($transferReason !== '' ? $transferReason : 'Reason not specified');
-					$disposeUpdates[] = "prescription='" . mysqli_real_escape_string($con, $transferNote) . "'";
+					$disposeUpdates[] = "prescription='" . hms_escape($con, $transferNote) . "'";
 				}
 
 				if (!empty($disposeUpdates)) {
-					mysqli_query($con, "UPDATE $appointmentTable SET " . implode(', ', $disposeUpdates) . " WHERE id='$appointmentId' AND doctorId='$doctorId'");
+					hms_query($con, "UPDATE $appointmentTable SET " . implode(', ', $disposeUpdates) . " WHERE id='$appointmentId' AND doctorId='$doctorId'");
+					hms_archive_appointment($con, $appointmentTable, $appointmentId);
 				}
 
 				$_SESSION['msg'] = 'Patient transferred to Admitted and appointment moved to history.';
@@ -223,27 +338,31 @@ include('include/header.php');
 				$whereVisit .= " AND COALESCE($appointmentTable.visitStatus,'Scheduled') IN ('Scheduled','Checked In')";
 			}
 			
-			$sql = mysqli_query($con, "SELECT $appointmentTable.*, users.fullName FROM $appointmentTable JOIN users ON users.id=$appointmentTable.userId WHERE $appointmentTable.doctorId='$doctorId'" . $whereVisit . " ORDER BY $appointmentTable.id DESC");
+			$sql = hms_query($con, "SELECT $appointmentTable.*, users.fullName FROM $appointmentTable JOIN users ON users.id=$appointmentTable.userId WHERE $appointmentTable.doctorId='$doctorId'" . $whereVisit . " ORDER BY $appointmentTable.id DESC");
 			
-			if ($sql) while($row = mysqli_fetch_array($sql)) {
+			if ($sql) while($row = hms_fetch_array($sql)) {
 				if ($hasVisitStatus) {
 					$status = $row['visitStatus'] ?: 'Scheduled';
 				} else {
 					$status = ((int)($row['doctorStatus'] ?? 1) === 0 || (int)($row['userStatus'] ?? 1) === 0) ? 'Cancelled' : 'Scheduled';
 				}
 				$hasPrescriptionData = !empty(trim((string)($row['prescription'] ?? '')));
-				$isPaid = ($hasPaymentStatus && strtoupper((string)($row['paymentStatus'] ?? '')) === 'PAID')
+				$isPaid = ($hasPaymentStatus && in_array(strtolower((string)($row['paymentStatus'] ?? '')), ['paid','paid at hospital'], true))
 					|| ($hasPaymentRef && !empty($row['paymentRef']))
 					|| ($hasPaidAt && !empty($row['paidAt']));
+				$isPayAtHospital = $isPaid && (($hasPaymentOption && (string)($row['paymentOption'] ?? '') === 'PayLater')
+					|| in_array(strtolower((string)($row['paymentStatus'] ?? '')), ['pay at hospital', 'paid at hospital'], true));
 			?>
 				<tr>
 					<td><?php echo $cnt; ?>.</td>
 					<td><?php echo htmlentities($row['fullName']); ?></td>
 					<td>
-						<?php if($isPaid): ?>
+						<?php if($isPayAtHospital): ?>
+							<span class="status-active">Paid at Hospital</span>
+						<?php elseif($isPaid): ?>
 							<span class="status-active">Paid</span>
 						<?php else: ?>
-							<span class="status-cancelled"><?php echo htmlentities($row['paymentStatus'] ?? 'Pending'); ?></span>
+							<span class="status-warning"><?php echo htmlentities($row['paymentStatus'] ?? 'Pending'); ?></span>
 						<?php endif; ?>
 					</td>
 					<td><?php echo htmlentities($row['appointmentDate'].' '.$row['appointmentTime']); ?></td>
@@ -251,29 +370,45 @@ include('include/header.php');
 						<?php if($status === 'Completed'): ?>
 							<span class="status-active">Completed</span>
 						<?php elseif($status === 'Checked In'): ?>
-							<span style="color:#1d4ed8;font-weight:700;">Checked In</span>
+							<span class="status-info">Checked In</span>
 						<?php else: ?>
-							<span>Scheduled</span>
+							<span class="status-warning">Scheduled</span>
 						<?php endif; ?>
 					</td>
 					<td style="font-size:12px;">
 						<?php if($status === 'Scheduled'): ?>
 							<a class="btn btn-primary btn-xs" href="visit-management.php?checkin=<?php echo (int)$row['id']; ?>">Check In</a>
+							<div style="margin-top:5px;">
+								<button type="button" class="btn btn-primary btn-xs" onclick="showTransferModal(<?php echo (int)$row['id']; ?>)">Transfer to Admitted</button>
+							</div>
+							<div style="margin-top:5px;">
+								<a class="btn btn-cancel btn-xs" href="visit-management.php?cancelappt=<?php echo (int)$row['id']; ?>" onclick="return confirm('Are you sure you want to cancel this appointment?');">Cancel Appointment</a>
+							</div>
+							<?php if(!$isPaid): ?>
+								<div style="margin-top:5px;">
+									<span class="status-warning">Payment Pending (complete after check-in)</span>
+								</div>
+							<?php endif; ?>
 						<?php elseif($status === 'Checked In'): ?>
-							<?php if(!$hasPrescriptionData): ?>
+							<?php if(!$isPaid): ?>
+								<div style="margin-bottom:5px;">
+									<a class="btn btn-primary btn-xs" href="visit-management.php?markpaid=<?php echo (int)$row['id']; ?>">Payment Received</a>
+								</div>
+								<?php if(!$hasPrescriptionData): ?>
+									<div style="margin-bottom:5px;">
+										<button type="button" class="btn btn-default btn-xs" disabled style="opacity:.65;cursor:not-allowed;">Add Prescription (Locked)</button>
+										<div class="text-muted" style="margin-top:3px;">Receive payment first to enable prescription.</div>
+									</div>
+								<?php endif; ?>
+							<?php elseif(!$hasPrescriptionData): ?>
 								<div style="margin-bottom:5px;">
 									<a class="btn btn-primary btn-xs" href="add-prescription.php?appointment_id=<?php echo (int)$row['id']; ?>">Add Prescription</a>
 								</div>
 							<?php endif; ?>
-							<?php if($hasPrescriptionData && !$isPaid): ?>
-								<div style="margin-bottom:5px;">
-									<a class="btn btn-primary btn-xs" href="visit-management.php?markpaid=<?php echo (int)$row['id']; ?>">Payment Received</a>
-								</div>
-							<?php endif; ?>
-							<?php if($hasPrescriptionData && $isPaid): ?>
-								<span class="status-active">Completed - In History</span>
-							<?php endif; ?>
-							<button class="btn btn-cancel btn-xs" onclick="showTransferModal(<?php echo (int)$row['id']; ?>)">Transfer to Admitted</button>
+							<div style="margin-bottom:5px;">
+								<button type="button" class="btn btn-primary btn-xs" onclick="showTransferModal(<?php echo (int)$row['id']; ?>)">Transfer to Admitted</button>
+							</div>
+							<a class="btn btn-cancel btn-xs" href="visit-management.php?cancelappt=<?php echo (int)$row['id']; ?>" onclick="return confirm('Are you sure you want to cancel this appointment?');">Cancel Appointment</a>
 						<?php else: ?>
 							<span class="text-muted">--</span>
 						<?php endif; ?>

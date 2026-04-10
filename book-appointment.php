@@ -10,12 +10,48 @@ if (!isset($_SESSION['id'])) {
 }
 
 // Determine which appointment table to use
-$tableCheck = mysqli_query($con, "SHOW TABLES LIKE 'current_appointments'");
-$useCurrentAppointments = mysqli_num_rows($tableCheck) > 0;
+$tableCheck = hms_query($con, "SHOW TABLES LIKE 'current_appointments'");
+$useCurrentAppointments = hms_num_rows($tableCheck) > 0;
 $appointmentTable = $useCurrentAppointments ? 'current_appointments' : 'appointment';
 
+$doctorSpecColumn = 'specilization';
+$doctorSpecType = '';
+$doctorSpecColumnCheck = hms_query($con, "SHOW COLUMNS FROM doctors LIKE 'specialization'");
+if ($doctorSpecColumnCheck && hms_num_rows($doctorSpecColumnCheck) > 0) {
+	$doctorSpecColumn = 'specialization';
+	$doctorSpecMeta = hms_fetch_assoc($doctorSpecColumnCheck);
+	$doctorSpecType = strtolower($doctorSpecMeta['Type'] ?? '');
+} else {
+	$doctorSpecLegacyCheck = hms_query($con, "SHOW COLUMNS FROM doctors LIKE 'specilization'");
+	if ($doctorSpecLegacyCheck && hms_num_rows($doctorSpecLegacyCheck) > 0) {
+		$doctorSpecMeta = hms_fetch_assoc($doctorSpecLegacyCheck);
+		$doctorSpecType = strtolower($doctorSpecMeta['Type'] ?? '');
+	}
+}
+$isDoctorSpecNumeric = preg_match('/int|decimal|float|double/', $doctorSpecType) === 1;
+
+$specTable = '';
+$specColumn = 'specialization';
+if (hms_num_rows(hms_query($con, "SHOW TABLES LIKE 'doctorspecialization'")) > 0) {
+	$specTable = 'doctorspecialization';
+	$specColumn = 'specialization';
+} elseif (hms_num_rows(hms_query($con, "SHOW TABLES LIKE 'doctorspecilization'")) > 0) {
+	$specTable = 'doctorspecilization';
+	$specColumn = 'specilization';
+} elseif (hms_num_rows(hms_query($con, "SHOW TABLES LIKE 'doctor_specialization'")) > 0) {
+	$specTable = 'doctor_specialization';
+	$specColumn = 'specialization';
+}
+
 if(isset($_POST['submit'])) {
-	$specilization = $_POST['Doctorspecialization'];
+	$selectedSpecialization = $_POST['Doctorspecialization'];
+	$specilization = $selectedSpecialization;
+	if ($isDoctorSpecNumeric && !empty($specTable)) {
+		$spQuery = hms_query($con, "SELECT $specColumn AS specialization_name FROM $specTable WHERE id='".(int)$selectedSpecialization."' LIMIT 1");
+		if ($spQuery && ($spRow = hms_fetch_assoc($spQuery))) {
+			$specilization = $spRow['specialization_name'];
+		}
+	}
 	$doctorid = (int)$_POST['doctor'];
 	$userid = $_SESSION['id'];
 	$fees = (int)$_POST['fees'];
@@ -24,20 +60,133 @@ if(isset($_POST['submit'])) {
 	$paymentOption = $_POST['paymentOption'] ?? 'BookOnly';
 	$userstatus = 1;
 	$docstatus = 1;
+	$linkedPatientId = 0;
+
+	// Create/find patient profile only when appointment is booked.
+	$patientsTableCheck = hms_query($con, "SHOW TABLES LIKE 'patients'");
+	$usePatientsTable = ($patientsTableCheck && hms_num_rows($patientsTableCheck) > 0);
+
+	if ($usePatientsTable) {
+		$patientsColumnsCheck = hms_query($con, "SHOW COLUMNS FROM patients");
+		$patientsColumns = [];
+		if ($patientsColumnsCheck) {
+			while ($pc = hms_fetch_assoc($patientsColumnsCheck)) {
+				$patientsColumns[] = $pc['Field'];
+			}
+		}
+
+		$where = ["userId='" . (int)$userid . "'"];
+		if (in_array('doctorId', $patientsColumns)) {
+			$where[] = "doctorId='" . (int)$doctorid . "'";
+		}
+		if (in_array('patientType', $patientsColumns)) {
+			$where[] = "LOWER(patientType)='consultancy'";
+		}
+		$existingPatientQ = hms_query(
+			$con,
+			"SELECT id FROM patients WHERE " . implode(' AND ', $where) . " ORDER BY id DESC LIMIT 1"
+		);
+		if ($existingPatientQ && hms_num_rows($existingPatientQ) > 0) {
+			$existingPatient = hms_fetch_assoc($existingPatientQ);
+			$linkedPatientId = (int)($existingPatient['id'] ?? 0);
+		} else {
+			$userQ = hms_query($con, "SELECT fullName,email,gender,address FROM users WHERE id='" . (int)$userid . "' LIMIT 1");
+			$userData = ($userQ && hms_num_rows($userQ) > 0) ? hms_fetch_assoc($userQ) : [];
+
+			$insertPatientCols = [];
+			$insertPatientVals = [];
+
+			if (in_array('userId', $patientsColumns)) {
+				$insertPatientCols[] = 'userId';
+				$insertPatientVals[] = "'" . (int)$userid . "'";
+			}
+			if (in_array('doctorId', $patientsColumns)) {
+				$insertPatientCols[] = 'doctorId';
+				$insertPatientVals[] = "'" . (int)$doctorid . "'";
+			}
+			if (in_array('patientName', $patientsColumns)) {
+				$insertPatientCols[] = 'patientName';
+				$insertPatientVals[] = "'" . hms_escape($con, (string)($userData['fullName'] ?? '')) . "'";
+			}
+			if (in_array('patientEmail', $patientsColumns)) {
+				$insertPatientCols[] = 'patientEmail';
+				$insertPatientVals[] = "'" . hms_escape($con, (string)($userData['email'] ?? '')) . "'";
+			}
+			if (in_array('patientGender', $patientsColumns)) {
+				$insertPatientCols[] = 'patientGender';
+				$insertPatientVals[] = "'" . hms_escape($con, (string)($userData['gender'] ?? '')) . "'";
+			}
+			if (in_array('patientAddress', $patientsColumns)) {
+				$insertPatientCols[] = 'patientAddress';
+				$insertPatientVals[] = "'" . hms_escape($con, (string)($userData['address'] ?? '')) . "'";
+			}
+			if (in_array('patientType', $patientsColumns)) {
+				$insertPatientCols[] = 'patientType';
+				$insertPatientVals[] = "'consultancy'";
+			}
+			if (in_array('status', $patientsColumns)) {
+				$insertPatientCols[] = 'status';
+				$insertPatientVals[] = "'Active'";
+			}
+			if (in_array('isEmergency', $patientsColumns)) {
+				$insertPatientCols[] = 'isEmergency';
+				$insertPatientVals[] = "'0'";
+			}
+
+			if (!empty($insertPatientCols)) {
+				$createPatientQ = hms_query(
+					$con,
+					"INSERT INTO patients(" . implode(',', $insertPatientCols) . ") VALUES(" . implode(',', $insertPatientVals) . ")"
+				);
+				if ($createPatientQ) {
+					$linkedPatientId = (int)hms_last_insert_id($con);
+				}
+			}
+		}
+	} else {
+		$tblPatientCheck = hms_query($con, "SHOW TABLES LIKE 'tblpatient'");
+		$useTblPatient = ($tblPatientCheck && hms_num_rows($tblPatientCheck) > 0);
+		if ($useTblPatient) {
+			$userQ = hms_query($con, "SELECT fullName,email,gender,address FROM users WHERE id='" . (int)$userid . "' LIMIT 1");
+			$userData = ($userQ && hms_num_rows($userQ) > 0) ? hms_fetch_assoc($userQ) : [];
+
+			$legacyExistsQ = hms_query(
+				$con,
+				"SELECT ID FROM tblpatient WHERE Docid='" . (int)$doctorid . "' AND PatientEmail='" . hms_escape($con, (string)($userData['email'] ?? '')) . "' LIMIT 1"
+			);
+			if (!$legacyExistsQ || hms_num_rows($legacyExistsQ) === 0) {
+				hms_query(
+					$con,
+					"INSERT INTO tblpatient(Docid,PatientName,PatientContno,PatientEmail,PatientGender,PatientAdd,PatientAge) VALUES('" .
+					(int)$doctorid . "','" .
+					hms_escape($con, (string)($userData['fullName'] ?? '')) . "',NULL,'" .
+					hms_escape($con, (string)($userData['email'] ?? '')) . "','" .
+					hms_escape($con, (string)($userData['gender'] ?? '')) . "','" .
+					hms_escape($con, (string)($userData['address'] ?? '')) . "',NULL)"
+				);
+			}
+		}
+	}
 	
 	// Check if using new schema
-	$columnsCheck = mysqli_query($con, "SHOW COLUMNS FROM $appointmentTable");
+	$columnsCheck = hms_query($con, "SHOW COLUMNS FROM $appointmentTable");
 	$columns = [];
-	while ($col = mysqli_fetch_assoc($columnsCheck)) {
+	while ($col = hms_fetch_assoc($columnsCheck)) {
 		$columns[] = $col['Field'];
 	}
 	
 	$hasPaymentOption = in_array('paymentOption', $columns);
 	$hasAppointmentType = in_array('appointmentType', $columns);
 	$hasPaymentStatus = in_array('paymentStatus', $columns);
+	$hasPatientId = in_array('patientId', $columns);
 	
 	$insertCols = "doctorSpecialization,doctorId,userId,consultancyFees,appointmentDate,appointmentTime,userStatus,doctorStatus";
 	$insertVals = "'$specilization','$doctorid','$userid','$fees','$appdate','$time','$userstatus','$docstatus'";
+
+	if ($hasPatientId && $linkedPatientId > 0) {
+		$insertCols .= ",patientId";
+		$insertVals .= ",'$linkedPatientId'";
+	}
 	
 	if ($hasAppointmentType) {
 		$insertCols .= ",appointmentType";
@@ -61,10 +210,10 @@ if(isset($_POST['submit'])) {
 		}
 	}
 	
-	$query = mysqli_query($con, "INSERT INTO $appointmentTable($insertCols) VALUES($insertVals)");
+	$query = hms_query($con, "INSERT INTO $appointmentTable($insertCols) VALUES($insertVals)");
 	
 	if($query) {
-		$appointmentId = mysqli_insert_id($con);
+		$appointmentId = hms_last_insert_id($con);
 		
 		if ($paymentOption === 'PayNow') {
 			$_SESSION['msg1'] = "Appointment created. Proceed to payment.";
@@ -75,7 +224,7 @@ if(isset($_POST['submit'])) {
 		}
 		exit();
 	} else {
-		$_SESSION['error'] = "Error booking appointment: " . mysqli_error($con);
+		$_SESSION['error'] = "Error booking appointment: " . hms_last_error($con);
 	}
 }
 ?>
@@ -101,15 +250,15 @@ if(isset($_POST['submit'])) {
 			transition: all 0.2s ease;
 		}
 		.payment-option-card:hover {
-			border-color: #1e40af;
-			background: #f0f9ff;
+			border-color: #337ab7;
+			background: #f7fbff;
 		}
 		.payment-option-card input[type="radio"] {
 			cursor: pointer;
 		}
 		.payment-option-card.selected {
-			border-color: #1e40af;
-			background: #f0f9ff;
+			border-color: #337ab7;
+			background: #f7fbff;
 		}
 	</style>
 	<script>
@@ -117,7 +266,7 @@ if(isset($_POST['submit'])) {
 			$.ajax({
 				type: "POST",
 				url: "get_doctor.php",
-				data:'specilizationid='+val,
+				data:'specializationid='+val,
 				success: function(data){
 					$("#doctor").html(data);
 				}
@@ -173,9 +322,10 @@ if(isset($_POST['submit'])) {
 									<select name="Doctorspecialization" class="form-control" onChange="getdoctor(this.value);" required="required">
 										<option value="">Select Specialization</option>
 										<?php 
-										$ret=mysqli_query($con,"select * from doctorspecilization");
-										while($row=mysqli_fetch_array($ret)) {
-											echo "<option value='".htmlentities($row['specilization'])."'>".htmlentities($row['specilization'])."</option>";
+										$ret=hms_query($con,"SELECT id, $specColumn AS specialization_name FROM $specTable ORDER BY $specColumn ASC");
+										while($row=hms_fetch_array($ret)) {
+											$optionValue = $isDoctorSpecNumeric ? $row['id'] : $row['specialization_name'];
+											echo "<option value='".htmlentities($optionValue)."'>".htmlentities($row['specialization_name'])."</option>";
 										}
 										?>
 									</select>
@@ -245,10 +395,10 @@ if(isset($_POST['submit'])) {
 								</div>
 
 								<hr style="margin:20px 0;">
-								<button type="submit" name="submit" class="btn btn-primary btn-lg" style="min-width:150px;">
+								<button type="submit" name="submit" class="btn btn-o btn-primary" style="min-width:150px;">
 									<i class="fa fa-check"></i> Continue
 								</button>
-								<a href="appointments.php" class="btn btn-default btn-lg">Cancel</a>
+								<a href="appointments.php" class="btn btn-o btn-default">Cancel</a>
 							</form>
 						</div>
 					</div>

@@ -5,9 +5,9 @@ error_reporting(0);
 if(isset($_POST['submit']))
 {
 	// Server-side login check creates doctor session state.
-	$ret=mysqli_query($con,"SELECT * FROM doctors WHERE docEmail='".$_POST['username']."' and password='".md5($_POST['password'])."'");
-	$num=mysqli_fetch_array($ret);
-	if($num>0)
+	$ret=hms_query($con,"SELECT * FROM doctors WHERE docEmail='".$_POST['username']."' and password='".$_POST['password']."'");
+	$num=hms_fetch_array($ret);
+	if($num)
 	{
 		session_regenerate_id(true);
 		$extra="dashboard.php";
@@ -17,7 +17,7 @@ if(isset($_POST['submit']))
 		$_SESSION['doctorName']=$num['doctorName'];
 		$uip=$_SERVER['REMOTE_ADDR'];
 		$status=1;
-		$log=mysqli_query($con,"insert into doctorslog(uid,username,userip,status) values('".$_SESSION['id']."','".$_SESSION['dlogin']."','$uip','$status')");
+		$log=hms_query($con,"insert into doctorslog(uid,username,userip,status) values('".$_SESSION['id']."','".$_SESSION['dlogin']."','$uip','$status')");
 		$host=$_SERVER['HTTP_HOST'];
 		$uri=rtrim(dirname($_SERVER['PHP_SELF']),'/\\');
 		header("location:http://$host$uri/$extra");
@@ -29,7 +29,7 @@ if(isset($_POST['submit']))
 		$_SESSION['dlogin']=$_POST['username'];
 		$uip=$_SERVER['REMOTE_ADDR'];
 		$status=0;
-		mysqli_query($con,"insert into doctorslog(username,userip,status) values('".$_SESSION['dlogin']."','$uip','$status')");
+		hms_query($con,"insert into doctorslog(username,userip,status) values('".$_SESSION['dlogin']."','$uip','$status')");
 		$_SESSION['errmsg']="Invalid username or password";
 		$extra="index.php";
 		$uri  = rtrim(dirname($_SERVER['PHP_SELF']),'/\\');

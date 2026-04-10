@@ -1,0 +1,917 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.0
+-- https://www.phpmyadmin.net/
+--
+-- Host: localhost
+-- Generation Time: Mar 23, 2026 at 07:16 AM
+-- Server version: 10.4.27-MariaDB
+-- PHP Version: 7.4.33
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `hms`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `active_appointments`
+-- (See below for the actual view)
+--
+CREATE TABLE `active_appointments` (
+`id` int(11)
+,`doctorSpecialization` varchar(255)
+,`doctorId` int(11)
+,`userId` int(11)
+,`patientId` int(11)
+,`consultancyFees` int(11)
+,`appointmentDate` varchar(255)
+,`appointmentTime` varchar(255)
+,`postingDate` timestamp
+,`userStatus` int(11)
+,`doctorStatus` int(11)
+,`visitStatus` varchar(30)
+,`checkInTime` datetime
+,`checkOutTime` datetime
+,`prescription` mediumtext
+,`paymentStatus` varchar(20)
+,`paymentRef` varchar(64)
+,`paidAt` datetime
+,`appointmentType` varchar(50)
+,`paymentOption` enum('PayNow','PayLater','BookOnly')
+,`updationDate` timestamp
+);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `admin`
+--
+
+CREATE TABLE `admin` (
+  `id` int(11) NOT NULL,
+  `username` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `updationDate` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `admin`
+--
+
+INSERT INTO `admin` (`id`, `username`, `password`, `updationDate`) VALUES
+(1, 'admin', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 06:53:09');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `appointment_transfers`
+--
+
+CREATE TABLE `appointment_transfers` (
+  `id` int(11) NOT NULL,
+  `originalAppointmentId` int(11) NOT NULL,
+  `transferredAppointmentId` int(11) DEFAULT NULL,
+  `patientId` int(11) NOT NULL,
+  `doctorId` int(11) NOT NULL,
+  `fromType` varchar(50) DEFAULT 'consultancy',
+  `toType` varchar(50) DEFAULT 'admitted',
+  `transferReason` varchar(255) DEFAULT NULL,
+  `transferDate` datetime DEFAULT current_timestamp(),
+  `transferredAt` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `appointment_transfers`
+--
+
+INSERT INTO `appointment_transfers` (`id`, `originalAppointmentId`, `transferredAppointmentId`, `patientId`, `doctorId`, `fromType`, `toType`, `transferReason`, `transferDate`, `transferredAt`) VALUES
+(1, 37, NULL, 0, 7, 'consultancy', 'admitted', 'surgery', '2026-03-23 00:59:28', '2026-03-22 19:29:28'),
+(2, 40, NULL, 0, 11, 'consultancy', 'admitted', 'surgery', '2026-03-23 01:16:26', '2026-03-22 19:46:26');
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `completed_appointments`
+-- (See below for the actual view)
+--
+CREATE TABLE `completed_appointments` (
+`id` int(11)
+,`doctorSpecialization` varchar(255)
+,`doctorId` int(11)
+,`userId` int(11)
+,`patientId` int(11)
+,`consultancyFees` int(11)
+,`appointmentDate` varchar(255)
+,`appointmentTime` varchar(255)
+,`postingDate` timestamp
+,`userStatus` int(11)
+,`doctorStatus` int(11)
+,`visitStatus` varchar(30)
+,`checkInTime` datetime
+,`checkOutTime` datetime
+,`prescription` mediumtext
+,`paymentStatus` varchar(20)
+,`paymentRef` varchar(64)
+,`paidAt` datetime
+,`appointmentType` varchar(50)
+,`updationDate` timestamp
+);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `current_appointments`
+--
+
+CREATE TABLE `current_appointments` (
+  `id` int(11) NOT NULL,
+  `doctorSpecialization` varchar(255) DEFAULT NULL,
+  `doctorId` int(11) DEFAULT NULL,
+  `userId` int(11) DEFAULT NULL,
+  `patientId` int(11) DEFAULT NULL,
+  `consultancyFees` int(11) DEFAULT NULL,
+  `appointmentDate` varchar(255) DEFAULT NULL,
+  `appointmentTime` varchar(255) DEFAULT NULL,
+  `postingDate` timestamp NULL DEFAULT current_timestamp(),
+  `userStatus` int(11) DEFAULT NULL,
+  `doctorStatus` int(11) DEFAULT NULL,
+  `visitStatus` varchar(30) NOT NULL DEFAULT 'Scheduled',
+  `checkInTime` datetime DEFAULT NULL,
+  `checkOutTime` datetime DEFAULT NULL,
+  `prescription` mediumtext DEFAULT NULL,
+  `paymentStatus` varchar(20) NOT NULL DEFAULT 'Pending',
+  `paymentRef` varchar(64) DEFAULT NULL,
+  `paidAt` datetime DEFAULT NULL,
+  `appointmentType` varchar(50) DEFAULT 'Online',
+  `paymentOption` enum('PayNow','PayLater','BookOnly') DEFAULT 'PayLater',
+  `updationDate` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `current_appointments`
+--
+
+INSERT INTO `current_appointments` (`id`, `doctorSpecialization`, `doctorId`, `userId`, `patientId`, `consultancyFees`, `appointmentDate`, `appointmentTime`, `postingDate`, `userStatus`, `doctorStatus`, `visitStatus`, `checkInTime`, `checkOutTime`, `prescription`, `paymentStatus`, `paymentRef`, `paidAt`, `appointmentType`, `paymentOption`, `updationDate`) VALUES
+(4, 'Ayurveda', 5, 5, NULL, 8050, '2019-11-08', '1:00 PM', '2019-11-05 10:28:54', 0, 0, 'Cancelled', NULL, NULL, NULL, 'Pay at Hospital', NULL, NULL, 'Online', 'PayLater', '2026-03-22 19:09:57'),
+(5, 'Dermatologist', 9, 7, NULL, 500, '2019-11-30', '5:30 PM', '2019-11-10 18:41:34', 1, 0, 'Cancelled', NULL, NULL, NULL, 'Pay at Hospital', NULL, NULL, 'Online', 'PayLater', '2026-03-22 19:09:57'),
+(6, 'Ayurveda', 5, 2, NULL, 8050, '123231', '12323', '2022-06-12 04:29:23', 0, 1, 'Cancelled', NULL, NULL, NULL, 'Pay at Hospital', NULL, NULL, 'Online', 'PayLater', '2026-03-22 19:09:57'),
+(7, 'Dermatologist', 9, 2, NULL, 500, '2022-06-15', '23:11', '2022-06-12 16:26:06', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Pay at Hospital', NULL, NULL, 'Online', 'PayLater', '2026-03-22 19:09:57'),
+(8, 'General Physician', 3, 2, NULL, 1200, '2026-03-19', '22:00', '2026-03-20 16:24:58', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Pay at Hospital', NULL, NULL, 'Online', 'PayLater', '2026-03-22 19:09:57'),
+(9, 'General Physician', 3, 1, NULL, 1200, '2026-03-19', '22:00', '2026-03-20 16:37:05', 0, 1, 'Scheduled', NULL, NULL, NULL, 'Paid', 'ZTXN1774072559457', '2026-03-21 11:25:59', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(10, 'Dentist', 1, 7, NULL, 500, '2026-03-24', '13:00', '2026-03-21 04:14:34', 1, 0, 'Cancelled', NULL, NULL, NULL, 'Pay at Hospital', NULL, NULL, 'Online', 'PayLater', '2026-03-22 19:09:57'),
+(11, 'Dermatologist', 9, 1, NULL, 500, '2026-03-25', '17:00', '2026-03-21 04:56:42', 0, 1, 'Cancelled', NULL, NULL, NULL, 'Paid', 'ZTXN1774071885508', '2026-03-21 11:14:45', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(12, 'Homeopath', 2, 1, NULL, 600, '2026-03-26', '22:00', '2026-03-21 05:12:35', 0, 1, 'Scheduled', NULL, NULL, NULL, 'Paid', 'ZTXN1774072325727', '2026-03-21 11:22:05', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(13, 'Dermatologist', 9, 1, NULL, 500, '2026-03-21', '14:00', '2026-03-21 06:02:52', 0, 1, 'Scheduled', NULL, NULL, NULL, 'Paid', 'ZTXN1774072992719', '2026-03-21 11:33:12', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(14, 'Dentist', 1, 1, NULL, 500, '2026-03-26', '15:00', '2026-03-21 06:06:57', 0, 1, 'Scheduled', NULL, NULL, NULL, 'Paid', 'ZTXN1774073234355', '2026-03-21 11:37:14', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(15, 'Homeopath', 2, 1, NULL, 600, '2026-03-22', '13:00', '2026-03-21 06:10:53', 1, 1, 'Checked In', '2026-03-23 10:25:24', NULL, 'Diagnosis: cough | Medicines: 1', 'Paid', 'ZTXN1774073469935', '2026-03-21 11:41:09', 'Online', 'PayNow', '2026-03-23 04:55:37'),
+(16, 'Ayurveda', 8, 1, NULL, 600, '2026-03-21', '14:00', '2026-03-21 06:21:16', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Paid', 'ZTXN1774074092262', '2026-03-21 11:51:32', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(17, 'General Physician', 3, 1, NULL, 1200, '2026-03-21', '15:00', '2026-03-21 06:25:48', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Paid', 'ZTXN1774074364708', '2026-03-21 11:56:04', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(18, 'Homeopath', 2, 7, NULL, 600, '2026-03-21', '15:00', '2026-03-21 06:28:43', 0, 1, 'Scheduled', NULL, NULL, NULL, 'Paid', 'ZTXN1774074540688', '2026-03-21 11:59:00', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(19, 'Demo test', 7, 7, NULL, 200, '2026-03-26', '22:00', '2026-03-21 06:30:53', 1, 1, 'Completed', '2026-03-21 12:01:34', '2026-03-21 12:01:58', 'Paracetemol Calpol 500', 'Paid', 'ZTXN1774074678497', '2026-03-21 12:01:18', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(20, 'Demo test', 7, 7, NULL, 200, '2026-03-17', '14:06', '2026-03-21 07:06:01', 1, 1, 'Completed', '2026-03-21 12:36:52', '2026-03-22 22:23:50', 'Diagnosis: surgery | Medicines: 1 | Follow-up: 2026-03-27', 'Paid', 'ZTXN1774076784467', '2026-03-21 12:36:24', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(21, 'Demo test', 7, 7, NULL, 200, '2026-03-22', '17:00', '2026-03-21 07:16:35', 1, 1, 'Completed', '2026-03-21 12:48:41', '2026-03-21 12:50:11', 'Diagnosis: Rest | Medicines: 2 | Follow-up: 2026-03-26', 'Paid', 'ZTXN1774077414635', '2026-03-21 12:46:54', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(22, 'Demo test', 7, 1, NULL, 200, '2026-03-23', '22:00', '2026-03-22 16:50:42', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Paid', 'ZTXN1774198270564', '2026-03-22 22:21:10', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(23, 'Dentist', 1, 1, NULL, 500, '2026-03-23', '22:00', '2026-03-22 16:52:31', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Pay at Hospital', NULL, NULL, 'Online', 'PayLater', '2026-03-22 19:09:57'),
+(24, 'Dentist', 1, 7, NULL, 500, '0001-05-22', '10:00', '2026-03-22 16:52:53', 0, 1, 'Scheduled', NULL, NULL, NULL, 'Paid', 'ZTXN1774198387818', '2026-03-22 22:23:07', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(25, 'Demo test', 7, 1, NULL, 200, '2026-03-25', '10:00', '2026-03-22 16:59:04', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Pay at Hospital', NULL, NULL, 'Online', 'PayLater', '2026-03-22 19:09:57'),
+(26, 'Demo test', 7, 7, NULL, 200, '2026-03-25', '22:00', '2026-03-22 17:00:52', 1, 1, 'Completed', '2026-03-22 22:32:13', '2026-03-22 22:32:50', 'Diagnosis: surgery | Medicines: 1', 'Paid', 'ZTXN1774198866793', '2026-03-22 22:31:06', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(27, 'Demo test', 7, 8, NULL, 200, '2026-03-28', '22:00', '2026-03-22 17:19:01', 1, 1, 'Completed', '2026-03-23 00:51:21', '2026-03-23 00:51:32', NULL, 'Paid', 'ZTXN1774199954824', '2026-03-22 22:49:14', 'Online', 'PayNow', '2026-03-22 19:21:32'),
+(28, 'Dentist', 1, 8, NULL, 500, '2026-03-25', '22:00', '2026-03-22 17:21:52', 1, 1, 'Completed', '2026-03-22 22:52:33', '2026-03-22 22:53:26', 'Diagnosis: GDSGSDFG | Medicines: 1', 'Paid', 'ZTXN1774200126991', '2026-03-22 22:52:06', 'Online', 'PayNow', '2026-03-22 18:58:47'),
+(29, 'Dermatologist', 9, 1, NULL, 500, '2026-03-26', '22:00', '2026-03-22 17:31:48', 0, 1, 'Scheduled', NULL, NULL, NULL, 'Pay at Hospital', NULL, NULL, 'Online', 'PayLater', '2026-03-22 19:09:57'),
+(30, 'Dentist', 1, 1, NULL, 0, '2026-04-01', '13:20', '2026-03-22 19:00:06', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Pending', NULL, NULL, 'Online', 'BookOnly', NULL),
+(31, 'Dentist', 1, 1, NULL, 0, '2026-03-27', '14:03', '2026-03-22 19:01:18', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Pending', NULL, NULL, 'Online', 'PayNow', NULL),
+(32, 'Dentist', 1, 1, NULL, 0, '2026-03-24', '13:20', '2026-03-22 19:10:39', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Pending', NULL, NULL, 'Online', 'BookOnly', NULL),
+(33, 'Demo test', 7, 1, NULL, 0, '2026-03-28', '14:00', '2026-03-22 19:11:49', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Pay at Hospital', NULL, NULL, 'Online', 'PayLater', NULL),
+(34, 'Dermatologist', 9, 7, NULL, 500, '2026-03-25', '02:04', '2026-03-22 19:19:01', 0, 1, 'Scheduled', NULL, NULL, NULL, 'Pending', NULL, NULL, 'Online', 'BookOnly', '2026-03-22 19:19:24'),
+(35, 'Dentist', 1, 1, NULL, 500, '2026-03-27', '14:03', '2026-03-22 19:20:03', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Pay at Hospital', NULL, NULL, 'Online', 'PayLater', NULL),
+(36, 'Dentist', 1, 7, NULL, 500, '2026-03-31', '03:03', '2026-03-22 19:20:59', 1, 1, 'Completed', '2026-03-23 01:01:57', '2026-03-23 01:02:14', 'Diagnosis: dfdsfds | Medicines: 2', 'Paid', 'HOSPITAL-20260322203214-36', '2026-03-23 01:02:14', 'Online', 'PayLater', '2026-03-22 19:32:14'),
+(37, 'Demo test', 7, 7, NULL, 200, '2026-03-26', '15:05', '2026-03-22 19:27:28', 1, 1, 'Checked In', '2026-03-23 00:57:44', NULL, NULL, 'Paid', 'HOSPITAL-20260322202751-37', '2026-03-23 00:57:51', 'Online', 'PayLater', '2026-03-22 19:27:51'),
+(38, 'Dermatologist', 9, 7, NULL, 500, '2026-03-27', '03:06', '2026-03-22 19:33:13', 1, 1, 'Scheduled', NULL, NULL, NULL, 'Pending', NULL, NULL, 'Online', 'PayNow', NULL),
+(39, 'Dermatologist', 11, 7, NULL, 350, '2026-03-27', '16:17', '2026-03-22 19:45:07', 1, 1, 'Completed', '2026-03-23 01:15:21', '2026-03-23 01:15:35', 'Diagnosis: bgv | Medicines: 1', 'Paid', 'HOSPITAL-20260322204535-39', '2026-03-23 01:15:35', 'Online', 'PayLater', '2026-03-22 19:45:35'),
+(40, 'Dermatologist', 11, 7, NULL, 350, '2026-03-25', '04:19', '2026-03-22 19:46:14', 1, 1, 'Completed', '2026-03-23 01:16:19', '2026-03-23 01:16:26', 'Transferred to Admitted: surgery', 'Pay at Hospital', NULL, NULL, 'Online', 'PayLater', '2026-03-22 19:46:26'),
+(41, 'Cardiologist', 2, 10, NULL, 900, '2026-03-26', '14:17', '2026-03-23 04:44:27', 1, 1, 'Completed', '2026-03-23 10:14:48', '2026-03-23 10:15:11', 'Diagnosis: fever | Medicines: 1', 'Paid', 'HOSPITAL-20260323054511-41', '2026-03-23 10:15:11', 'Online', 'BookOnly', '2026-03-23 04:45:11'),
+(42, 'Cardiologist', 2, 11, NULL, 900, '2026-03-26', '15:07', '2026-03-23 05:33:29', 0, 1, 'Scheduled', NULL, NULL, NULL, 'Pending', NULL, NULL, 'Online', 'BookOnly', '2026-03-23 05:37:04'),
+(43, 'Neurologist', 4, 17, NULL, 1000, '2026-03-27', '15:26', '2026-03-23 05:52:38', 1, 1, 'Completed', '2026-03-23 11:23:05', '2026-03-23 11:23:35', 'Diagnosis: MEDICINE | Medicines: 1', 'Paid', 'ZTXN1774245176766', '2026-03-23 11:22:56', 'Online', 'PayNow', '2026-03-23 05:53:35');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `doctors`
+--
+
+CREATE TABLE `doctors` (
+  `id` int(11) NOT NULL,
+  `specialization` int(11) DEFAULT NULL,
+  `doctorName` varchar(255) DEFAULT NULL,
+  `address` longtext DEFAULT NULL,
+  `docFees` varchar(255) DEFAULT NULL,
+  `contactno` bigint(11) DEFAULT NULL,
+  `docEmail` varchar(255) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `creationDate` timestamp NULL DEFAULT current_timestamp(),
+  `updationDate` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `doctors`
+--
+
+INSERT INTO `doctors` (`id`, `specialization`, `doctorName`, `address`, `docFees`, `contactno`, `docEmail`, `password`, `creationDate`, `updationDate`) VALUES
+(1, 1, 'Dr. Rajesh Sharma', 'Mumbai', '800', 9876543201, 'doctor-general@gmail.com', 'general', '2026-03-23 04:10:01', NULL),
+(2, 2, 'Dr. Neha Mehta', 'Delhi', '900', 9876543202, 'doctor-cardio@gmail.com', 'cardio', '2026-03-23 04:10:01', NULL),
+(3, 3, 'Dr. Amit Verma', 'Pune', '700', 9876543203, 'doctor-derma@gmail.com', 'derma', '2026-03-23 04:10:01', NULL),
+(4, 4, 'Dr. Priya Singh', 'Bangalore', '1000', 9876543204, 'doctor-neuro@gmail.com', 'neuro', '2026-03-23 04:10:01', NULL),
+(5, 5, 'Dr. Karan Patel', 'Ahmedabad', '850', 9876543205, 'doctor-ortho@gmail.com', 'ortho', '2026-03-23 04:10:01', NULL),
+(6, 6, 'Dr. Sneha Iyer', 'Chennai', '600', 9876543206, 'doctor-pedia@gmail.com', 'pedia', '2026-03-23 04:10:01', NULL),
+(7, 7, 'Dr. Arjun Rao', 'Hyderabad', '950', 9876543207, 'doctor-psy@gmail.com', 'psy', '2026-03-23 04:10:01', NULL),
+(8, 8, 'Dr. Kavita Shah', 'Surat', '750', 9876543208, 'doctor-gyno@gmail.com', 'gyno', '2026-03-23 04:10:01', NULL),
+(9, 9, 'Dr. Rohit Kulkarni', 'Nagpur', '650', 9876543209, 'doctor-ent@gmail.com', 'ent', '2026-03-23 04:10:01', NULL),
+(10, 10, 'Dr. Meera Nair', 'Kochi', '700', 9876543210, 'doctor-eye@gmail.com', 'eye', '2026-03-23 04:10:01', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `doctorslog`
+--
+
+CREATE TABLE `doctorslog` (
+  `id` int(11) NOT NULL,
+  `uid` int(11) DEFAULT NULL,
+  `username` varchar(255) DEFAULT NULL,
+  `userip` binary(16) DEFAULT NULL,
+  `loginTime` timestamp NULL DEFAULT current_timestamp(),
+  `logout` varchar(255) DEFAULT NULL,
+  `status` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `doctorslog`
+--
+
+INSERT INTO `doctorslog` (`id`, `uid`, `username`, `userip`, `loginTime`, `logout`, `status`) VALUES
+(20, 7, 'test@demo.com', 0x3a3a3100000000000000000000000000, '2022-06-09 06:00:27', '09-06-2022 11:30:46 AM', 1),
+(21, NULL, 'test@demo.com', 0x3a3a3100000000000000000000000000, '2022-06-12 02:03:44', NULL, 0),
+(22, 7, 'test@demo.com', 0x3a3a3100000000000000000000000000, '2022-06-12 02:04:13', NULL, 1),
+(23, 7, 'test@demo.com', 0x3a3a3100000000000000000000000000, '2022-06-12 02:14:21', '12-06-2022 08:35:44 AM', 1),
+(24, 7, 'test@demo.com', 0x3a3a3100000000000000000000000000, '2022-06-12 03:06:06', '12-06-2022 09:31:42 AM', 1),
+(25, NULL, '', 0x3a3a3100000000000000000000000000, '2022-06-12 04:05:16', NULL, 0),
+(26, NULL, 'test@demo.com', 0x3a3a3100000000000000000000000000, '2022-06-12 04:07:59', NULL, 0),
+(27, 7, 'test@demo.com', 0x3a3a3100000000000000000000000000, '2022-06-12 04:08:09', '12-06-2022 09:38:39 AM', 1),
+(28, 7, 'test@demo.com', 0x3a3a3100000000000000000000000000, '2022-06-12 14:33:16', '23-03-2026 01:01:49 AM', 1),
+(29, NULL, 'test@dmo.com', 0x3a3a3100000000000000000000000000, '2022-06-12 17:21:14', NULL, 0),
+(30, NULL, 'test@gmail.com', 0x3a3a3100000000000000000000000000, '2022-06-12 17:21:28', NULL, 0),
+(31, NULL, 'test@gmail.com', 0x3a3a3100000000000000000000000000, '2022-06-12 17:21:40', NULL, 0),
+(32, NULL, 'test@test.com', 0x3a3a3100000000000000000000000000, '2022-06-12 17:22:36', NULL, 0),
+(33, 1, 'test@test.com1', 0x3a3a3100000000000000000000000000, '2022-06-12 17:22:50', NULL, 1),
+(34, NULL, 'test@demo.com', 0x3a3a3100000000000000000000000000, '2022-06-13 13:26:19', NULL, 0),
+(35, NULL, 'test@demo.com', 0x3a3a3100000000000000000000000000, '2022-06-13 13:26:31', NULL, 0),
+(36, 1, 'test@test.com1', 0x3a3a3100000000000000000000000000, '2022-06-13 13:26:55', '13-06-2022 07:15:24 PM', 1),
+(37, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2022-06-13 13:45:51', '13-06-2022 07:15:57 PM', 1),
+(38, NULL, 'test@user.com', 0x3a3a3100000000000000000000000000, '2026-03-20 15:29:20', NULL, 0),
+(39, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-20 15:29:38', '20-03-2026 09:00:33 PM', 1),
+(40, NULL, 'test@user.com', 0x3a3a3100000000000000000000000000, '2026-03-20 15:54:53', NULL, 0),
+(41, NULL, 'test@user.com', 0x3a3a3100000000000000000000000000, '2026-03-20 15:55:14', NULL, 0),
+(42, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-20 15:55:24', '20-03-2026 09:33:41 PM', 1),
+(43, NULL, 'test@user.com', 0x3a3a3100000000000000000000000000, '2026-03-20 16:04:07', NULL, 0),
+(44, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-20 16:25:35', '20-03-2026 09:56:13 PM', 1),
+(45, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-21 04:14:52', NULL, 1),
+(46, NULL, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-21 04:16:45', NULL, 0),
+(47, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-21 04:16:51', NULL, 1),
+(48, NULL, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-21 04:59:39', NULL, 0),
+(49, NULL, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-21 04:59:39', NULL, 0),
+(50, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-21 04:59:41', NULL, 1),
+(51, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-21 06:21:43', '21-03-2026 11:56:20 AM', 1),
+(52, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-21 06:26:28', NULL, 1),
+(53, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:50:14', '22-03-2026 10:21:52 PM', 1),
+(54, NULL, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:51:54', NULL, 0),
+(55, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:51:56', NULL, 1),
+(56, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:57:35', '22-03-2026 10:27:43 PM', 1),
+(57, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:57:45', '22-03-2026 10:28:02 PM', 1),
+(58, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:58:05', '22-03-2026 10:28:08 PM', 1),
+(59, NULL, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:58:09', NULL, 0),
+(60, NULL, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:58:10', NULL, 0),
+(61, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:58:13', '22-03-2026 10:28:21 PM', 1),
+(62, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:58:31', NULL, 1),
+(63, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:19:26', '22-03-2026 10:49:36 PM', 1),
+(64, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:19:42', '22-03-2026 10:49:47 PM', 1),
+(65, NULL, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:19:50', NULL, 0),
+(66, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:19:52', '22-03-2026 10:50:00 PM', 1),
+(67, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:20:02', '22-03-2026 10:50:05 PM', 1),
+(68, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:20:08', '22-03-2026 10:50:39 PM', 1),
+(69, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:20:48', '22-03-2026 10:50:54 PM', 1),
+(70, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:20:57', NULL, 1),
+(71, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:22:23', NULL, 1),
+(72, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:23:03', NULL, 1),
+(73, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:24:02', '22-03-2026 10:54:50 PM', 1),
+(74, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:24:52', '22-03-2026 10:54:56 PM', 1),
+(75, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:24:58', '22-03-2026 10:56:54 PM', 1),
+(76, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:28:26', NULL, 1),
+(77, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:37:06', NULL, 1),
+(78, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 19:19:43', '23-03-2026 12:50:24 AM', 1),
+(79, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 19:20:27', NULL, 1),
+(80, 1, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 19:31:51', NULL, 1),
+(81, 11, 'doctor-derma@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 19:44:32', NULL, 1),
+(82, 11, 'doctor-derma@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 03:39:18', NULL, 1),
+(83, NULL, 'doctor-derma@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 04:16:45', NULL, 0),
+(84, 2, 'doctor-cardio@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 04:20:28', '23-03-2026 11:22:06 AM', 1),
+(85, 4, 'doctor-neuro@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 05:52:19', NULL, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `doctorspecialization`
+--
+
+CREATE TABLE `doctorspecialization` (
+  `id` int(11) NOT NULL,
+  `specialization` varchar(255) DEFAULT NULL,
+  `creationDate` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updationDate` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `doctorspecialization`
+--
+
+INSERT INTO `doctorspecialization` (`id`, `specialization`, `creationDate`, `updationDate`) VALUES
+(1, 'General Physician', '2026-03-23 04:11:49', NULL),
+(2, 'Cardiologist', '2026-03-23 04:11:49', NULL),
+(3, 'Dermatologist', '2026-03-23 04:11:49', NULL),
+(4, 'Neurologist', '2026-03-23 04:11:49', NULL),
+(5, 'Orthopedic', '2026-03-23 04:11:49', NULL),
+(6, 'Pediatrician', '2026-03-23 04:11:49', NULL),
+(7, 'Psychiatrist', '2026-03-23 04:11:49', NULL),
+(8, 'Gynecologist', '2026-03-23 04:11:49', NULL),
+(9, 'ENT Specialist', '2026-03-23 04:11:49', NULL),
+(10, 'Ophthalmologist', '2026-03-23 04:11:49', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `past_appointments`
+--
+
+CREATE TABLE `past_appointments` (
+  `id` int(11) NOT NULL,
+  `doctorSpecialization` varchar(255) DEFAULT NULL,
+  `doctorId` int(11) DEFAULT NULL,
+  `userId` int(11) DEFAULT NULL,
+  `patientId` int(11) DEFAULT NULL,
+  `consultancyFees` int(11) DEFAULT NULL,
+  `appointmentDate` varchar(255) DEFAULT NULL,
+  `appointmentTime` varchar(255) DEFAULT NULL,
+  `postingDate` timestamp NULL DEFAULT current_timestamp(),
+  `userStatus` int(11) DEFAULT NULL,
+  `doctorStatus` int(11) DEFAULT NULL,
+  `visitStatus` varchar(30) NOT NULL DEFAULT 'Scheduled',
+  `checkInTime` datetime DEFAULT NULL,
+  `checkOutTime` datetime DEFAULT NULL,
+  `prescription` mediumtext DEFAULT NULL,
+  `paymentStatus` varchar(20) NOT NULL DEFAULT 'Pending',
+  `paymentRef` varchar(64) DEFAULT NULL,
+  `paidAt` datetime DEFAULT NULL,
+  `appointmentType` varchar(50) DEFAULT 'Online',
+  `updationDate` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `patients`
+--
+
+CREATE TABLE `patients` (
+  `id` int(11) NOT NULL,
+  `userId` int(11) NOT NULL,
+  `doctorId` int(11) DEFAULT NULL,
+  `patientName` varchar(255) NOT NULL,
+  `patientEmail` varchar(255) DEFAULT NULL,
+  `patientPhone` bigint(11) DEFAULT NULL,
+  `patientGender` varchar(50) DEFAULT NULL,
+  `patientAge` int(10) DEFAULT NULL,
+  `patientAddress` longtext DEFAULT NULL,
+  `patientType` enum('consultancy','admitted','emergency') DEFAULT 'consultancy',
+  `status` varchar(30) DEFAULT 'Active',
+  `isEmergency` tinyint(1) DEFAULT 0,
+  `admissionDate` datetime DEFAULT NULL,
+  `dischargeDate` datetime DEFAULT NULL,
+  `notes` mediumtext DEFAULT NULL,
+  `createdAt` timestamp NULL DEFAULT current_timestamp(),
+  `updatedAt` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `patients`
+--
+
+INSERT INTO `patients` (`id`, `userId`, `doctorId`, `patientName`, `patientEmail`, `patientPhone`, `patientGender`, `patientAge`, `patientAddress`, `patientType`, `status`, `isEmergency`, `admissionDate`, `dischargeDate`, `notes`, `createdAt`, `updatedAt`) VALUES
+(1, 1, 1, 'Rohan Malhotra', 'rohan@gmail.com', 9876600001, 'Male', 27, 'Mumbai', 'consultancy', 'Active', 0, NULL, NULL, 'Routine check', '2026-03-23 04:34:30', NULL),
+(2, 2, 2, 'Ayesha Khan', 'ayesha@gmail.com', 9876600002, 'Female', 31, 'Delhi', 'admitted', 'Active', 1, '2026-03-23 10:04:30', NULL, 'Severe fever', '2026-03-23 04:34:30', NULL),
+(3, 3, 3, 'Manish Tiwari', 'manish@gmail.com', 9876600003, 'Male', 45, 'Kanpur', 'consultancy', 'Active', 0, NULL, NULL, 'BP issue', '2026-03-23 04:34:30', NULL),
+(4, 4, 4, 'Zoya Siddiqui', 'zoya@gmail.com', 9876600004, 'Female', 22, 'Lucknow', 'emergency', 'Active', 1, '2026-03-23 10:04:30', NULL, 'Accident', '2026-03-23 04:34:30', NULL),
+(5, 5, 5, 'Nikhil Bansal', 'nikhil@gmail.com', 9876600005, 'Male', 36, 'Jaipur', 'admitted', 'Active', 0, '2026-03-23 10:04:30', NULL, 'Surgery', '2026-03-23 04:34:30', NULL),
+(6, 6, 6, 'Simran Kaur', 'simran@gmail.com', 9876600006, 'Female', 29, 'Chandigarh', 'consultancy', 'Active', 0, NULL, NULL, 'Skin issue', '2026-03-23 04:34:30', NULL),
+(7, 7, 7, 'Farhan Ali', 'farhan@gmail.com', 9876600007, 'Male', 34, 'Hyderabad', 'consultancy', 'Active', 0, NULL, NULL, 'General check', '2026-03-23 04:34:30', NULL),
+(8, 8, 8, 'Kritika Sharma', 'kritika@gmail.com', 9876600008, 'Female', 26, 'Bhopal', 'admitted', 'Active', 1, '2026-03-23 10:04:30', NULL, 'Infection', '2026-03-23 04:34:30', NULL),
+(9, 9, 9, 'Deepanshu Yadav', 'deepanshu@gmail.com', 9876600009, 'Male', 41, 'Noida', 'consultancy', 'Inactive', 0, NULL, NULL, 'Follow-up', '2026-03-23 04:34:30', NULL),
+(10, 10, 10, 'Tanvi Kulkarni', 'tanvi@gmail.com', 9876600010, 'Female', 33, 'Pune', 'emergency', 'Active', 1, '2026-03-23 10:04:30', NULL, 'Emergency', '2026-03-23 04:34:30', NULL),
+(11, 21, 2, 'Mahir', 'kachwalamahir17@gmail.com', 7990939100, 'male', 20, 'Ghansoli', 'consultancy', 'Active', 0, NULL, NULL, NULL, '2026-03-23 04:49:55', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payment_transactions`
+--
+
+CREATE TABLE `payment_transactions` (
+  `id` int(11) NOT NULL,
+  `appointmentId` int(11) NOT NULL,
+  `userId` int(11) NOT NULL,
+  `patientId` int(11) DEFAULT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `paymentRef` varchar(64) DEFAULT NULL,
+  `paymentStatus` varchar(20) DEFAULT 'Pending',
+  `paymentMethod` varchar(50) DEFAULT 'Online',
+  `transactionDate` datetime DEFAULT NULL,
+  `createdAt` timestamp NULL DEFAULT current_timestamp(),
+  `updatedAt` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `prescriptions`
+--
+
+CREATE TABLE `prescriptions` (
+  `id` int(11) NOT NULL,
+  `patient_id` int(11) NOT NULL,
+  `doctor_id` int(11) NOT NULL,
+  `appointment_id` int(11) NOT NULL,
+  `temperature` varchar(20) DEFAULT NULL,
+  `blood_pressure` varchar(30) DEFAULT NULL,
+  `pulse` varchar(20) DEFAULT NULL,
+  `weight` varchar(20) DEFAULT NULL,
+  `symptoms` text DEFAULT NULL,
+  `diagnosis` text DEFAULT NULL,
+  `tests` text DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `medicines` longtext DEFAULT NULL,
+  `patient_name` varchar(255) DEFAULT NULL,
+  `doctor_name` varchar(255) DEFAULT NULL,
+  `next_visit_date` date DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `prescriptions`
+--
+
+INSERT INTO `prescriptions` (`id`, `patient_id`, `doctor_id`, `appointment_id`, `temperature`, `blood_pressure`, `pulse`, `weight`, `symptoms`, `diagnosis`, `tests`, `notes`, `medicines`, `patient_name`, `doctor_name`, `next_visit_date`, `created_at`) VALUES
+(1, 7, 7, 21, '98', '120/80', '78', '75', 'Food Poisoning', 'Rest', 'Blood Test', '', 'Medicine: LB2 | Dosage: 500 | Frequency: 1-1-1 | Duration: 5 | Instructions: After Food\nMedicine: ORS | Dosage: 100 | Frequency: 1-0-1 | Duration: 5 | Instructions: Water', NULL, NULL, '2026-03-26', '2026-03-21 12:50:11'),
+(2, 7, 7, 20, '98', '120/80', '78', '75', 'wisdom', 'surgery', 'Blood Test, X-Ray', 'rest', 'Medicine: LB2 | Dosage: 500 | Frequency: 1-1-1 | Duration: 5 | Instructions: After Food', NULL, NULL, '2026-03-27', '2026-03-22 22:23:50'),
+(3, 7, 7, 26, '98', '', '78', '75', 'tooth ache', 'surgery', 'X-Ray', '', 'Medicine: tube | Dosage: 500 | Frequency: 1-1-1 | Duration: 5 | Instructions: After Food', NULL, NULL, NULL, '2026-03-22 22:32:50'),
+(4, 8, 1, 28, '', '', '', '', 'VFGDGSDFG', 'GDSGSDFG', 'MRI', '', 'Medicine: DGDSGFDS | Dosage: DGVSD | Frequency: 1-1-1 | Duration: 2 | Instructions: After Food', NULL, NULL, NULL, '2026-03-22 22:53:26'),
+(5, 7, 1, 36, '', '', '', '', '', 'dfdsfds', '', '', 'Medicine: LB2 | Dosage: - | Frequency: - | Duration: - | Instructions: -\nMedicine: fg | Dosage: - | Frequency: - | Duration: - | Instructions: -', NULL, NULL, NULL, '2026-03-23 01:02:12'),
+(6, 7, 11, 39, '', '', '', '', '', 'bgv', '', '', 'Medicine: LB2 | Dosage: - | Frequency: - | Duration: - | Instructions: -', NULL, NULL, NULL, '2026-03-23 01:15:32'),
+(7, 10, 2, 41, '', '', '', '', '', 'fever', '', '', 'Medicine: calpol | Dosage: - | Frequency: - | Duration: - | Instructions: -', NULL, NULL, NULL, '2026-03-23 10:15:07'),
+(8, 1, 2, 15, '', '', '', '', '', 'cough', '', '', 'Medicine: lb2 | Dosage: - | Frequency: - | Duration: - | Instructions: -', NULL, NULL, NULL, '2026-03-23 10:25:37'),
+(9, 17, 4, 43, '98', '', '', '', 'TUMOR', 'MEDICINE', 'X-Ray, MRI', '', 'Medicine: tube | Dosage: 500 | Frequency: 1-0-0 | Duration: 2 | Instructions: After Food', NULL, NULL, NULL, '2026-03-23 11:23:35');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tblpatient`
+--
+
+CREATE TABLE `tblpatient` (
+  `ID` int(10) NOT NULL,
+  `Docid` int(10) DEFAULT NULL,
+  `PatientName` varchar(200) DEFAULT NULL,
+  `PatientContno` bigint(10) DEFAULT NULL,
+  `PatientEmail` varchar(200) DEFAULT NULL,
+  `PatientGender` varchar(50) DEFAULT NULL,
+  `PatientAdd` mediumtext DEFAULT NULL,
+  `PatientAge` int(10) DEFAULT NULL,
+  `CreationDate` timestamp NULL DEFAULT current_timestamp(),
+  `UpdationDate` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `tblpatient`
+--
+
+INSERT INTO `tblpatient` (`ID`, `Docid`, `PatientName`, `PatientContno`, `PatientEmail`, `PatientGender`, `PatientAdd`, `PatientAge`, `CreationDate`, `UpdationDate`) VALUES
+(1, 1, 'Lokesh Gupta', 9876620001, 'lokesh@gmail.com', 'Male', 'Delhi', 50, '2026-03-23 04:34:50', NULL),
+(2, 2, 'Anamika Das', 9876620002, 'anamika@gmail.com', 'Female', 'Kolkata', 42, '2026-03-23 04:34:50', NULL),
+(3, 3, 'Pankaj Arora', 9876620003, 'pankaj@gmail.com', 'Male', 'Chandigarh', 38, '2026-03-23 04:34:50', NULL),
+(4, 4, 'Reshma Shaikh', 9876620004, 'reshma@gmail.com', 'Female', 'Mumbai', 30, '2026-03-23 04:34:50', NULL),
+(5, 5, 'Yash Thakur', 9876620005, 'yash@gmail.com', 'Male', 'Bhopal', 27, '2026-03-23 04:34:50', NULL),
+(6, 6, 'Geeta Pillai', 9876620006, 'geeta@gmail.com', 'Female', 'Chennai', 48, '2026-03-23 04:34:50', NULL),
+(7, 7, 'Ankit Soni', 9876620007, 'ankit@gmail.com', 'Male', 'Indore', 35, '2026-03-23 04:34:50', NULL),
+(8, 8, 'Saloni Verma', 9876620008, 'saloni@gmail.com', 'Female', 'Kanpur', 29, '2026-03-23 04:34:50', NULL),
+(9, 9, 'Prateek Dubey', 9876620009, 'prateek@gmail.com', 'Male', 'Varanasi', 44, '2026-03-23 04:34:50', NULL),
+(10, 10, 'Kajal Singh', 9876620010, 'kajal@gmail.com', 'Female', 'Lucknow', 31, '2026-03-23 04:34:50', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `userlog`
+--
+
+CREATE TABLE `userlog` (
+  `id` int(11) NOT NULL,
+  `uid` int(11) DEFAULT NULL,
+  `username` varchar(255) DEFAULT NULL,
+  `userip` binary(16) DEFAULT NULL,
+  `loginTime` timestamp NULL DEFAULT current_timestamp(),
+  `logout` varchar(255) DEFAULT NULL,
+  `status` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `userlog`
+--
+
+INSERT INTO `userlog` (`id`, `uid`, `username`, `userip`, `loginTime`, `logout`, `status`) VALUES
+(1, 2, 'test@gmail.com', 0x3a3a3100000000000000000000000000, '2022-06-13 13:12:49', '13-06-2022 06:43:08 PM', 1),
+(2, NULL, 'test@gmail.com', 0x3a3a3100000000000000000000000000, '2022-06-13 13:13:15', NULL, 0),
+(3, NULL, 'test@gmail.com', 0x3a3a3100000000000000000000000000, '2022-06-13 13:13:27', NULL, 0),
+(4, NULL, 'test@gmail.com', 0x3a3a3100000000000000000000000000, '2022-06-13 13:13:36', NULL, 0),
+(5, 2, 'test@gmail.com', 0x3a3a3100000000000000000000000000, '2022-06-13 13:14:54', '13-06-2022 06:54:23 PM', 1),
+(6, 2, 'test@gmail.com', 0x3a3a3100000000000000000000000000, '2022-06-13 13:25:24', '13-06-2022 06:55:52 PM', 1),
+(7, 2, 'test@gmail.com', 0x3a3a3100000000000000000000000000, '2022-06-13 13:26:02', '13-06-2022 06:56:06 PM', 1),
+(8, 2, 'test@user.com', 0x3a3a3100000000000000000000000000, '2022-06-13 13:45:34', '13-06-2022 07:15:39 PM', 1),
+(9, 6, 'bofileqe@mailinator.com', 0x3a3a3100000000000000000000000000, '2022-06-13 13:47:57', '13-06-2022 07:18:02 PM', 1),
+(10, 2, 'test@user.com', 0x3a3a3100000000000000000000000000, '2026-03-20 16:17:19', NULL, 1),
+(11, 2, 'test@user.com', 0x3a3a3100000000000000000000000000, '2026-03-20 16:55:46', NULL, 1),
+(12, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-21 04:14:02', '21-03-2026 09:44:37 AM', 1),
+(13, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-21 04:15:06', '21-03-2026 09:46:07 AM', 1),
+(14, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-21 04:16:27', NULL, 1),
+(15, NULL, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-21 04:58:38', NULL, 0),
+(16, NULL, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-21 04:58:39', NULL, 0),
+(17, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-21 04:58:42', NULL, 1),
+(18, NULL, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-21 06:28:22', NULL, 0),
+(19, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-21 06:28:25', NULL, 1),
+(20, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:49:59', NULL, 1),
+(21, NULL, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:52:33', NULL, 0),
+(22, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:52:35', NULL, 1),
+(23, NULL, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:59:07', NULL, 0),
+(24, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 16:59:10', '22-03-2026 10:48:02 PM', 1),
+(25, 8, 'kachwalamahir2005@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:18:36', NULL, 1),
+(26, NULL, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:21:20', NULL, 0),
+(27, 8, 'kachwalamahir2005@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:21:22', NULL, 1),
+(28, 8, 'kachwalamahir2005@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:22:39', NULL, 1),
+(29, 8, 'kachwalamahir2005@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:23:36', NULL, 1),
+(30, 8, 'kachwalamahir2005@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 17:33:31', NULL, 1),
+(31, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 19:13:31', NULL, 1),
+(32, NULL, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 19:20:40', NULL, 0),
+(33, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 19:20:43', NULL, 1),
+(34, NULL, 'test@doctor.com', 0x3a3a3100000000000000000000000000, '2026-03-22 19:32:54', NULL, 0),
+(35, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 19:32:56', NULL, 1),
+(36, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-22 19:44:48', NULL, 1),
+(37, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 03:39:02', NULL, 1),
+(38, NULL, 'admin', 0x3a3a3100000000000000000000000000, '2026-03-23 03:48:52', NULL, 0),
+(39, 7, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 03:48:55', NULL, 1),
+(40, NULL, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 04:16:04', NULL, 0),
+(41, NULL, 'kachwalamahir2005@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 04:16:08', NULL, 0),
+(42, NULL, 'kachwalamahir2005@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 04:16:09', NULL, 0),
+(43, NULL, 'kachwalamahir2005@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 04:16:10', NULL, 0),
+(44, NULL, 'kachwalamahir2005@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 04:16:10', NULL, 0),
+(45, NULL, 'kachwalamahir17@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 04:16:12', NULL, 0),
+(46, 11, 'rohit@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 04:36:27', NULL, 1),
+(47, 10, 'anjali@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 04:37:32', NULL, 1),
+(48, 1, 'amit@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 04:56:58', NULL, 1),
+(49, 6, 'sneha@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 05:23:54', '23-03-2026 10:54:35 AM', 1),
+(50, NULL, 'rohit@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 05:32:29', NULL, 0),
+(51, 11, 'rohit@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 05:32:39', '23-03-2026 11:07:16 AM', 1),
+(52, 17, 'sid@gmail.com', 0x3a3a3100000000000000000000000000, '2026-03-23 05:51:54', NULL, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `fullName` varchar(255) DEFAULT NULL,
+  `address` longtext DEFAULT NULL,
+  `city` varchar(255) DEFAULT NULL,
+  `gender` varchar(255) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `regDate` timestamp NULL DEFAULT current_timestamp(),
+  `updationDate` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `fullName`, `address`, `city`, `gender`, `email`, `password`, `regDate`, `updationDate`) VALUES
+(1, 'Amit Shah', 'Andheri East', 'Mumbai', 'Male', 'amit@gmail.com', 'amit123', '2026-03-23 04:33:32', NULL),
+(2, 'Neha Mehta', 'Connaught Place', 'Delhi', 'Female', 'neha@gmail.com', 'neha123', '2026-03-23 04:33:32', NULL),
+(3, 'Rahul Verma', 'MG Road', 'Bangalore', 'Male', 'rahul@gmail.com', 'rahul123', '2026-03-23 04:33:32', NULL),
+(4, 'Priya Singh', 'Aliganj', 'Lucknow', 'Female', 'priya@gmail.com', 'priya123', '2026-03-23 04:33:32', NULL),
+(5, 'Karan Patel', 'Navrangpura', 'Ahmedabad', 'Male', 'karan@gmail.com', 'karan123', '2026-03-23 04:33:32', NULL),
+(6, 'Sneha Joshi', 'Shivaji Nagar', 'Pune', 'Female', 'sneha@gmail.com', 'sneha123', '2026-03-23 04:33:32', NULL),
+(7, 'Arjun Nair', 'Kakkanad', 'Kochi', 'Male', 'arjun@gmail.com', 'arjun123', '2026-03-23 04:33:32', NULL),
+(8, 'Pooja Reddy', 'Banjara Hills', 'Hyderabad', 'Female', 'pooja@gmail.com', 'pooja123', '2026-03-23 04:33:32', NULL),
+(9, 'Vikas Gupta', 'Salt Lake', 'Kolkata', 'Male', 'vikas@gmail.com', 'vikas123', '2026-03-23 04:33:32', NULL),
+(10, 'Anjali Desai', 'Borivali West', 'Mumbai', 'Female', 'anjali@gmail.com', 'anjali123', '2026-03-23 04:33:32', NULL),
+(11, 'Rohit Agarwal', 'Sector 62', 'Noida', 'Male', 'rohit@gmail.com', '12345', '2026-03-23 04:34:40', NULL),
+(12, 'Sana Sheikh', 'Bandra', 'Mumbai', 'Female', 'sana@gmail.com', '12345', '2026-03-23 04:34:40', NULL),
+(13, 'Varun Saxena', 'Indirapuram', 'Ghaziabad', 'Male', 'varun@gmail.com', '12345', '2026-03-23 04:34:40', NULL),
+(14, 'Ishita Roy', 'Salt Lake', 'Kolkata', 'Female', 'ishita@gmail.com', '12345', '2026-03-23 04:34:40', NULL),
+(15, 'Aditya Mishra', 'Hazratganj', 'Lucknow', 'Male', 'aditya@gmail.com', '12345', '2026-03-23 04:34:40', NULL),
+(16, 'Mehak Jain', 'Malviya Nagar', 'Delhi', 'Female', 'mehak@gmail.com', '12345', '2026-03-23 04:34:40', NULL),
+(17, 'Siddharth Rao', 'Whitefield', 'Bangalore', 'Male', 'sid@gmail.com', '12345', '2026-03-23 04:34:40', NULL),
+(18, 'Naina Kapoor', 'Janakpuri', 'Delhi', 'Female', 'naina@gmail.com', '12345', '2026-03-23 04:34:40', NULL),
+(19, 'Harsh Vardhan', 'Patna City', 'Patna', 'Male', 'harsh@gmail.com', '12345', '2026-03-23 04:34:40', NULL),
+(20, 'Riya Sen', 'Park Street', 'Kolkata', 'Female', 'riya@gmail.com', '12345', '2026-03-23 04:34:40', NULL),
+(21, 'Mahir', NULL, NULL, NULL, 'kachwalamahir17@gmail.com', 'hospital2026', '2026-03-23 04:49:55', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `view_current_appointments`
+-- (See below for the actual view)
+--
+CREATE TABLE `view_current_appointments` (
+`id` int(11)
+,`doctorSpecialization` varchar(255)
+,`doctorId` int(11)
+,`userId` int(11)
+,`patientId` int(11)
+,`consultancyFees` int(11)
+,`appointmentDate` varchar(255)
+,`appointmentTime` varchar(255)
+,`postingDate` timestamp
+,`userStatus` int(11)
+,`doctorStatus` int(11)
+,`visitStatus` varchar(30)
+,`checkInTime` datetime
+,`checkOutTime` datetime
+,`prescription` mediumtext
+,`paymentStatus` varchar(20)
+,`paymentRef` varchar(64)
+,`paidAt` datetime
+,`appointmentType` varchar(50)
+,`paymentOption` enum('PayNow','PayLater','BookOnly')
+,`userName` varchar(255)
+,`userEmail` varchar(255)
+,`doctorName` varchar(255)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `active_appointments`
+--
+DROP TABLE IF EXISTS `active_appointments`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `active_appointments`  AS SELECT `current_appointments`.`id` AS `id`, `current_appointments`.`doctorSpecialization` AS `doctorSpecialization`, `current_appointments`.`doctorId` AS `doctorId`, `current_appointments`.`userId` AS `userId`, `current_appointments`.`patientId` AS `patientId`, `current_appointments`.`consultancyFees` AS `consultancyFees`, `current_appointments`.`appointmentDate` AS `appointmentDate`, `current_appointments`.`appointmentTime` AS `appointmentTime`, `current_appointments`.`postingDate` AS `postingDate`, `current_appointments`.`userStatus` AS `userStatus`, `current_appointments`.`doctorStatus` AS `doctorStatus`, `current_appointments`.`visitStatus` AS `visitStatus`, `current_appointments`.`checkInTime` AS `checkInTime`, `current_appointments`.`checkOutTime` AS `checkOutTime`, `current_appointments`.`prescription` AS `prescription`, `current_appointments`.`paymentStatus` AS `paymentStatus`, `current_appointments`.`paymentRef` AS `paymentRef`, `current_appointments`.`paidAt` AS `paidAt`, `current_appointments`.`appointmentType` AS `appointmentType`, `current_appointments`.`paymentOption` AS `paymentOption`, `current_appointments`.`updationDate` AS `updationDate` FROM `current_appointments` WHERE `current_appointments`.`userStatus` = 1 AND `current_appointments`.`doctorStatus` = 1 AND coalesce(`current_appointments`.`visitStatus`,'Scheduled') in ('Scheduled','Checked In')  ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `completed_appointments`
+--
+DROP TABLE IF EXISTS `completed_appointments`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `completed_appointments`  AS SELECT `past_appointments`.`id` AS `id`, `past_appointments`.`doctorSpecialization` AS `doctorSpecialization`, `past_appointments`.`doctorId` AS `doctorId`, `past_appointments`.`userId` AS `userId`, `past_appointments`.`patientId` AS `patientId`, `past_appointments`.`consultancyFees` AS `consultancyFees`, `past_appointments`.`appointmentDate` AS `appointmentDate`, `past_appointments`.`appointmentTime` AS `appointmentTime`, `past_appointments`.`postingDate` AS `postingDate`, `past_appointments`.`userStatus` AS `userStatus`, `past_appointments`.`doctorStatus` AS `doctorStatus`, `past_appointments`.`visitStatus` AS `visitStatus`, `past_appointments`.`checkInTime` AS `checkInTime`, `past_appointments`.`checkOutTime` AS `checkOutTime`, `past_appointments`.`prescription` AS `prescription`, `past_appointments`.`paymentStatus` AS `paymentStatus`, `past_appointments`.`paymentRef` AS `paymentRef`, `past_appointments`.`paidAt` AS `paidAt`, `past_appointments`.`appointmentType` AS `appointmentType`, `past_appointments`.`updationDate` AS `updationDate` FROM `past_appointments` WHERE `past_appointments`.`visitStatus` in ('Completed','Cancelled') OR `past_appointments`.`userStatus` = 0 OR `past_appointments`.`doctorStatus` = 00  ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `view_current_appointments`
+--
+DROP TABLE IF EXISTS `view_current_appointments`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY INVOKER VIEW `view_current_appointments`  AS SELECT `ca`.`id` AS `id`, `ca`.`doctorSpecialization` AS `doctorSpecialization`, `ca`.`doctorId` AS `doctorId`, `ca`.`userId` AS `userId`, `ca`.`patientId` AS `patientId`, `ca`.`consultancyFees` AS `consultancyFees`, `ca`.`appointmentDate` AS `appointmentDate`, `ca`.`appointmentTime` AS `appointmentTime`, `ca`.`postingDate` AS `postingDate`, `ca`.`userStatus` AS `userStatus`, `ca`.`doctorStatus` AS `doctorStatus`, `ca`.`visitStatus` AS `visitStatus`, `ca`.`checkInTime` AS `checkInTime`, `ca`.`checkOutTime` AS `checkOutTime`, `ca`.`prescription` AS `prescription`, `ca`.`paymentStatus` AS `paymentStatus`, `ca`.`paymentRef` AS `paymentRef`, `ca`.`paidAt` AS `paidAt`, `ca`.`appointmentType` AS `appointmentType`, `ca`.`paymentOption` AS `paymentOption`, `u`.`fullName` AS `userName`, `u`.`email` AS `userEmail`, `d`.`doctorName` AS `doctorName` FROM ((`current_appointments` `ca` left join `users` `u` on(`ca`.`userId` = `u`.`id`)) left join `doctors` `d` on(`ca`.`doctorId` = `d`.`id`))  ;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `admin`
+--
+ALTER TABLE `admin`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `appointment_transfers`
+--
+ALTER TABLE `appointment_transfers`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_transfer_originalAppointmentId` (`originalAppointmentId`),
+  ADD KEY `idx_transfer_patientId` (`patientId`),
+  ADD KEY `idx_transfer_doctorId` (`doctorId`);
+
+--
+-- Indexes for table `current_appointments`
+--
+ALTER TABLE `current_appointments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_current_appointments_patientId` (`patientId`),
+  ADD KEY `idx_current_appointments_appointmentType` (`appointmentType`),
+  ADD KEY `idx_current_appt_visitStatus` (`visitStatus`),
+  ADD KEY `idx_current_appt_paymentStatus` (`paymentStatus`),
+  ADD KEY `idx_current_appt_appointmentDate` (`appointmentDate`),
+  ADD KEY `idx_current_appt_doctorId` (`doctorId`),
+  ADD KEY `idx_current_userId` (`userId`),
+  ADD KEY `idx_current_doctorId` (`doctorId`),
+  ADD KEY `idx_current_paymentStatus` (`paymentStatus`),
+  ADD KEY `idx_current_visitStatus` (`visitStatus`);
+
+--
+-- Indexes for table `doctors`
+--
+ALTER TABLE `doctors`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_specialization` (`specialization`);
+
+--
+-- Indexes for table `doctorslog`
+--
+ALTER TABLE `doctorslog`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `doctorspecialization`
+--
+ALTER TABLE `doctorspecialization`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `past_appointments`
+--
+ALTER TABLE `past_appointments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_past_appointments_userId` (`userId`),
+  ADD KEY `idx_past_appointments_doctorId` (`doctorId`),
+  ADD KEY `idx_past_appointments_patientId` (`patientId`),
+  ADD KEY `idx_past_appt_visitStatus` (`visitStatus`),
+  ADD KEY `idx_past_appt_doctorId` (`doctorId`),
+  ADD KEY `idx_past_appt_userId` (`userId`);
+
+--
+-- Indexes for table `patients`
+--
+ALTER TABLE `patients`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_patients_userId` (`userId`),
+  ADD KEY `idx_patients_doctorId` (`doctorId`),
+  ADD KEY `idx_patients_patientType` (`patientType`),
+  ADD KEY `idx_patients_createdAt` (`createdAt`);
+
+--
+-- Indexes for table `payment_transactions`
+--
+ALTER TABLE `payment_transactions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_payment_appointmentId` (`appointmentId`),
+  ADD KEY `idx_payment_userId` (`userId`),
+  ADD KEY `idx_payment_patientId` (`patientId`),
+  ADD KEY `idx_payment_paymentStatus` (`paymentStatus`);
+
+--
+-- Indexes for table `prescriptions`
+--
+ALTER TABLE `prescriptions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_prescriptions_patient_id` (`patient_id`),
+  ADD KEY `idx_prescriptions_doctor_id` (`doctor_id`),
+  ADD KEY `idx_prescriptions_appointment_id` (`appointment_id`),
+  ADD KEY `idx_prescriptions_created_at` (`created_at`),
+  ADD KEY `idx_appointment_id` (`appointment_id`),
+  ADD KEY `idx_patient_id` (`patient_id`),
+  ADD KEY `idx_doctor_id` (`doctor_id`);
+
+--
+-- Indexes for table `tblpatient`
+--
+ALTER TABLE `tblpatient`
+  ADD PRIMARY KEY (`ID`);
+
+--
+-- Indexes for table `userlog`
+--
+ALTER TABLE `userlog`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `email` (`email`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `admin`
+--
+ALTER TABLE `admin`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `appointment_transfers`
+--
+ALTER TABLE `appointment_transfers`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `current_appointments`
+--
+ALTER TABLE `current_appointments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
+
+--
+-- AUTO_INCREMENT for table `doctors`
+--
+ALTER TABLE `doctors`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `doctorslog`
+--
+ALTER TABLE `doctorslog`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=86;
+
+--
+-- AUTO_INCREMENT for table `doctorspecialization`
+--
+ALTER TABLE `doctorspecialization`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `past_appointments`
+--
+ALTER TABLE `past_appointments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `patients`
+--
+ALTER TABLE `patients`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- AUTO_INCREMENT for table `payment_transactions`
+--
+ALTER TABLE `payment_transactions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `prescriptions`
+--
+ALTER TABLE `prescriptions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `tblpatient`
+--
+ALTER TABLE `tblpatient`
+  MODIFY `ID` int(10) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `userlog`
+--
+ALTER TABLE `userlog`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `doctors`
+--
+ALTER TABLE `doctors`
+  ADD CONSTRAINT `fk_specialization` FOREIGN KEY (`specialization`) REFERENCES `doctorspecialization` (`id`);
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

@@ -9,25 +9,29 @@ function ensureAppointmentColumns($con, $table) {
 	// Server-side schema guard for appointment workflow fields.
 	$requiredColumns = [
 		"visitStatus" => "ALTER TABLE $table ADD COLUMN visitStatus varchar(30) NOT NULL DEFAULT 'Scheduled' AFTER doctorStatus",
+		"checkInTime" => "ALTER TABLE $table ADD COLUMN checkInTime datetime DEFAULT NULL AFTER visitStatus",
 		"checkOutTime" => "ALTER TABLE $table ADD COLUMN checkOutTime datetime DEFAULT NULL AFTER checkInTime",
-		"prescription" => "ALTER TABLE $table ADD COLUMN prescription mediumtext DEFAULT NULL AFTER checkOutTime"
+		"prescription" => "ALTER TABLE $table ADD COLUMN prescription mediumtext DEFAULT NULL AFTER checkOutTime",
+		"paymentStatus" => "ALTER TABLE $table ADD COLUMN paymentStatus varchar(20) NOT NULL DEFAULT 'Pending' AFTER prescription",
+		"paymentRef" => "ALTER TABLE $table ADD COLUMN paymentRef varchar(64) DEFAULT NULL AFTER paymentStatus",
+		"paidAt" => "ALTER TABLE $table ADD COLUMN paidAt datetime DEFAULT NULL AFTER paymentRef"
 	];
 
 	foreach ($requiredColumns as $columnName => $ddl) {
-		$check = mysqli_query($con, "SHOW COLUMNS FROM $table LIKE '" . $columnName . "'");
-		if ($check && mysqli_num_rows($check) === 0) {
-			mysqli_query($con, $ddl);
+		$check = hms_query($con, "SHOW COLUMNS FROM $table LIKE '" . $columnName . "'");
+		if ($check && hms_num_rows($check) === 0) {
+			hms_query($con, $ddl);
 		}
 	}
 }
 
 function appointmentTableName($con) {
-	$check = mysqli_query($con, "SHOW TABLES LIKE 'current_appointments'");
-	return ($check && mysqli_num_rows($check) > 0) ? 'current_appointments' : 'appointment';
+	$check = hms_query($con, "SHOW TABLES LIKE 'current_appointments'");
+	return ($check && hms_num_rows($check) > 0) ? 'current_appointments' : 'appointment';
 }
 
 function ensurePrescriptionTables($con) {
-	mysqli_query($con, "CREATE TABLE IF NOT EXISTS prescriptions (
+	hms_query($con, "CREATE TABLE IF NOT EXISTS prescriptions (
 		id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		patient_id INT NOT NULL,
 		doctor_id INT NOT NULL,
@@ -40,6 +44,7 @@ function ensurePrescriptionTables($con) {
 		diagnosis TEXT DEFAULT NULL,
 		tests TEXT DEFAULT NULL,
 		notes TEXT DEFAULT NULL,
+		medicines LONGTEXT DEFAULT NULL,
 		next_visit_date DATE DEFAULT NULL,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		INDEX idx_appointment_id (appointment_id),
@@ -47,17 +52,10 @@ function ensurePrescriptionTables($con) {
 		INDEX idx_doctor_id (doctor_id)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-	mysqli_query($con, "CREATE TABLE IF NOT EXISTS prescription_medicines (
-		id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-		prescription_id INT NOT NULL,
-		medicine_name VARCHAR(255) NOT NULL,
-		dosage VARCHAR(100) DEFAULT NULL,
-		frequency VARCHAR(100) DEFAULT NULL,
-		duration VARCHAR(100) DEFAULT NULL,
-		instructions VARCHAR(255) DEFAULT NULL,
-		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		INDEX idx_prescription_id (prescription_id)
-	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+	$medicinesColumnCheck = hms_query($con, "SHOW COLUMNS FROM prescriptions LIKE 'medicines'");
+	if (!$medicinesColumnCheck || hms_num_rows($medicinesColumnCheck) === 0) {
+		hms_query($con, "ALTER TABLE prescriptions ADD COLUMN medicines LONGTEXT DEFAULT NULL AFTER notes");
+	}
 }
 
 ensureAppointmentColumns($con, appointmentTableName($con));
@@ -74,8 +72,8 @@ if ($appointmentId <= 0) {
 	exit();
 }
 
-$appointmentSql = mysqli_query($con, "SELECT $appointmentTable.*, users.fullName FROM $appointmentTable JOIN users ON users.id=$appointmentTable.userId WHERE $appointmentTable.id='$appointmentId' AND $appointmentTable.doctorId='$doctorId' LIMIT 1");
-$appointment = ($appointmentSql) ? mysqli_fetch_array($appointmentSql) : null;
+$appointmentSql = hms_query($con, "SELECT $appointmentTable.*, users.fullName FROM $appointmentTable JOIN users ON users.id=$appointmentTable.userId WHERE $appointmentTable.id='$appointmentId' AND $appointmentTable.doctorId='$doctorId' LIMIT 1");
+$appointment = ($appointmentSql) ? hms_fetch_array($appointmentSql) : null;
 
 if (!$appointment) {
 	$_SESSION['msg'] = 'Appointment not found for this doctor.';
@@ -95,16 +93,25 @@ if (($appointment['visitStatus'] ?? 'Scheduled') !== 'Checked In') {
 	exit();
 }
 
+$isPaid = in_array(strtolower((string)($appointment['paymentStatus'] ?? '')), ['paid', 'paid at hospital'], true)
+	|| !empty($appointment['paymentRef'])
+	|| !empty($appointment['paidAt']);
+if (!$isPaid) {
+	$_SESSION['msg'] = 'Payment must be received before adding prescription.';
+	header('location:visit-management.php');
+	exit();
+}
+
 if (isset($_POST['submit_prescription'])) {
-	$temperature = mysqli_real_escape_string($con, trim($_POST['temperature'] ?? ''));
-	$bloodPressure = mysqli_real_escape_string($con, trim($_POST['blood_pressure'] ?? ''));
-	$pulse = mysqli_real_escape_string($con, trim($_POST['pulse'] ?? ''));
-	$weight = mysqli_real_escape_string($con, trim($_POST['weight'] ?? ''));
-	$symptoms = mysqli_real_escape_string($con, trim($_POST['symptoms'] ?? ''));
-	$diagnosis = mysqli_real_escape_string($con, trim($_POST['diagnosis'] ?? ''));
-	$notes = mysqli_real_escape_string($con, trim($_POST['notes'] ?? ''));
+	$temperature = hms_escape($con, trim($_POST['temperature'] ?? ''));
+	$bloodPressure = hms_escape($con, trim($_POST['blood_pressure'] ?? ''));
+	$pulse = hms_escape($con, trim($_POST['pulse'] ?? ''));
+	$weight = hms_escape($con, trim($_POST['weight'] ?? ''));
+	$symptoms = hms_escape($con, trim($_POST['symptoms'] ?? ''));
+	$diagnosis = hms_escape($con, trim($_POST['diagnosis'] ?? ''));
+	$notes = hms_escape($con, trim($_POST['notes'] ?? ''));
 	$nextVisitDate = trim($_POST['next_visit_date'] ?? '');
-	$nextVisitDateValue = ($nextVisitDate !== '') ? "'" . mysqli_real_escape_string($con, $nextVisitDate) . "'" : "NULL";
+	$nextVisitDateValue = ($nextVisitDate !== '') ? "'" . hms_escape($con, $nextVisitDate) . "'" : "NULL";
 
 	$testList = $_POST['tests'] ?? [];
 	if (!is_array($testList)) {
@@ -115,45 +122,53 @@ if (isset($_POST['submit_prescription'])) {
 		$testList[] = $otherTest;
 	}
 	$testList = array_filter(array_map('trim', $testList));
-	$tests = mysqli_real_escape_string($con, implode(', ', $testList));
+	$tests = hms_escape($con, implode(', ', $testList));
 
 	if ($diagnosis === '') {
 		$_SESSION['msg'] = 'Diagnosis is required.';
 	} else {
-		$insertPrescription = mysqli_query($con, "INSERT INTO prescriptions(patient_id, doctor_id, appointment_id, temperature, blood_pressure, pulse, weight, symptoms, diagnosis, tests, notes, next_visit_date) VALUES('" . (int)$appointment['userId'] . "', '$doctorId', '$appointmentId', '$temperature', '$bloodPressure', '$pulse', '$weight', '$symptoms', '$diagnosis', '$tests', '$notes', $nextVisitDateValue)");
+		$medicines = $_POST['medicine_name'] ?? [];
+		$dosages = $_POST['dosage'] ?? [];
+		$frequencies = $_POST['frequency'] ?? [];
+		$durations = $_POST['duration'] ?? [];
+		$instructions = $_POST['instructions'] ?? [];
+		$medicineCount = 0;
+		$medicineLines = [];
+
+		for ($i = 0; $i < count($medicines); $i++) {
+			$medicineName = trim($medicines[$i] ?? '');
+			if ($medicineName === '') {
+				continue;
+			}
+			$dosageText = trim($dosages[$i] ?? '');
+			$frequencyText = trim($frequencies[$i] ?? '');
+			$durationText = trim($durations[$i] ?? '');
+			$instructionText = trim($instructions[$i] ?? '');
+
+			$line = 'Medicine: ' . $medicineName;
+			$line .= ' | Dosage: ' . ($dosageText !== '' ? $dosageText : '-');
+			$line .= ' | Frequency: ' . ($frequencyText !== '' ? $frequencyText : '-');
+			$line .= ' | Duration: ' . ($durationText !== '' ? $durationText : '-');
+			$line .= ' | Instructions: ' . ($instructionText !== '' ? $instructionText : '-');
+			$medicineLines[] = $line;
+			$medicineCount++;
+		}
+
+		$medicinesSummary = hms_escape($con, implode("\n", $medicineLines));
+
+		$insertPrescription = hms_query($con, "INSERT INTO prescriptions(patient_id, doctor_id, appointment_id, temperature, blood_pressure, pulse, weight, symptoms, diagnosis, tests, notes, medicines, next_visit_date) VALUES('" . (int)$appointment['userId'] . "', '$doctorId', '$appointmentId', '$temperature', '$bloodPressure', '$pulse', '$weight', '$symptoms', '$diagnosis', '$tests', '$notes', '$medicinesSummary', $nextVisitDateValue)");
 
 		if ($insertPrescription) {
-			$prescriptionId = (int)mysqli_insert_id($con);
-			$medicines = $_POST['medicine_name'] ?? [];
-			$dosages = $_POST['dosage'] ?? [];
-			$frequencies = $_POST['frequency'] ?? [];
-			$durations = $_POST['duration'] ?? [];
-			$instructions = $_POST['instructions'] ?? [];
-			$medicineCount = 0;
-
-			for ($i = 0; $i < count($medicines); $i++) {
-				$medicineName = trim($medicines[$i] ?? '');
-				if ($medicineName === '') {
-					continue;
-				}
-				$dosage = mysqli_real_escape_string($con, trim($dosages[$i] ?? ''));
-				$frequency = mysqli_real_escape_string($con, trim($frequencies[$i] ?? ''));
-				$duration = mysqli_real_escape_string($con, trim($durations[$i] ?? ''));
-				$instruction = mysqli_real_escape_string($con, trim($instructions[$i] ?? ''));
-				$medicineEscaped = mysqli_real_escape_string($con, $medicineName);
-				mysqli_query($con, "INSERT INTO prescription_medicines(prescription_id, medicine_name, dosage, frequency, duration, instructions) VALUES('$prescriptionId', '$medicineEscaped', '$dosage', '$frequency', '$duration', '$instruction')");
-				$medicineCount++;
-			}
-
 			$summary = 'Diagnosis: ' . trim($_POST['diagnosis'] ?? '');
 			$summary .= ' | Medicines: ' . $medicineCount;
 			if ($nextVisitDate !== '') {
 				$summary .= ' | Follow-up: ' . $nextVisitDate;
 			}
-			$summaryEscaped = mysqli_real_escape_string($con, $summary);
-			mysqli_query($con, "UPDATE $appointmentTable SET prescription='$summaryEscaped' WHERE id='$appointmentId' AND doctorId='$doctorId'");
+			$summaryEscaped = hms_escape($con, $summary);
+			hms_query($con, "UPDATE $appointmentTable SET prescription='$summaryEscaped', visitStatus='Completed', checkOutTime=NOW() WHERE id='$appointmentId' AND doctorId='$doctorId'");
+			hms_archive_appointment($con, $appointmentTable, $appointmentId);
 
-			$_SESSION['msg'] = 'Prescription added successfully. Please click Payment Received to complete this appointment.';
+			$_SESSION['msg'] = 'Prescription added successfully and appointment moved to history.';
 			header('location:visit-management.php');
 			exit();
 		}
@@ -266,7 +281,7 @@ include('include/header.php');
 					</thead>
 					<tbody>
 						<tr>
-							<td><input type="text" name="medicine_name[]" class="form-control" placeholder="Paracetamol" required></td>
+							<td><input type="text" name="medicine_name[]" class="form-control" placeholder="Paracetamol"></td>
 							<td><input type="text" name="dosage[]" class="form-control" placeholder="500mg"></td>
 							<td><input type="text" name="frequency[]" class="form-control" placeholder="1-1-1"></td>
 							<td><input type="text" name="duration[]" class="form-control" placeholder="5 days"></td>

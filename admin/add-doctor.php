@@ -5,21 +5,64 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
+function isStrongPassword($password) {
+	return (bool)preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/', (string)$password);
+}
+
+$doctorSpecColumn = 'specilization';
+$doctorSpecType = '';
+$doctorSpecColumnCheck = hms_query($con, "SHOW COLUMNS FROM doctors LIKE 'specialization'");
+if ($doctorSpecColumnCheck && hms_num_rows($doctorSpecColumnCheck) > 0) {
+	$doctorSpecColumn = 'specialization';
+	$doctorSpecMeta = hms_fetch_assoc($doctorSpecColumnCheck);
+	$doctorSpecType = strtolower($doctorSpecMeta['Type'] ?? '');
+} else {
+	$doctorSpecLegacyCheck = hms_query($con, "SHOW COLUMNS FROM doctors LIKE 'specilization'");
+	if ($doctorSpecLegacyCheck && hms_num_rows($doctorSpecLegacyCheck) > 0) {
+		$doctorSpecMeta = hms_fetch_assoc($doctorSpecLegacyCheck);
+		$doctorSpecType = strtolower($doctorSpecMeta['Type'] ?? '');
+	}
+}
+$isDoctorSpecNumeric = preg_match('/int|decimal|float|double/', $doctorSpecType) === 1;
+
+$specTable = '';
+$specColumn = 'specialization';
+if (hms_num_rows(hms_query($con, "SHOW TABLES LIKE 'doctorspecialization'")) > 0) {
+	$specTable = 'doctorspecialization';
+	$specColumn = 'specialization';
+} elseif (hms_num_rows(hms_query($con, "SHOW TABLES LIKE 'doctorspecilization'")) > 0) {
+	$specTable = 'doctorspecilization';
+	$specColumn = 'specilization';
+} elseif (hms_num_rows(hms_query($con, "SHOW TABLES LIKE 'doctor_specialization'")) > 0) {
+	$specTable = 'doctor_specialization';
+	$specColumn = 'specialization';
+}
+
 if(isset($_POST['submit']))
 {
 	$docspecialization=$_POST['Doctorspecialization'];
+	if ($isDoctorSpecNumeric) {
+		$docspecialization = (int)$docspecialization;
+	}
 	$docname=$_POST['docname'];
 	$docaddress=$_POST['clinicaddress'];
 	$docfees=$_POST['docfees'];
 	$doccontactno=$_POST['doccontact'];
 	$docemail=$_POST['docemail'];
-	$password=md5($_POST['npass']);
-	$sql=mysqli_query($con,"insert into doctors(specilization,doctorName,address,docFees,contactno,docEmail,password) values('$docspecialization','$docname','$docaddress','$docfees','$doccontactno','$docemail','$password')");
-	if($sql)
-	{
-		echo "<script>alert('Doctor info added Successfully');</script>";
-		echo "<script>window.location.href ='manage-doctors.php'</script>";
+	$password=$_POST['npass'] ?? '';
+	$confirmPassword=$_POST['cfpass'] ?? '';
+	if($password !== $confirmPassword) {
+		echo "<script>alert('Password and Confirm Password Field do not match.');</script>";
+	} elseif(!isStrongPassword($password)) {
+		echo "<script>alert('Password must be minimum 8 characters with uppercase, lowercase, number and special character.');</script>";
+	} else {
+		$sql=hms_query($con,"INSERT INTO doctors($doctorSpecColumn,doctorName,address,docFees,contactno,docEmail,password) VALUES('$docspecialization','$docname','$docaddress','$docfees','$doccontactno','$docemail','$password')");
+		if($sql)
+		{
+			echo "<script>alert('Doctor info added Successfully');</script>";
+			echo "<script>window.location.href ='manage-doctors.php'</script>";
 
+		}
 	}
 }
 ?>
@@ -28,29 +71,38 @@ if(isset($_POST['submit']))
 <head>
 	<title>Admin | Add Doctor</title>
 
-	<!-- Bootstrap -->
+
 	<link href="../vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
-	<!-- Font Awesome -->
+
 	<link href="../vendors/font-awesome/css/font-awesome.min.css" rel="stylesheet">
-	<!-- NProgress -->
+
 	<link href="../vendors/nprogress/nprogress.css" rel="stylesheet">
-	<!-- iCheck -->
+
 	<link href="../vendors/iCheck/skins/flat/green.css" rel="stylesheet">
-	<!-- bootstrap-progressbar -->
+
 	<link href="../vendors/bootstrap-progressbar/css/bootstrap-progressbar-3.3.4.min.css" rel="stylesheet">
-	<!-- JQVMap -->
+
 	<link href="../vendors/jqvmap/dist/jqvmap.min.css" rel="stylesheet"/>
-	<!-- bootstrap-daterangepicker -->
+
 	<link href="../vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
-	<!-- Custom Theme Style -->
+
 	<link href="../assets/css/custom.min.css" rel="stylesheet">
 	<script type="text/javascript">
+		function strongPassword(pwd) {
+			return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(pwd || '');
+		}
+
 		function valid()
 		{
 			if(document.adddoc.npass.value!= document.adddoc.cfpass.value)
 			{
 				alert("Password and Confirm Password Field do not match  !!");
 				document.adddoc.cfpass.focus();
+				return false;
+			}
+			if(!strongPassword(document.adddoc.npass.value)) {
+				alert("Password must be minimum 8 characters with uppercase, lowercase, number and special character.");
+				document.adddoc.npass.focus();
 				return false;
 			}
 			return true;
@@ -96,12 +148,13 @@ if(isset($_POST['submit']))
 									</label>
 									<select name="Doctorspecialization" class="form-control" required="true">
 										<option value="">Select Specialization</option>
-										<?php $ret=mysqli_query($con,"select * from doctorspecilization");
-										while($row=mysqli_fetch_array($ret))
+										<?php $ret=hms_query($con,"SELECT id, $specColumn AS specialization_name FROM $specTable ORDER BY $specColumn ASC");
+										while($row=hms_fetch_array($ret))
 										{
+											$optionValue = $isDoctorSpecNumeric ? $row['id'] : $row['specialization_name'];
 											?>
-											<option value="<?php echo htmlentities($row['specilization']);?>">
-												<?php echo htmlentities($row['specilization']);?>
+											<option value="<?php echo htmlentities($optionValue);?>">
+												<?php echo htmlentities($row['specialization_name']);?>
 											</option>
 										<?php } ?>
 
@@ -152,6 +205,7 @@ if(isset($_POST['submit']))
 										Password
 									</label>
 									<input type="password" name="npass" class="form-control"  placeholder="New Password" required="required">
+									<small class="text-muted">Min 8 chars with uppercase, lowercase, number, and special character.</small>
 								</div>
 
 								<div class="form-group">
@@ -180,46 +234,46 @@ if(isset($_POST['submit']))
 			</div>
 		</div>
 	</div>
-	<!-- start: FOOTER -->
+
 	<?php include('include/footer.php');?>
-	<!-- jQuery -->
+
 	<script src="../vendors/jquery/dist/jquery.min.js"></script>
-	<!-- Bootstrap -->
+
 	<script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-	<!-- FastClick -->
+
 	<script src="../vendors/fastclick/lib/fastclick.js"></script>
-	<!-- NProgress -->
+
 	<script src="../vendors/nprogress/nprogress.js"></script>
-	<!-- Chart.js -->
+
 	<script src="../vendors/Chart.js/dist/Chart.min.js"></script>
-	<!-- gauge.js -->
+
 	<script src="../vendors/gauge.js/dist/gauge.min.js"></script>
-	<!-- bootstrap-progressbar -->
+
 	<script src="../vendors/bootstrap-progressbar/bootstrap-progressbar.min.js"></script>
-	<!-- iCheck -->
+
 	<script src="../vendors/iCheck/icheck.min.js"></script>
-	<!-- Skycons -->
+
 	<script src="../vendors/skycons/skycons.js"></script>
-	<!-- Flot -->
+
 	<script src="../vendors/Flot/jquery.flot.js"></script>
 	<script src="../vendors/Flot/jquery.flot.pie.js"></script>
 	<script src="../vendors/Flot/jquery.flot.time.js"></script>
 	<script src="../vendors/Flot/jquery.flot.stack.js"></script>
 	<script src="../vendors/Flot/jquery.flot.resize.js"></script>
-	<!-- Flot plugins -->
+
 	<script src="../vendors/flot.orderbars/js/jquery.flot.orderBars.js"></script>
 	<script src="../vendors/flot-spline/js/jquery.flot.spline.min.js"></script>
 	<script src="../vendors/flot.curvedlines/curvedLines.js"></script>
-	<!-- DateJS -->
+
 	<script src="../vendors/DateJS/build/date.js"></script>
-	<!-- JQVMap -->
+
 	<script src="../vendors/jqvmap/dist/jquery.vmap.js"></script>
 	<script src="../vendors/jqvmap/dist/maps/jquery.vmap.world.js"></script>
 	<script src="../vendors/jqvmap/examples/js/jquery.vmap.sampledata.js"></script>
-	<!-- bootstrap-daterangepicker -->
+
 	<script src="../vendors/moment/min/moment.min.js"></script>
 	<script src="../vendors/bootstrap-daterangepicker/daterangepicker.js"></script>
-	<!-- Custom Theme Scripts -->
+
 	<script src="../assets/js/custom.min.js"></script>
 </body>
 </html>

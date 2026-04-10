@@ -5,8 +5,8 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 function tableExists($con, $tableName) {
-	$check = mysqli_query($con, "SHOW TABLES LIKE '" . mysqli_real_escape_string($con, $tableName) . "'");
-	return ($check && mysqli_num_rows($check) > 0);
+	$check = hms_query($con, "SHOW TABLES LIKE '" . hms_escape($con, $tableName) . "'");
+	return ($check && hms_num_rows($check) > 0);
 }
 
 $viewId = (int)($_GET['viewid'] ?? 0);
@@ -14,14 +14,14 @@ $usePatientsTable = tableExists($con, 'patients');
 $patient = null;
 
 if ($viewId > 0 && $usePatientsTable) {
-	$q = mysqli_query($con, "SELECT p.*, d.doctorName, u.fullName AS userName FROM patients p LEFT JOIN doctors d ON d.id=p.doctorId LEFT JOIN users u ON u.id=p.userId WHERE p.id='$viewId' LIMIT 1");
+	$q = hms_query($con, "SELECT p.*, d.doctorName, u.fullName AS userName FROM patients p LEFT JOIN doctors d ON d.id=p.doctorId LEFT JOIN users u ON u.id=p.userId WHERE p.id='$viewId' LIMIT 1");
 	if ($q) {
-		$patient = mysqli_fetch_array($q);
+		$patient = hms_fetch_array($q);
 	}
 } elseif ($viewId > 0) {
-	$q = mysqli_query($con, "SELECT * FROM tblpatient WHERE ID='$viewId' LIMIT 1");
+	$q = hms_query($con, "SELECT * FROM tblpatient WHERE ID='$viewId' LIMIT 1");
 	if ($q) {
-		$patient = mysqli_fetch_array($q);
+		$patient = hms_fetch_array($q);
 	}
 }
 ?>

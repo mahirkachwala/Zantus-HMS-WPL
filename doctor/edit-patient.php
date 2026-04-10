@@ -14,7 +14,7 @@ if(isset($_POST['submit']))
 	$gender=$_POST['gender'];
 	$pataddress=$_POST['pataddress'];
 	$patage=$_POST['patage'];
-	$sql=mysqli_query($con,"update tblpatient set PatientName='$patname',PatientContno='$patcontact',PatientEmail='$patemail',PatientGender='$gender',PatientAdd='$pataddress',PatientAge='$patage' where ID='$eid'");
+	$sql=hms_query($con,"update tblpatient set PatientName='$patname',PatientContno='$patcontact',PatientEmail='$patemail',PatientGender='$gender',PatientAdd='$pataddress',PatientAge='$patage' where ID='$eid'");
 	if($sql)
 	{
 		echo "<script>alert('Patient info updated Successfully');</script>";
@@ -64,9 +64,9 @@ if(isset($_POST['submit']))
 							<form role="form" name="" method="post">
 								<?php
 								$eid=$_GET['editid'];
-								$ret=mysqli_query($con,"select * from tblpatient where ID='$eid'");
+								$ret=hms_query($con,"select * from tblpatient where ID='$eid'");
 								$cnt=1;
-								while ($row=mysqli_fetch_array($ret)) {
+								while ($row=hms_fetch_array($ret)) {
 
 									?>
 									<div class="form-group">

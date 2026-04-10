@@ -5,164 +5,149 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
+$doctorId = (int)($_SESSION['doctor_id'] ?? $_SESSION['id'] ?? 0);
+$keyword = trim($_GET['q'] ?? $_POST['q'] ?? '');
+$hasQuery = ($keyword !== '');
+$kwEsc = hms_escape($con, $keyword);
+
+$results = [
+	'patients' => [],
+	'appointments' => [],
+	'prescriptions' => [],
+	'queries' => [],
+	'feedback' => []
+];
+
+if ($hasQuery && $doctorId > 0) {
+	if (hms_table_exists($con, 'patients')) {
+		$q = hms_query($con, "SELECT id, patientName, patientPhone, patientGender, patientType, createdAt
+			FROM patients
+			WHERE doctorId='$doctorId' AND (
+				patientName LIKE '%$kwEsc%' OR patientPhone LIKE '%$kwEsc%' OR patientEmail LIKE '%$kwEsc%'
+			)
+			ORDER BY id DESC LIMIT 50");
+		if ($q) while($r = hms_fetch_assoc($q)) { $results['patients'][] = $r; }
+	} elseif (hms_table_exists($con, 'tblpatient')) {
+		$q = hms_query($con, "SELECT ID as id, PatientName as patientName, PatientContno as patientPhone, PatientGender as patientGender, 'consultancy' as patientType, CreationDate as createdAt
+			FROM tblpatient
+			WHERE Docid='$doctorId' AND (PatientName LIKE '%$kwEsc%' OR PatientContno LIKE '%$kwEsc%' OR PatientEmail LIKE '%$kwEsc%')
+			ORDER BY ID DESC LIMIT 50");
+		if ($q) while($r = hms_fetch_assoc($q)) { $results['patients'][] = $r; }
+	}
+
+	$apptTable = hms_table_exists($con, 'current_appointments') ? 'current_appointments' : 'appointment';
+	if (hms_table_exists($con, $apptTable)) {
+		$q = hms_query($con, "SELECT a.id, a.appointmentDate, a.appointmentTime, a.visitStatus, a.paymentStatus, u.fullName
+			FROM $apptTable a
+			LEFT JOIN users u ON u.id=a.userId
+			WHERE a.doctorId='$doctorId' AND (
+				a.id LIKE '%$kwEsc%' OR a.appointmentDate LIKE '%$kwEsc%' OR a.appointmentTime LIKE '%$kwEsc%' OR
+				COALESCE(a.visitStatus,'') LIKE '%$kwEsc%' OR COALESCE(a.paymentStatus,'') LIKE '%$kwEsc%' OR
+				COALESCE(u.fullName,'') LIKE '%$kwEsc%'
+			)
+			ORDER BY a.id DESC LIMIT 80");
+		if ($q) while($r = hms_fetch_assoc($q)) { $results['appointments'][] = $r; }
+	}
+
+	if (hms_table_exists($con, 'prescriptions')) {
+		$q = hms_query($con, "SELECT p.id, p.appointment_id, p.diagnosis, p.created_at, u.fullName as patientName
+			FROM prescriptions p
+			LEFT JOIN users u ON u.id=p.patient_id
+			WHERE p.doctor_id='$doctorId' AND (
+				p.id LIKE '%$kwEsc%' OR p.appointment_id LIKE '%$kwEsc%' OR
+				COALESCE(p.diagnosis,'') LIKE '%$kwEsc%' OR COALESCE(p.notes,'') LIKE '%$kwEsc%' OR
+				COALESCE(u.fullName,'') LIKE '%$kwEsc%'
+			)
+			ORDER BY p.id DESC LIMIT 80");
+		if ($q) while($r = hms_fetch_assoc($q)) { $results['prescriptions'][] = $r; }
+	}
+
+	if (hms_table_exists($con, 'contact_queries')) {
+		$q = hms_query($con, "SELECT id, subject, status, created_at
+			FROM contact_queries
+			WHERE portal_type='doctor' AND doctor_id='$doctorId' AND (
+				subject LIKE '%$kwEsc%' OR message LIKE '%$kwEsc%' OR status LIKE '%$kwEsc%'
+			)
+			ORDER BY id DESC LIMIT 50");
+		if ($q) while($r = hms_fetch_assoc($q)) { $results['queries'][] = $r; }
+	}
+
+	if (hms_table_exists($con, 'feedback_entries')) {
+		$q = hms_query($con, "SELECT id, rating, status, created_at
+			FROM feedback_entries
+			WHERE portal_type='doctor' AND doctor_id='$doctorId' AND (
+				COALESCE(feedback_text,'') LIKE '%$kwEsc%' OR COALESCE(status,'') LIKE '%$kwEsc%' OR id LIKE '%$kwEsc%'
+			)
+			ORDER BY id DESC LIMIT 50");
+		if ($q) while($r = hms_fetch_assoc($q)) { $results['feedback'][] = $r; }
+	}
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<title>Doctor | Manage Patients</title>
-
-
+	<title>Doctor | Search</title>
 	<link href="../vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
-
 	<link href="../vendors/font-awesome/css/font-awesome.min.css" rel="stylesheet">
-
 	<link href="../vendors/nprogress/nprogress.css" rel="stylesheet">
-
-	<link href="../vendors/iCheck/skins/flat/green.css" rel="stylesheet">
-
-	<link href="../vendors/bootstrap-progressbar/css/bootstrap-progressbar-3.3.4.min.css" rel="stylesheet">
-
-	<link href="../vendors/jqvmap/dist/jqvmap.min.css" rel="stylesheet"/>
-
 	<link href="../vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
-
 	<link href="../assets/css/custom.css" rel="stylesheet">
-	<style>
-		.page-heading {
-			font-size: 22px;
-			font-weight: 700;
-			color: #1e3a8a;
-			margin-bottom: 14px;
-		}
-		.data-table-wrap {
-			background: #fff;
-			border: 1px solid #e6ebf5;
-			border-radius: 10px;
-			overflow: hidden;
-		}
-		.data-table-wrap td, .data-table-wrap th {
-			font-size: 14px;
-		}
-	</style>
 </head>
 <body class="nav-md">
-	<?php
-	$page_title = 'Doctor | Manage Patients';
-	$x_content = true;
-	?>
-	<?php include('include/header.php');?>
-	<div class="row">
-		<div class="col-md-12">
-			<h3 class="page-heading">Search Patients</h3>
-			<form role="form" method="post" name="search">
+<?php $page_title = 'Doctor | Search'; $x_content = true; include('include/header.php');?>
+<div class="row">
+	<div class="col-md-12">
+		<form method="get" class="form-inline" style="margin-bottom:14px;">
+			<div class="form-group" style="width:78%;">
+				<input type="text" name="q" class="form-control" style="width:100%;" placeholder="Search patient, appointment ID/date, prescription, status..." value="<?php echo htmlentities($keyword); ?>" required>
+			</div>
+			<button type="submit" class="btn btn-primary" style="margin-left:8px;">Search</button>
+		</form>
 
-				<div class="form-group">
-					<label for="doctorname">
-						Search by Name/Mobile No.
-					</label>
-					<input type="text" name="searchdata" id="searchdata" class="form-control" value="" required='true'>
-				</div>
+		<?php if($hasQuery): ?>
+			<div class="alert alert-info">Search result for <strong><?php echo htmlentities($keyword); ?></strong></div>
 
-				<button type="submit" name="search" id="submit" class="btn btn-primary">
-					Search
-				</button>
-			</form>
-			<?php
-			if(isset($_POST['search']))
-			{
+			<div class="x_panel"><div class="x_title"><h2>Patients (<?php echo count($results['patients']); ?>)</h2><div class="clearfix"></div></div><div class="x_content">
+			<?php if(!empty($results['patients'])): ?>
+			<table class="table table-bordered table-hover"><thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Gender</th><th>Type</th><th>Created</th></tr></thead><tbody>
+			<?php $i=1; foreach($results['patients'] as $r): ?><tr><td><?php echo $i++; ?></td><td><?php echo htmlentities($r['patientName'] ?? '-'); ?></td><td><?php echo htmlentities($r['patientPhone'] ?? '-'); ?></td><td><?php echo htmlentities($r['patientGender'] ?? '-'); ?></td><td><?php echo htmlentities($r['patientType'] ?? '-'); ?></td><td><?php echo htmlentities($r['createdAt'] ?? '-'); ?></td></tr><?php endforeach; ?>
+			</tbody></table><?php else: ?><div class="text-muted">No patients matched.</div><?php endif; ?>
+			</div></div>
 
-				$sdata=$_POST['searchdata'];
-				?>
-				<h4 style="margin:16px 0;">Result for "<?php echo htmlentities($sdata); ?>"</h4>
+			<div class="x_panel"><div class="x_title"><h2>Appointments (<?php echo count($results['appointments']); ?>)</h2><div class="clearfix"></div></div><div class="x_content">
+			<?php if(!empty($results['appointments'])): ?>
+			<table class="table table-bordered table-hover"><thead><tr><th>#</th><th>Appointment ID</th><th>Patient</th><th>Date/Time</th><th>Visit</th><th>Payment</th></tr></thead><tbody>
+			<?php $i=1; foreach($results['appointments'] as $r): ?><tr><td><?php echo $i++; ?></td><td><?php echo (int)$r['id']; ?></td><td><?php echo htmlentities($r['fullName'] ?? '-'); ?></td><td><?php echo htmlentities(($r['appointmentDate'] ?? '').' '.($r['appointmentTime'] ?? '')); ?></td><td><?php echo htmlentities($r['visitStatus'] ?? 'Scheduled'); ?></td><td><?php echo htmlentities($r['paymentStatus'] ?? 'Pending'); ?></td></tr><?php endforeach; ?>
+			</tbody></table><?php else: ?><div class="text-muted">No appointments matched.</div><?php endif; ?>
+			</div></div>
 
-				<table class="table table-hover data-table-wrap" id="sample-table-1">
-					<thead>
-						<tr>
-							<th class="center">#</th>
-							<th>Patient Name</th>
-							<th>Patient Contact Number</th>
-							<th>Patient Gender </th>
-							<th>Creation Date </th>
-							<th>Updation Date </th>
-							<th>Action</th>
-						</tr>
-					</thead>
-					<tbody>
-						<?php
-						$docid=(int)($_SESSION['doctor_id'] ?? $_SESSION['id'] ?? 0);
-						$sdata=mysqli_real_escape_string($con,$sdata);
-						$sql=mysqli_query($con,"select * from tblpatient where Docid='$docid' and (PatientName like '%$sdata%' OR PatientContno like '%$sdata%')");
-						$num=mysqli_num_rows($sql);
-						if($num>0){
-							$cnt=1;
-							while($row=mysqli_fetch_array($sql))
-							{
-								?>
-								<tr>
-									<td class="center"><?php echo $cnt;?>.</td>
-									<td class="hidden-xs"><?php echo $row['PatientName'];?></td>
-									<td><?php echo $row['PatientContno'];?></td>
-									<td><?php echo $row['PatientGender'];?></td>
-									<td><?php echo $row['CreationDate'];?></td>
-									<td><?php echo $row['UpdationDate'];?>
-								</td>
-								<td>
-									<a href="edit-patient.php?editid=<?php echo $row['ID'];?>" class="btn btn-primary btn-sm">Edit</a>
-									<a href="view-patient.php?viewid=<?php echo $row['ID'];?>" class="btn btn-cancel btn-sm">View</a>
-								</td>
-							</tr>
-							<?php
-							$cnt=$cnt+1;
-						} } else { ?>
-							<tr>
-								<td colspan="8" class="text-center text-muted">No record found against this search.</td>
+			<div class="x_panel"><div class="x_title"><h2>Prescriptions (<?php echo count($results['prescriptions']); ?>)</h2><div class="clearfix"></div></div><div class="x_content">
+			<?php if(!empty($results['prescriptions'])): ?>
+			<table class="table table-bordered table-hover"><thead><tr><th>#</th><th>Prescription ID</th><th>Appointment</th><th>Patient</th><th>Diagnosis</th><th>Created</th></tr></thead><tbody>
+			<?php $i=1; foreach($results['prescriptions'] as $r): ?><tr><td><?php echo $i++; ?></td><td><?php echo (int)$r['id']; ?></td><td><?php echo (int)$r['appointment_id']; ?></td><td><?php echo htmlentities($r['patientName'] ?? '-'); ?></td><td><?php echo htmlentities($r['diagnosis'] ?? '-'); ?></td><td><?php echo htmlentities($r['created_at'] ?? '-'); ?></td></tr><?php endforeach; ?>
+			</tbody></table><?php else: ?><div class="text-muted">No prescriptions matched.</div><?php endif; ?>
+			</div></div>
 
-							</tr>
+			<div class="x_panel"><div class="x_title"><h2>Contact Queries (<?php echo count($results['queries']); ?>)</h2><div class="clearfix"></div></div><div class="x_content">
+			<?php if(!empty($results['queries'])): ?>
+			<table class="table table-bordered table-hover"><thead><tr><th>#</th><th>ID</th><th>Subject</th><th>Status</th><th>Created</th></tr></thead><tbody>
+			<?php $i=1; foreach($results['queries'] as $r): ?><tr><td><?php echo $i++; ?></td><td><?php echo (int)$r['id']; ?></td><td><?php echo htmlentities($r['subject'] ?? '-'); ?></td><td><?php echo htmlentities($r['status'] ?? 'New'); ?></td><td><?php echo htmlentities($r['created_at'] ?? '-'); ?></td></tr><?php endforeach; ?>
+			</tbody></table><?php else: ?><div class="text-muted">No contact queries matched.</div><?php endif; ?>
+			</div></div>
 
-							<?php }} ?></tbody>
-						</table>
-					</div>
-				</div>
-
-				<?php include('include/footer.php');?>
-
-				<script src="../vendors/jquery/dist/jquery.min.js"></script>
-
-				<script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-
-				<script src="../vendors/fastclick/lib/fastclick.js"></script>
-
-				<script src="../vendors/nprogress/nprogress.js"></script>
-
-				<script src="../vendors/Chart.js/dist/Chart.min.js"></script>
-
-				<script src="../vendors/gauge.js/dist/gauge.min.js"></script>
-
-				<script src="../vendors/bootstrap-progressbar/bootstrap-progressbar.min.js"></script>
-
-				<script src="../vendors/iCheck/icheck.min.js"></script>
-
-				<script src="../vendors/skycons/skycons.js"></script>
-
-				<script src="../vendors/Flot/jquery.flot.js"></script>
-				<script src="../vendors/Flot/jquery.flot.pie.js"></script>
-				<script src="../vendors/Flot/jquery.flot.time.js"></script>
-				<script src="../vendors/Flot/jquery.flot.stack.js"></script>
-				<script src="../vendors/Flot/jquery.flot.resize.js"></script>
-
-				<script src="../vendors/flot.orderbars/js/jquery.flot.orderBars.js"></script>
-				<script src="../vendors/flot-spline/js/jquery.flot.spline.min.js"></script>
-				<script src="../vendors/flot.curvedlines/curvedLines.js"></script>
-
-				<script src="../vendors/DateJS/build/date.js"></script>
-
-				<script src="../vendors/jqvmap/dist/jquery.vmap.js"></script>
-				<script src="../vendors/jqvmap/dist/maps/jquery.vmap.world.js"></script>
-				<script src="../vendors/jqvmap/examples/js/jquery.vmap.sampledata.js"></script>
-
-				<script src="../vendors/moment/min/moment.min.js"></script>
-				<script src="../vendors/bootstrap-daterangepicker/daterangepicker.js"></script>
-
-				<script src="../assets/js/custom.min.js"></script>
-			</body>
-			</html>
+			<div class="x_panel"><div class="x_title"><h2>Feedback (<?php echo count($results['feedback']); ?>)</h2><div class="clearfix"></div></div><div class="x_content">
+			<?php if(!empty($results['feedback'])): ?>
+			<table class="table table-bordered table-hover"><thead><tr><th>#</th><th>ID</th><th>Rating</th><th>Status</th><th>Created</th></tr></thead><tbody>
+			<?php $i=1; foreach($results['feedback'] as $r): ?><tr><td><?php echo $i++; ?></td><td><?php echo (int)$r['id']; ?></td><td><?php echo (int)($r['rating'] ?? 0) > 0 ? (int)$r['rating'].'/5' : '-'; ?></td><td><?php echo htmlentities($r['status'] ?? 'New'); ?></td><td><?php echo htmlentities($r['created_at'] ?? '-'); ?></td></tr><?php endforeach; ?>
+			</tbody></table><?php else: ?><div class="text-muted">No feedback matched.</div><?php endif; ?>
+			</div></div>
+		<?php endif; ?>
+	</div>
+</div>
+<?php include('include/footer.php');?>
+<script src="../vendors/jquery/dist/jquery.min.js"></script>
+<script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../vendors/nprogress/nprogress.js"></script>
+<script src="../assets/js/custom.min.js"></script>
+</body>
+</html>

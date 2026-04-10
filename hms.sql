@@ -247,7 +247,6 @@ CREATE TABLE `tblpatient` (
   `PatientGender` varchar(50) DEFAULT NULL,
   `PatientAdd` mediumtext,
   `PatientAge` int(10) DEFAULT NULL,
-  `PatientMedhis` mediumtext,
   `CreationDate` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `UpdationDate` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -256,12 +255,12 @@ CREATE TABLE `tblpatient` (
 -- Dumping data for table `tblpatient`
 --
 
-INSERT INTO `tblpatient` (`ID`, `Docid`, `PatientName`, `PatientContno`, `PatientEmail`, `PatientGender`, `PatientAdd`, `PatientAge`, `PatientMedhis`, `CreationDate`, `UpdationDate`) VALUES
-(1, 1, 'Test Patient', 4558968789, 'test@gmail.com', 'Female', 'New York', 26, 'She is diabetic patient', '2022-06-13 01:08:09', '2022-06-13 13:30:51'),
-(2, 5, 'Test Patient1', 9797977979, 'test1@gmail.com', 'Male', 'New York', 39, 'No', '2022-06-13 01:08:09', '2022-06-13 13:30:54'),
-(3, 7, 'Test Patient2', 9878978798, 'test2@gmail.com', 'Female', 'New York', 46, 'No', '2022-06-13 01:08:09', '2022-06-13 13:30:56'),
-(4, 7, 'Test Patient3', 9888988989, 'test3@gmail.com', 'Male', 'New York', 45, 'He is long suffered by asthma', '2022-06-13 01:08:09', '2022-06-13 13:30:58'),
-(5, 9, 'Test Patient4', 1234567890, 'test4@gmail.com', 'male', 'Test ', 25, 'THis is sample text for testing.', '2022-06-13 01:08:09', '2022-06-13 13:31:00');
+INSERT INTO `tblpatient` (`ID`, `Docid`, `PatientName`, `PatientContno`, `PatientEmail`, `PatientGender`, `PatientAdd`, `PatientAge`, `CreationDate`, `UpdationDate`) VALUES
+(1, 1, 'Test Patient', 4558968789, 'test@gmail.com', 'Female', 'New York', 26, '2022-06-13 01:08:09', '2022-06-13 13:30:51'),
+(2, 5, 'Test Patient1', 9797977979, 'test1@gmail.com', 'Male', 'New York', 39, '2022-06-13 01:08:09', '2022-06-13 13:30:54'),
+(3, 7, 'Test Patient2', 9878978798, 'test2@gmail.com', 'Female', 'New York', 46, '2022-06-13 01:08:09', '2022-06-13 13:30:56'),
+(4, 7, 'Test Patient3', 9888988989, 'test3@gmail.com', 'Male', 'New York', 45, '2022-06-13 01:08:09', '2022-06-13 13:30:58'),
+(5, 9, 'Test Patient4', 1234567890, 'test4@gmail.com', 'male', 'Test ', 25, '2022-06-13 01:08:09', '2022-06-13 13:31:00');
 
 -- --------------------------------------------------------
 

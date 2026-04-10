@@ -6,16 +6,19 @@ include('include/checklogin.php');
 check_login();
 
 function appointmentColumnExists($con, $tableName, $columnName) {
-	$check = mysqli_query($con, "SHOW COLUMNS FROM `$tableName` LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
-	return ($check && mysqli_num_rows($check) > 0);
+	$check = hms_query($con, "SHOW COLUMNS FROM `$tableName` LIKE '" . hms_escape($con, $columnName) . "'");
+	return ($check && hms_num_rows($check) > 0);
 }
 
 function tableExists($con, $tableName) {
-	$check = mysqli_query($con, "SHOW TABLES LIKE '" . mysqli_real_escape_string($con, $tableName) . "'");
-	return ($check && mysqli_num_rows($check) > 0);
+	$check = hms_query($con, "SHOW TABLES LIKE '" . hms_escape($con, $tableName) . "'");
+	return ($check && hms_num_rows($check) > 0);
 }
 
-$appointmentTable = tableExists($con, 'current_appointments') ? 'current_appointments' : 'appointment';
+$hasCurrentAppointments = tableExists($con, 'current_appointments');
+$hasLegacyAppointments = tableExists($con, 'appointment');
+$hasPastAppointments = tableExists($con, 'past_appointments');
+$appointmentTable = $hasCurrentAppointments ? 'current_appointments' : 'appointment';
 $hasVisitStatus = appointmentColumnExists($con, $appointmentTable, 'visitStatus');
 $hasPrescriptionsTable = tableExists($con, 'prescriptions');
 $hasTransferTable = tableExists($con, 'appointment_transfers');
@@ -23,7 +26,8 @@ $hasTransferTable = tableExists($con, 'appointment_transfers');
 if(isset($_GET['cancelid']))
 {
 	$aid = (int)$_GET['cancelid'];
-	mysqli_query($con,"update $appointmentTable set userStatus='0', doctorStatus='0', visitStatus='Cancelled' where id='$aid'");
+	hms_query($con,"update $appointmentTable set userStatus='0', doctorStatus='0', visitStatus='Cancelled' where id='$aid'");
+	hms_archive_appointment($con, $appointmentTable, $aid);
 	$_SESSION['msg'] = 'Appointment cancelled by admin.';
 	header('location:appointment-history.php');
 	exit();
@@ -93,15 +97,44 @@ if(isset($_GET['cancelid']))
 				</thead>
 				<tbody>
 					<?php
-					// MySQL rows are rendered into each HTML table row below.
-					$sql=mysqli_query($con,"select doctors.doctorName as docname,users.fullName as pname,$appointmentTable.* from $appointmentTable join doctors on doctors.id=$appointmentTable.doctorId join users on users.id=$appointmentTable.userId order by $appointmentTable.id desc");
+					// Load all appointment sources so admin can view complete records.
+					$rows = [];
+					$tablesToRead = [];
+					if($hasCurrentAppointments) {
+						$tablesToRead[] = 'current_appointments';
+					} elseif($hasLegacyAppointments) {
+						$tablesToRead[] = 'appointment';
+					}
+					if($hasPastAppointments) {
+						$tablesToRead[] = 'past_appointments';
+					}
+
+					foreach($tablesToRead as $tbl) {
+						$q = hms_query($con, "SELECT doctors.doctorName as docname, users.fullName as pname, $tbl.*, '$tbl' as sourceTableName FROM $tbl JOIN doctors ON doctors.id=$tbl.doctorId JOIN users ON users.id=$tbl.userId");
+						if($q) {
+							while($r = hms_fetch_array($q)) {
+								$rows[] = $r;
+							}
+						}
+					}
+
+					usort($rows, function($a, $b) {
+						$da = strtotime((string)($a['postingDate'] ?? $a['archivedAt'] ?? '1970-01-01 00:00:00'));
+						$db = strtotime((string)($b['postingDate'] ?? $b['archivedAt'] ?? '1970-01-01 00:00:00'));
+						if($da === $db) {
+							return (int)($b['id'] ?? 0) <=> (int)($a['id'] ?? 0);
+						}
+						return $db <=> $da;
+					});
+
 					$cnt=1;
-					while($row=mysqli_fetch_array($sql))
+					foreach($rows as $row)
 					{
 						$isTransferred = false;
+						$effectiveAppointmentId = (int)($row['originalAppointmentId'] ?? 0) > 0 ? (int)$row['originalAppointmentId'] : (int)$row['id'];
 						if($hasTransferTable) {
-							$tr = mysqli_query($con, "SELECT id FROM appointment_transfers WHERE originalAppointmentId='".(int)$row['id']."' ORDER BY id DESC LIMIT 1");
-							$isTransferred = ($tr && mysqli_num_rows($tr) > 0);
+							$tr = hms_query($con, "SELECT id FROM appointment_transfers WHERE originalAppointmentId='".$effectiveAppointmentId."' ORDER BY id DESC LIMIT 1");
+							$isTransferred = ($tr && hms_num_rows($tr) > 0);
 						}
 						if(!$isTransferred && stripos((string)($row['prescription'] ?? ''), 'Transferred to Admitted') !== false) {
 							$isTransferred = true;
@@ -139,15 +172,15 @@ if(isset($_GET['cancelid']))
 								<?php
 								$visitStatus = $row['visitStatus'] ?? 'Scheduled';
 								if($isTransferred) {
-									echo '<span style="color:#7c3aed;font-weight:700;">Transferred to Admitted</span>';
+									echo '<span class="status-transferred">Transferred to Admitted</span>';
 								} elseif($visitStatus === 'Completed') {
 									echo '<span class="status-active">Completed</span>';
 								} elseif($visitStatus === 'Checked In') {
-									echo '<span style="color:#1d4ed8;font-weight:700;">Checked In</span>';
+									echo '<span class="status-info">Checked In</span>';
 								} elseif($visitStatus === 'Cancelled') {
 									echo '<span class="status-cancelled">Cancelled</span>';
 								} else {
-									echo 'Scheduled';
+									echo '<span class="status-warning">Scheduled</span>';
 								}
 								?>
 							</td>
@@ -155,12 +188,24 @@ if(isset($_GET['cancelid']))
 							<td>
 								<?php
 								$hasStructured = false;
+								$prescriptionId = 0;
 								if($hasPrescriptionsTable) {
-									$ps = mysqli_query($con, "SELECT id FROM prescriptions WHERE appointment_id='".(int)$row['id']."' ORDER BY id DESC LIMIT 1");
-									$hasStructured = ($ps && mysqli_num_rows($ps) > 0);
+									$ps = hms_query($con, "SELECT id FROM prescriptions WHERE appointment_id='".$effectiveAppointmentId."' ORDER BY id DESC LIMIT 1");
+									if($ps && hms_num_rows($ps) > 0) {
+										$psRow = hms_fetch_assoc($ps);
+										$prescriptionId = (int)($psRow['id'] ?? 0);
+										$hasStructured = ($prescriptionId > 0);
+									} elseif(isset($row['userId'], $row['doctorId'])) {
+										$ps2 = hms_query($con, "SELECT id FROM prescriptions WHERE doctor_id='".(int)$row['doctorId']."' AND patient_id='".(int)$row['userId']."' ORDER BY id DESC LIMIT 1");
+										if($ps2 && hms_num_rows($ps2) > 0) {
+											$psRow2 = hms_fetch_assoc($ps2);
+											$prescriptionId = (int)($psRow2['id'] ?? 0);
+											$hasStructured = ($prescriptionId > 0);
+										}
+									}
 								}
 								if($hasStructured) {
-									echo '<a href="view-prescription.php?appointment_id='.(int)$row['id'].'" class="btn btn-primary btn-sm">View</a>';
+									echo '<a href="view-prescription.php?prescription_id='.(int)$prescriptionId.'" class="btn btn-primary btn-sm">View</a>';
 								} else {
 									echo '<span class="text-muted">History Record</span>';
 								}

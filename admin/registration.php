@@ -1,5 +1,10 @@
 <?php
 include_once('include/config.php');
+
+function isStrongPassword($password) {
+	return (bool)preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/', (string)$password);
+}
+
 if(isset($_POST['submit']))
 {
 $fname=$_POST['full_name'];
@@ -7,11 +12,19 @@ $address=$_POST['address'];
 $city=$_POST['city'];
 $gender=$_POST['gender'];
 $email=$_POST['email'];
-$password=md5($_POST['password']);
-$query=mysql_query("insert into users(fullname,address,city,gender,email,password) values('$fname','$address','$city','$gender','$email','$password')");
-if($query)
-{
-	echo "<script>alert('Successfully Registered. You can login now');</script>";
+$password=$_POST['password'] ?? '';
+$confirmPassword=$_POST['password_again'] ?? '';
+
+if($password !== $confirmPassword) {
+	echo "<script>alert('Password and Confirm Password Field do not match.');</script>";
+} elseif(!isStrongPassword($password)) {
+	echo "<script>alert('Password must be minimum 8 characters with uppercase, lowercase, number and special character.');</script>";
+} else {
+	$query=hms_query($con,"insert into users(fullName,address,city,gender,email,password) values('".hms_escape($con,$fname)."','".hms_escape($con,$address)."','".hms_escape($con,$city)."','".hms_escape($con,$gender)."','".hms_escape($con,$email)."','".hms_escape($con,$password)."')");
+	if($query)
+	{
+		echo "<script>alert('Successfully Registered. You can login now');</script>";
+	}
 }
 }
 ?>
@@ -64,6 +77,25 @@ if($query)
 				font-size: 14px;
 			}
 		</style>
+		<script type="text/javascript">
+			function strongPassword(pwd) {
+				return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(pwd || '');
+			}
+
+			function valid() {
+				if(document.registration.password.value != document.registration.password_again.value) {
+					alert("Password and Confirm Password Field do not match !!");
+					document.registration.password_again.focus();
+					return false;
+				}
+				if(!strongPassword(document.registration.password.value)) {
+					alert("Password must be minimum 8 characters with uppercase, lowercase, number and special character.");
+					document.registration.password.focus();
+					return false;
+				}
+				return true;
+			}
+		</script>
 
 
 
@@ -71,15 +103,15 @@ if($query)
 	</head>
 
 	<body class="login">
-		<!-- start: REGISTRATION -->
+
 		<div class="row">
 			<div class="main-login col-xs-10 col-xs-offset-1 col-sm-8 col-sm-offset-2 col-md-4 col-md-offset-4">
 				<div class="logo margin-top-30">
 					<img src="../assets/images/zantus-logo.jpg" alt="Zantus"/>
 				</div>
-				<!-- start: REGISTER BOX -->
+
 				<div class="box-register">
-					<form name="registration" id="registration"  method="post">
+					<form name="registration" id="registration"  method="post" onSubmit="return valid();">
 						<fieldset>
 							<legend>
 								Zantus HMS | Sign Up
@@ -122,7 +154,7 @@ if($query)
 							</div>
 							<div class="form-group">
 								<span class="input-icon">
-									<input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+									<input type="password" class="form-control" id="password" name="password" placeholder="Password" minlength="8" required>
 									<i class="fa fa-lock"></i> </span>
 							</div>
 							<div class="form-group">
@@ -193,5 +225,5 @@ error:function (){}
 </script>
 
 	</body>
-	<!-- end: BODY -->
+
 </html>

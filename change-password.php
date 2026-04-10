@@ -1,22 +1,28 @@
 <?php
 session_start();
-//error_reporting(0);
 include('include/config.php');
 include('include/checklogin.php');
 check_login();
-date_default_timezone_set('Asia/Kolkata');// change according timezone
+date_default_timezone_set('Asia/Kolkata');
 $currentTime = date( 'Y-m-d h:i:s', time () );
+
+function isStrongPassword($password) {
+	return (bool)preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/', (string)$password);
+}
+
 if(isset($_POST['submit']))
 {
 
 	if($_POST['npass'] != $_POST['cfpass']) {
 		$_SESSION['msg1']="confirm Password not match !!";
+	} elseif(!isStrongPassword($_POST['npass'] ?? '')) {
+		$_SESSION['msg1']="Password must be minimum 8 characters with uppercase, lowercase, number and special character.";
 	} else {
-		$sql=mysqli_query($con,"SELECT password FROM  users where password='".md5($_POST['cpass'])."' && id='".$_SESSION['id']."'");
-		$num=mysqli_fetch_array($sql);
-		if($num>0)
+		$sql=hms_query($con,"SELECT password FROM  users where password='".$_POST['cpass']."' && id='".$_SESSION['id']."'");
+		$num=hms_fetch_array($sql);
+		if($num)
 		{
-			$con=mysqli_query($con,"update users set `password`='".md5($_POST['npass'])."', `updationDate`='$currentTime' where id='".$_SESSION['id']."'");
+			$updateResult = hms_query($con,"update users set `password`='".$_POST['npass']."', `updationDate`='$currentTime' where id='".$_SESSION['id']."'");
 
 			$_SESSION['msg1']="Password Changed Successfully !!";
 		}
@@ -32,21 +38,21 @@ if(isset($_POST['submit']))
 <head>
 	<title>User  | change Password</title>
 
-	<!-- Bootstrap -->
+
 	<link href="vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
-	<!-- Font Awesome -->
+
 	<link href="vendors/font-awesome/css/font-awesome.min.css" rel="stylesheet">
-	<!-- NProgress -->
+
 	<link href="vendors/nprogress/nprogress.css" rel="stylesheet">
-	<!-- iCheck -->
+
 	<link href="vendors/iCheck/skins/flat/green.css" rel="stylesheet">
-	<!-- bootstrap-progressbar -->
+
 	<link href="vendors/bootstrap-progressbar/css/bootstrap-progressbar-3.3.4.min.css" rel="stylesheet">
-	<!-- JQVMap -->
+
 	<link href="vendors/jqvmap/dist/jqvmap.min.css" rel="stylesheet"/>
-	<!-- bootstrap-daterangepicker -->
+
 	<link href="vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
-	<!-- Custom Theme Style -->
+
 	<link href="assets/css/custom.min.css" rel="stylesheet">
 	<style>
 		.page-heading {
@@ -57,6 +63,10 @@ if(isset($_POST['submit']))
 		}
 	</style>
 	<script type="text/javascript">
+		function strongPassword(pwd) {
+			return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(pwd || '');
+		}
+
 		function valid()
 		{
 			if(document.chngpwd.cpass.value=="")
@@ -81,6 +91,12 @@ if(isset($_POST['submit']))
 			{
 				alert("Password and Confirm Password Field do not match  !!");
 				document.chngpwd.cfpass.focus();
+				return false;
+			}
+			else if(!strongPassword(document.chngpwd.npass.value))
+			{
+				alert("Password must be minimum 8 characters with uppercase, lowercase, number and special character.");
+				document.chngpwd.npass.focus();
 				return false;
 			}
 			return true;
@@ -142,43 +158,43 @@ if(isset($_POST['submit']))
 
 	</div>
 	<?php include('include/footer.php');?>
-	<!-- jQuery -->
+
 	<script src="vendors/jquery/dist/jquery.min.js"></script>
-	<!-- Bootstrap -->
+
 	<script src="vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-	<!-- FastClick -->
+
 	<script src="vendors/fastclick/lib/fastclick.js"></script>
-	<!-- NProgress -->
+
 	<script src="vendors/nprogress/nprogress.js"></script>
-	<!-- Chart.js -->
+
 	<script src="vendors/Chart.js/dist/Chart.min.js"></script>
-	<!-- gauge.js -->
+
 	<script src="vendors/gauge.js/dist/gauge.min.js"></script>
-	<!-- bootstrap-progressbar -->
+
 	<script src="vendors/bootstrap-progressbar/bootstrap-progressbar.min.js"></script>
-	<!-- iCheck -->
+
 	<script src="vendors/iCheck/icheck.min.js"></script>
-	<!-- Skycons -->
+
 	<script src="vendors/skycons/skycons.js"></script>
-	<!-- Flot -->
+
 	<script src="vendors/Flot/jquery.flot.js"></script>
 	<script src="vendors/Flot/jquery.flot.pie.js"></script>
 	<script src="vendors/Flot/jquery.flot.time.js"></script>
 	<script src="vendors/Flot/jquery.flot.stack.js"></script>
 	<script src="vendors/Flot/jquery.flot.resize.js"></script>
-	<!-- Flot plugins -->
+
 	<script src="vendors/flot.orderbars/js/jquery.flot.orderBars.js"></script>
 	<script src="vendors/flot-spline/js/jquery.flot.spline.min.js"></script>
 	<script src="vendors/flot.curvedlines/curvedLines.js"></script>
-	<!-- DateJS -->
+
 	<script src="vendors/DateJS/build/date.js"></script>
-	<!-- JQVMap -->
+
 	<script src="vendors/jqvmap/dist/jquery.vmap.js"></script>
 	<script src="vendors/jqvmap/dist/maps/jquery.vmap.world.js"></script>
 	<script src="vendors/jqvmap/examples/js/jquery.vmap.sampledata.js"></script>
-	<!-- bootstrap-daterangepicker -->
+
 	<script src="vendors/moment/min/moment.min.js"></script>
 	<script src="vendors/bootstrap-daterangepicker/daterangepicker.js"></script>
-	<!-- Custom Theme Scripts -->
+
 	<script src="assets/js/custom.min.js"></script>
 </body>

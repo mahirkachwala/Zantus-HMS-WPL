@@ -39,9 +39,9 @@ check_login();
       <h5 class="over-title margin-bottom-15">Patient <span class="text-bold">Details</span></h5>
         <?php
         $vid=$_GET['viewid'];
-        $ret=mysqli_query($con,"select * from tblpatient where ID='$vid'");
+        $ret=hms_query($con,"select * from tblpatient where ID='$vid'");
         $cnt=1;
-        while ($row=mysqli_fetch_array($ret)) {
+        while ($row=hms_fetch_array($ret)) {
          ?>
          <table border="1" class="table table-bordered">
            <tr align="center">

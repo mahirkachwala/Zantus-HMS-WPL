@@ -5,17 +5,29 @@ include('include/checklogin.php');
 check_login();
 date_default_timezone_set('Asia/Kolkata');
 $currentTime = date( 'Y-m-d h:i:s', time () );
+
+function isStrongPassword($password) {
+	return (bool)preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/', (string)$password);
+}
+
 if(isset($_POST['submit']))
 {
 	if($_POST['npass'] != $_POST['cfpass']) {
 		$_SESSION['msg1']="Confirm Password not match !!";
+	} elseif(!isStrongPassword($_POST['npass'] ?? '')) {
+		$_SESSION['msg1']="Password must be minimum 8 characters with uppercase, lowercase, number and special character.";
 	} else {
-		$adminUser = mysqli_real_escape_string($con, $_SESSION['alogin'] ?? '');
-		$sql=mysqli_query($con,"SELECT password FROM  admin where password='".$_POST['cpass']."' && username='".$adminUser."'");
-		$num=mysqli_fetch_array($sql);
-		if($num>0)
+		$adminUser = hms_escape($con, $_SESSION['alogin'] ?? '');
+		$currentPass = $_POST['cpass'] ?? '';
+		$newPass = $_POST['npass'] ?? '';
+		$sql=hms_query($con,"SELECT password FROM admin where username='".$adminUser."' LIMIT 1");
+		$num=hms_fetch_array($sql);
+		$storedPassword = $num['password'] ?? '';
+		$isCurrentValid = ($storedPassword === $currentPass);
+		if($num && $isCurrentValid)
 		{
-			$con=mysqli_query($con,"update admin set `password`='".$_POST['npass']."', `updationDate`='$currentTime' where username='".$adminUser."'");
+			$newPasswordToStore = $newPass;
+			$updateResult = hms_query($con,"update admin set `password`='".$newPasswordToStore."', `updationDate`='$currentTime' where username='".$adminUser."'");
 			$_SESSION['msg1']="Password Changed Successfully !!";
 		}
 		else
@@ -52,6 +64,11 @@ if(isset($_POST['submit']))
 		}
 	</style>
 	<script type="text/javascript">
+		function strongPassword(pwd)
+		{
+			return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(pwd || '');
+		}
+
 		// Client-side form validation before submit.
 		function valid()
 		{
@@ -77,6 +94,12 @@ if(isset($_POST['submit']))
 			{
 				alert("Password and Confirm Password Field do not match  !!");
 				document.chngpwd.cfpass.focus();
+				return false;
+			}
+			else if(!strongPassword(document.chngpwd.npass.value))
+			{
+				alert("Password must be minimum 8 characters with uppercase, lowercase, number and special character.");
+				document.chngpwd.npass.focus();
 				return false;
 			}
 			return true;

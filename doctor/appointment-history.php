@@ -6,22 +6,43 @@ include('include/checklogin.php');
 check_login();
 
 function appointmentColumnExists($con, $tableName, $columnName) {
-	$check = mysqli_query($con, "SHOW COLUMNS FROM `$tableName` LIKE '" . mysqli_real_escape_string($con, $columnName) . "'");
-	return ($check && mysqli_num_rows($check) > 0);
+	$check = hms_query($con, "SHOW COLUMNS FROM `$tableName` LIKE '" . hms_escape($con, $columnName) . "'");
+	return ($check && hms_num_rows($check) > 0);
 }
 
 function tableExists($con, $tableName) {
-	$check = mysqli_query($con, "SHOW TABLES LIKE '" . mysqli_real_escape_string($con, $tableName) . "'");
-	return ($check && mysqli_num_rows($check) > 0);
+	$check = hms_query($con, "SHOW TABLES LIKE '" . hms_escape($con, $tableName) . "'");
+	return ($check && hms_num_rows($check) > 0);
 }
 
 $appointmentTable = tableExists($con, 'current_appointments') ? 'current_appointments' : 'appointment';
 $hasVisitStatus = appointmentColumnExists($con, $appointmentTable, 'visitStatus');
 $hasPrescriptionsTable = tableExists($con, 'prescriptions');
+$hasPaymentStatus = appointmentColumnExists($con, $appointmentTable, 'paymentStatus');
+$hasPaymentOption = appointmentColumnExists($con, $appointmentTable, 'paymentOption');
+$hasPaymentRef = appointmentColumnExists($con, $appointmentTable, 'paymentRef');
+$hasPaidAt = appointmentColumnExists($con, $appointmentTable, 'paidAt');
 
 if(isset($_GET['cancel']))
 {
-	mysqli_query($con,"update $appointmentTable set doctorStatus='0' where id ='".$_GET['id']."'");
+	$aid = (int)($_GET['id'] ?? 0);
+	$hasPaymentStatus = appointmentColumnExists($con, $appointmentTable, 'paymentStatus');
+	$hasPaymentRef = appointmentColumnExists($con, $appointmentTable, 'paymentRef');
+	$hasPaidAt = appointmentColumnExists($con, $appointmentTable, 'paidAt');
+	$apptRow = hms_query($con, "SELECT * FROM $appointmentTable WHERE id='$aid' AND doctorId='".(int)$_SESSION['id']."' LIMIT 1");
+	$apptData = ($apptRow) ? hms_fetch_array($apptRow) : null;
+	$isPaid = ($hasPaymentStatus && in_array(strtolower((string)($apptData['paymentStatus'] ?? '')), ['paid','paid at hospital'], true))
+		|| ($hasPaymentRef && !empty($apptData['paymentRef']))
+		|| ($hasPaidAt && !empty($apptData['paidAt']));
+	$updates = ["doctorStatus='0'"];
+	if($hasVisitStatus) {
+		$updates[] = "visitStatus='Cancelled'";
+	}
+	if($hasPaymentStatus && !$isPaid) {
+		$updates[] = "paymentStatus='Cancelled'";
+	}
+	hms_query($con,"update $appointmentTable set ".implode(', ', $updates)." where id ='$aid' and doctorId='".(int)$_SESSION['id']."'");
+	hms_archive_appointment($con, $appointmentTable, $aid);
 	$_SESSION['msg']="Appointment canceled !!";
 }
 ?>
@@ -97,9 +118,9 @@ if(isset($_GET['cancel']))
 						$historyWhere .= " OR $appointmentTable.visitStatus IN ('Checked In','Completed','Cancelled')";
 					}
 					// Server-side query output is rendered as HTML table rows.
-					$sql=mysqli_query($con,"select users.fullName as fname,$appointmentTable.* from $appointmentTable join users on users.id=$appointmentTable.userId where $appointmentTable.doctorId='".$_SESSION['id']."' and (".$historyWhere.") order by $appointmentTable.id desc");
+					$sql=hms_query($con,"select users.fullName as fname,$appointmentTable.* from $appointmentTable join users on users.id=$appointmentTable.userId where $appointmentTable.doctorId='".$_SESSION['id']."' and (".$historyWhere.") order by $appointmentTable.id desc");
 					$cnt=1;
-					while($row=mysqli_fetch_array($sql))
+					while($row=hms_fetch_array($sql))
 					{
 						?>
 
@@ -109,10 +130,21 @@ if(isset($_GET['cancel']))
 							<td><?php echo $row['doctorSpecialization'];?></td>
 							<td><?php echo $row['consultancyFees'];?></td>
 							<td>
-								<?php if(($row['paymentStatus'] ?? 'Pending') === 'Paid'): ?>
+								<?php
+								$paymentStatus = (string)($row['paymentStatus'] ?? 'Pending');
+								$isPaidRow = ($hasPaymentStatus && in_array(strtolower($paymentStatus), ['paid','paid at hospital'], true))
+									|| ($hasPaymentRef && !empty($row['paymentRef']))
+									|| ($hasPaidAt && !empty($row['paidAt']));
+								$isHospitalPaid = $isPaidRow && (
+									strtolower($paymentStatus) === 'paid at hospital'
+									|| ($hasPaymentOption && (string)($row['paymentOption'] ?? '') === 'PayLater')
+								);
+								if($isHospitalPaid): ?>
+									<span class="status-active">Paid at Hospital</span>
+								<?php elseif($isPaidRow): ?>
 									<span class="status-active">Paid</span>
 								<?php else: ?>
-									<span class="status-cancelled"><?php echo htmlentities($row['paymentStatus'] ?? 'Pending'); ?></span>
+									<span class="status-cancelled"><?php echo htmlentities($paymentStatus); ?></span>
 								<?php endif; ?>
 							</td>
 							<td><?php echo $row['appointmentDate'];?> / <?php echo
@@ -147,11 +179,11 @@ if(isset($_GET['cancel']))
 								if($visitStatus === 'Completed') {
 									echo '<span class="status-active">Completed</span>';
 								} elseif($visitStatus === 'Checked In') {
-									echo '<span style="color:#1d4ed8;font-weight:700;">Checked In</span>';
+									echo '<span class="status-info">Checked In</span>';
 								} elseif($visitStatus === 'Cancelled') {
 									echo '<span class="status-cancelled">Cancelled</span>';
 								} else {
-									echo 'Scheduled';
+									echo '<span class="status-warning">Scheduled</span>';
 								}
 								?>
 							</td>
@@ -159,12 +191,25 @@ if(isset($_GET['cancel']))
 							<td>
 								<?php
 								$hasStructured = false;
+								$prescriptionId = 0;
 								if($hasPrescriptionsTable) {
-									$ps = mysqli_query($con, "SELECT id FROM prescriptions WHERE appointment_id='".(int)$row['id']."' ORDER BY id DESC LIMIT 1");
-									$hasStructured = ($ps && mysqli_num_rows($ps) > 0);
+									$ps = hms_query($con, "SELECT id FROM prescriptions WHERE appointment_id='".(int)$row['id']."' ORDER BY id DESC LIMIT 1");
+									if($ps && hms_num_rows($ps) > 0) {
+										$psRow = hms_fetch_assoc($ps);
+										$prescriptionId = (int)($psRow['id'] ?? 0);
+										$hasStructured = ($prescriptionId > 0);
+									} elseif(isset($row['userId'])) {
+										// Fallback for migrated past records where appointment_id may not match.
+										$ps2 = hms_query($con, "SELECT id FROM prescriptions WHERE doctor_id='".(int)$_SESSION['id']."' AND patient_id='".(int)$row['userId']."' ORDER BY id DESC LIMIT 1");
+										if($ps2 && hms_num_rows($ps2) > 0) {
+											$psRow2 = hms_fetch_assoc($ps2);
+											$prescriptionId = (int)($psRow2['id'] ?? 0);
+											$hasStructured = ($prescriptionId > 0);
+										}
+									}
 								}
 								if($hasStructured) {
-									echo '<a href="view-prescription.php?appointment_id='.(int)$row['id'].'" class="btn btn-primary btn-sm">View</a>';
+									echo '<a href="view-prescription.php?prescription_id='.(int)$prescriptionId.'" class="btn btn-primary btn-sm">View</a>';
 								} else {
 									echo '<span class="text-muted">History Record</span>';
 								}

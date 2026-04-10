@@ -4,14 +4,20 @@ error_reporting(0);
 include('include/config.php');
 include('include/checklogin.php');
 check_login();
+$msgType = '';
 if(isset($_POST['delete_all']))
 {
-	$sql=mysqli_query($con,"delete from userlog");
+	$sql=hms_query($con,"delete from userlog");
 	if($sql)
 	{
 		$_SESSION['msg']="User logs deleted Successfully";
+		$msgType = 'success';
 
 
+	}
+	else {
+		$_SESSION['msg']="Unable to delete user logs";
+		$msgType = 'danger';
 	}
 }
 
@@ -65,8 +71,12 @@ if(isset($_POST['delete_all']))
 		</div>
 
 		<div class="col-md-12">
-			<p style="color:red;"><?php echo htmlentities($_SESSION['msg']);?>
-			<?php echo htmlentities($_SESSION['msg']="");?></p>
+			<?php if(!empty($_SESSION['msg'])): ?>
+				<div class="alert alert-<?php echo $msgType === 'danger' ? 'danger' : 'success'; ?>">
+					<?php echo htmlentities($_SESSION['msg']);?>
+				</div>
+				<?php $_SESSION['msg']=""; ?>
+			<?php endif; ?>
 			<table class="table table-hover" id="sample-table-1">
 				<thead>
 					<tr>
@@ -81,9 +91,9 @@ if(isset($_POST['delete_all']))
 				</thead>
 				<tbody>
 					<?php
-					$sql=mysqli_query($con,"select * from userlog order by id desc");
+					$sql=hms_query($con,"select * from userlog order by id desc");
 					$cnt=1;
-					while($row=mysqli_fetch_array($sql))
+					while($row=hms_fetch_array($sql))
 					{
 						?>
 						<tr>
@@ -97,11 +107,11 @@ if(isset($_POST['delete_all']))
 						<td>
 							<?php if($row['status']==1)
 							{
-								echo "Success";
+								echo '<span class="status-active">Success</span>';
 							}
 							else
 							{
-								echo "Failed";
+								echo '<span class="status-cancelled">Failed</span>';
 							}?>
 						</td>
 					</tr>

@@ -4,14 +4,24 @@ error_reporting(0);
 include('include/config.php');
 include('include/checklogin.php');
 check_login();
+
+$specTable = 'doctorspecialization';
+$specColumn = 'specialization';
+$tableExists = hms_query($con, "SHOW TABLES LIKE 'doctorspecialization'");
+if (!$tableExists || hms_num_rows($tableExists) === 0) {
+	$specTable = 'doctorspecilization';
+	$specColumn = 'specilization';
+}
+
 if(isset($_POST['submit']))
 {
-	$sql=mysqli_query($con,"insert into doctorspecilization values('".$_POST['doctorspecilization']."')");
+	$specialization = $_POST['doctorspecialization'];
+	$sql=hms_query($con,"INSERT INTO $specTable($specColumn) VALUES('".$specialization."')");
 	$_SESSION['msg']="Doctor Specialization added successfully !!";
 }
 if(isset($_GET['del']))
 {
-	mysqli_query($con,"delete from doctorspecilization where id = '".$_GET['id']."'");
+	hms_query($con,"DELETE FROM $specTable WHERE id = '".$_GET['id']."'");
 	$_SESSION['msg']="data deleted !!";
 }
 ?>
@@ -19,21 +29,21 @@ if(isset($_GET['del']))
 <html lang="en">
 <head>
 	<title>Admin | Doctor Specialization</title>
-	<!-- Bootstrap -->
+
 	<link href="../vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
-	<!-- Font Awesome -->
+
 	<link href="../vendors/font-awesome/css/font-awesome.min.css" rel="stylesheet">
-	<!-- NProgress -->
+
 	<link href="../vendors/nprogress/nprogress.css" rel="stylesheet">
-	<!-- iCheck -->
+
 	<link href="../vendors/iCheck/skins/flat/green.css" rel="stylesheet">
-	<!-- bootstrap-progressbar -->
+
 	<link href="../vendors/bootstrap-progressbar/css/bootstrap-progressbar-3.3.4.min.css" rel="stylesheet">
-	<!-- JQVMap -->
+
 	<link href="../vendors/jqvmap/dist/jqvmap.min.css" rel="stylesheet"/>
-	<!-- bootstrap-daterangepicker -->
+
 	<link href="../vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
-	<!-- Custom Theme Style -->
+
 	<link href="../assets/css/custom.min.css" rel="stylesheet">
 </head>
 <body class="nav-md">
@@ -55,10 +65,10 @@ if(isset($_GET['del']))
 							<?php echo htmlentities($_SESSION['msg']="");?></p>
 							<form role="form" name="dcotorspcl" method="post" >
 								<div class="form-group">
-									<label for="doctorspecilization">
+									<label for="doctorspecialization">
 										Doctor Specialization
 									</label>
-									<input id="doctorspecilization" type="text" name="doctorspecilization" class="form-control" required = "required" placeholder="Enter Doctor Specialization">
+									<input id="doctorspecialization" type="text" name="doctorspecialization" class="form-control" required = "required" placeholder="Enter Doctor Specialization">
 								</div>
 								<button type="submit" name="submit" class="btn btn-o btn-primary">
 									Submit
@@ -89,14 +99,14 @@ if(isset($_GET['del']))
 				</thead>
 				<tbody>
 					<?php
-					$sql=mysqli_query($con,"select * from doctorspecilization");
+					$sql=hms_query($con,"SELECT * FROM $specTable ORDER BY $specColumn ASC");
 					$cnt=1;
-					while($row=mysqli_fetch_array($sql))
+					while($row=hms_fetch_array($sql))
 					{
 						?>
 						<tr>
 							<td class="center"><?php echo $cnt;?>.</td>
-							<td class="hidden-xs"><?php echo $row['specilization'];?></td>
+							<td class="hidden-xs"><?php echo $row[$specColumn];?></td>
 							<td><?php echo $row['creationDate'];?></td>
 							<td><?php echo $row['updationDate'];?>
 						</td>
@@ -115,43 +125,43 @@ if(isset($_GET['del']))
 	</div>
 </div>
 <?php include('include/footer.php');?>
-<!-- jQuery -->
+
 <script src="../vendors/jquery/dist/jquery.min.js"></script>
-<!-- Bootstrap -->
+
 <script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<!-- FastClick -->
+
 <script src="../vendors/fastclick/lib/fastclick.js"></script>
-<!-- NProgress -->
+
 <script src="../vendors/nprogress/nprogress.js"></script>
-<!-- Chart.js -->
+
 <script src="../vendors/Chart.js/dist/Chart.min.js"></script>
-<!-- gauge.js -->
+
 <script src="../vendors/gauge.js/dist/gauge.min.js"></script>
-<!-- bootstrap-progressbar -->
+
 <script src="../vendors/bootstrap-progressbar/bootstrap-progressbar.min.js"></script>
-<!-- iCheck -->
+
 <script src="../vendors/iCheck/icheck.min.js"></script>
-<!-- Skycons -->
+
 <script src="../vendors/skycons/skycons.js"></script>
-<!-- Flot -->
+
 <script src="../vendors/Flot/jquery.flot.js"></script>
 <script src="../vendors/Flot/jquery.flot.pie.js"></script>
 <script src="../vendors/Flot/jquery.flot.time.js"></script>
 <script src="../vendors/Flot/jquery.flot.stack.js"></script>
 <script src="../vendors/Flot/jquery.flot.resize.js"></script>
-<!-- Flot plugins -->
+
 <script src="../vendors/flot.orderbars/js/jquery.flot.orderBars.js"></script>
 <script src="../vendors/flot-spline/js/jquery.flot.spline.min.js"></script>
 <script src="../vendors/flot.curvedlines/curvedLines.js"></script>
-<!-- DateJS -->
+
 <script src="../vendors/DateJS/build/date.js"></script>
-<!-- JQVMap -->
+
 <script src="../vendors/jqvmap/dist/jquery.vmap.js"></script>
 <script src="../vendors/jqvmap/dist/maps/jquery.vmap.world.js"></script>
 <script src="../vendors/jqvmap/examples/js/jquery.vmap.sampledata.js"></script>
-<!-- bootstrap-daterangepicker -->
+
 <script src="../vendors/moment/min/moment.min.js"></script>
 <script src="../vendors/bootstrap-daterangepicker/daterangepicker.js"></script>
-<!-- Custom Theme Scripts -->
+
 <script src="../assets/js/custom.min.js"></script>
 </body>

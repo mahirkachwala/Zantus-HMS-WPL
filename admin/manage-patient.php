@@ -6,8 +6,8 @@ include('include/checklogin.php');
 check_login();
 
 function tableExists($con, $tableName) {
-	$check = mysqli_query($con, "SHOW TABLES LIKE '" . mysqli_real_escape_string($con, $tableName) . "'");
-	return ($check && mysqli_num_rows($check) > 0);
+	$check = hms_query($con, "SHOW TABLES LIKE '" . hms_escape($con, $tableName) . "'");
+	return ($check && hms_num_rows($check) > 0);
 }
 
 $usePatientsTable = tableExists($con, 'patients');
@@ -83,8 +83,8 @@ $usePatientsTable = tableExists($con, 'patients');
 					<?php
 					$cnt=1;
 					if($usePatientsTable) {
-						$sql=mysqli_query($con,"SELECT p.*, d.doctorName, u.fullName as userName FROM patients p LEFT JOIN doctors d ON d.id=p.doctorId LEFT JOIN users u ON u.id=p.userId ORDER BY p.id DESC");
-						while($row=mysqli_fetch_array($sql)) {
+						$sql=hms_query($con,"SELECT p.*, d.doctorName, u.fullName as userName FROM patients p LEFT JOIN doctors d ON d.id=p.doctorId LEFT JOIN users u ON u.id=p.userId ORDER BY p.id DESC");
+						while($row=hms_fetch_array($sql)) {
 							?>
 							<tr>
 								<td class="center"><?php echo $cnt;?>.</td>
@@ -104,8 +104,8 @@ $usePatientsTable = tableExists($con, 'patients');
 							$cnt=$cnt+1;
 						}
 					} else {
-						$sql=mysqli_query($con,"select * from tblpatient");
-						while($row=mysqli_fetch_array($sql)) {
+						$sql=hms_query($con,"select * from tblpatient");
+						while($row=hms_fetch_array($sql)) {
 							?>
 							<tr>
 								<td class="center"><?php echo $cnt;?>.</td>

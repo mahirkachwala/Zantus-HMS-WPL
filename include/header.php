@@ -210,6 +210,18 @@
 		color: #dc2626;
 		font-weight: 700;
 	}
+	.status-info {
+		color: #1d4ed8;
+		font-weight: 700;
+	}
+	.status-warning {
+		color: #d97706;
+		font-weight: 700;
+	}
+	.status-transferred {
+		color: #7c3aed;
+		font-weight: 700;
+	}
 </style>
 <div class="container body">
 	<div class="main_container">

@@ -5,21 +5,21 @@ include("include/config.php");
 if(isset($_POST['submit']))
 {
 	// PHP session login flow using MySQL query result.
-	$ret=mysqli_query($con,"SELECT * FROM users WHERE email='".$_POST['username']."' and password='".md5($_POST['password'])."'");
-	$num=mysqli_fetch_array($ret);
-	if($num>0)
+	$ret=hms_query($con,"SELECT * FROM users WHERE email='".$_POST['username']."' and password='".$_POST['password']."'");
+	$num=hms_fetch_array($ret);
+	if($num)
 	{
 		// Regenerate session id on login to avoid session fixation/collision.
 		session_regenerate_id(true);
 $extra="dashboard.php";
-$_SESSION['login']=$_POST['username'];
+	$_SESSION['login']=$num['email'];
 $_SESSION['fullName']=$num['fullName'];
 $_SESSION['id']=$num['id'];
 $_SESSION['user_id']=$num['id'];
 $host=$_SERVER['HTTP_HOST'];
 $uip=$_SERVER['REMOTE_ADDR'];
 $status=1;
-$log=mysqli_query($con,"insert into userlog(uid,username,userip,status) values('".$_SESSION['id']."','".$_SESSION['login']."','$uip','$status')");
+$log=hms_query($con,"insert into userlog(uid,username,userip,status) values('".$_SESSION['id']."','".$_SESSION['login']."','$uip','$status')");
 $uri=rtrim(dirname($_SERVER['PHP_SELF']),'/\\');
 header("location:http://$host$uri/$extra");
 exit();
@@ -29,7 +29,7 @@ else
 	$_SESSION['login']=$_POST['username'];
 	$uip=$_SERVER['REMOTE_ADDR'];
 	$status=0;
-	mysqli_query($con,"insert into userlog(username,userip,status) values('".$_SESSION['login']."','$uip','$status')");
+	hms_query($con,"insert into userlog(username,userip,status) values('".$_SESSION['login']."','$uip','$status')");
 	$_SESSION['errmsg']="Invalid username or password";
 	$extra="index.php";
 	$host  = $_SERVER['HTTP_HOST'];

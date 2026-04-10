@@ -1,9 +1,8 @@
-// Load theme on page load
 if(localStorage.getItem("theme") === "dark"){
 	document.body.classList.add("dark-mode");
 }
 
-// Task 12: Search Doctors
+// Keyup event filters doctor cards using text matching in the DOM.
 document.getElementById("searchInput")
 .addEventListener("keyup", function(){
 

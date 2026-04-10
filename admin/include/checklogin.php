@@ -20,9 +20,9 @@ function check_login()
 	}
 
 	$adminId = (int)$_SESSION['admin_id'];
-	$adminUser = mysqli_real_escape_string($con, $_SESSION['alogin']);
-	$verify = mysqli_query($con, "SELECT id, username FROM admin WHERE id='$adminId' AND username='$adminUser' LIMIT 1");
-	if(!$verify || mysqli_num_rows($verify) === 0) {
+	$adminUser = hms_escape($con, $_SESSION['alogin']);
+	$verify = hms_query($con, "SELECT id, username FROM admin WHERE id='$adminId' AND username='$adminUser' LIMIT 1");
+	if(!$verify || hms_num_rows($verify) === 0) {
 		unset($_SESSION['alogin'], $_SESSION['admin_id'], $_SESSION['login'], $_SESSION['id']);
 		$host = $_SERVER['HTTP_HOST'];
 		$uri  = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
@@ -31,7 +31,7 @@ function check_login()
 		exit();
 	}
 
-	$currentAdmin = mysqli_fetch_array($verify);
+	$currentAdmin = hms_fetch_array($verify);
 	$_SESSION['admin_id'] = (int)$currentAdmin['id'];
 	$_SESSION['alogin'] = $currentAdmin['username'];
 	$_SESSION['id'] = (int)$currentAdmin['id'];
