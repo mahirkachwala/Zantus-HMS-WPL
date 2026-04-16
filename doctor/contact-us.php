@@ -118,9 +118,13 @@ if (isset($_POST['submit'])) {
 					<?php
 					$cnt=1;
 					$q = hms_query($con, "
-						SELECT id, subject, message, status, admin_note, created_at, updated_at
-						FROM contact_queries
-						WHERE portal_type='doctor' AND doctor_id='$doctorId'
+						SELECT cq.id, cq.subject, cq.message, cq.status, cq.admin_note, cq.created_at, cq.updated_at
+						FROM contact_queries cq
+						WHERE cq.portal_type='doctor' AND cq.doctor_id='$doctorId'
+						AND NOT EXISTS (
+							SELECT 1 FROM contact_query_history cqh
+							WHERE cqh.original_query_id = cq.id AND cqh.portal_type = cq.portal_type
+						)
 						UNION ALL
 						SELECT original_query_id AS id, subject, message, final_status AS status, admin_note, created_at, disposed_at AS updated_at
 						FROM contact_query_history

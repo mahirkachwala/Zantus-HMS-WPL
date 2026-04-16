@@ -179,7 +179,7 @@ $hasPrescription = appointmentColumnExists($con, $appointmentTable, 'prescriptio
 														<div style="margin-top:4px;color:#6b7280;">Receive payment first to enable prescription.</div>
 													<?php endif; ?>
 												<?php elseif(!$hasPrescriptionData): ?>
-													<a href="add-prescription.php?appointment_id=<?php echo (int)$apptRow['id']; ?>" class="btn btn-primary btn-xs">Add Prescription</a>
+													<a href="add-prescription.php?appointment_id=<?php echo (int)$apptRow['id']; ?>&id=<?php echo (int)$apptRow['id']; ?>" class="btn btn-primary btn-xs">Add Prescription</a>
 												<?php endif; ?>
 												<a href="visit-management.php?transfer=<?php echo (int)$apptRow['id']; ?>" class="btn btn-cancel btn-xs">Transfer to Admitted</a>
 												<a href="visit-management.php?cancelappt=<?php echo (int)$apptRow['id']; ?>" class="btn btn-cancel btn-xs">Cancel Appointment</a>

@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/include/session.php';
+hms_session_start();
 error_reporting(0);
 include('include/config.php');
 include('include/checklogin.php');
@@ -118,9 +119,13 @@ if (isset($_POST['submit'])) {
 					<?php
 					$cnt=1;
 					$q = hms_query($con, "
-						SELECT id, subject, message, status, admin_note, created_at, updated_at
-						FROM contact_queries
-						WHERE portal_type='user' AND user_id='$userId'
+						SELECT cq.id, cq.subject, cq.message, cq.status, cq.admin_note, cq.created_at, cq.updated_at
+						FROM contact_queries cq
+						WHERE cq.portal_type='user' AND cq.user_id='$userId'
+						AND NOT EXISTS (
+							SELECT 1 FROM contact_query_history cqh
+							WHERE cqh.original_query_id = cq.id AND cqh.portal_type = cq.portal_type
+						)
 						UNION ALL
 						SELECT original_query_id AS id, subject, message, final_status AS status, admin_note, created_at, disposed_at AS updated_at
 						FROM contact_query_history

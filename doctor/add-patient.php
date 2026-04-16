@@ -33,9 +33,10 @@ if(isset($_POST['submit'])) {
 		// First check if user exists, if not create a temporary user
 		$userCheck = hms_query($con, "SELECT id FROM users WHERE email='$patemail' LIMIT 1");
 		if (hms_num_rows($userCheck) == 0) {
-			// Create a temporary user for this patient
+			// Create a temporary user for this patient (store hashed temporary password)
 			$tempPassword = 'hospital2026';
-			hms_query($con, "INSERT INTO users(fullName, email, password, regDate) VALUES('$patname', '$patemail', '$tempPassword', NOW())");
+			$passwordHash = password_hash($tempPassword, PASSWORD_DEFAULT);
+			hms_query($con, "INSERT INTO users(fullName, email, password, regDate) VALUES('".hms_escape($con, $patname)."', '".hms_escape($con, $patemail)."', '".hms_escape($con, $passwordHash)."', NOW())");
 			$userId = hms_last_insert_id($con);
 		} else {
 			$userRow = hms_fetch_array($userCheck);

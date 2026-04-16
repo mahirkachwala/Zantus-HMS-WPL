@@ -9,7 +9,7 @@
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
-SET time_zone = "+00:00";
+SET time_zone = "+05:30";
 
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -69,7 +69,7 @@ CREATE TABLE `admin` (
 --
 
 INSERT INTO `admin` (`id`, `username`, `password`, `updationDate`) VALUES
-(1, 'admin', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 06:53:09');
+(1, 'admin', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 06:53:09');
 
 -- --------------------------------------------------------
 

@@ -1,18 +1,20 @@
 <?php
-session_start();
+require_once __DIR__ . '/include/session.php';
+hms_session_start();
 include('include/config.php');
 include('include/checklogin.php');
 check_login();
 $msg = '';
 if(isset($_POST['submit']))
 {
-	$fname=$_POST['fname'];
-	$address=$_POST['address'];
-	$city=$_POST['city'];
-	$gender=$_POST['gender'];
-	$sql=hms_query($con,"Update users set fullName='$fname',address='$address',city='$city',gender='$gender' where id='".$_SESSION['id']."'");
+	$fname=trim((string)($_POST['fname'] ?? ''));
+	$address=trim((string)($_POST['address'] ?? ''));
+	$city=trim((string)($_POST['city'] ?? ''));
+	$gender=trim((string)($_POST['gender'] ?? ''));
+	$sql=hms_query($con,"Update users set fullName='".hms_escape($con, $fname)."',address='".hms_escape($con, $address)."',city='".hms_escape($con, $city)."',gender='".hms_escape($con, $gender)."' where id='".(int)$_SESSION['id']."'");
 	if($sql)
 	{
+		$_SESSION['fullName']=$fname;
 		$msg="Your Profile updated Successfully";
 	}
 }

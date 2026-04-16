@@ -1,15 +1,23 @@
 <?php
-session_start();
+require_once __DIR__ . '/include/session.php';
+hms_session_start();
 error_reporting(0);
 include('include/config.php');
 include('include/checklogin.php');
 check_login();
 if(isset($_POST['submit']))
 {
-	$email=$_POST['email'];
-	$sql=hms_query($con,"Update users set email='$email' where id='".$_SESSION['id']."'");
+	$sql = false;
+	$email=trim((string)($_POST['email'] ?? ''));
+	if(!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+		$msg="Please enter a valid email address";
+	} else {
+		$emailEsc = hms_escape($con, $email);
+		$sql=hms_query($con,"Update users set email='$emailEsc' where id='".(int)$_SESSION['id']."'");
+	}
 	if($sql)
 	{
+		$_SESSION['login']=$email;
 		$msg="Your email updated Successfully";
 
 

@@ -402,7 +402,7 @@ include('include/header.php');
 								<?php endif; ?>
 							<?php elseif(!$hasPrescriptionData): ?>
 								<div style="margin-bottom:5px;">
-									<a class="btn btn-primary btn-xs" href="add-prescription.php?appointment_id=<?php echo (int)$row['id']; ?>">Add Prescription</a>
+									<a class="btn btn-primary btn-xs" href="add-prescription.php?appointment_id=<?php echo (int)$row['id']; ?>&id=<?php echo (int)$row['id']; ?>">Add Prescription</a>
 								</div>
 							<?php endif; ?>
 							<div style="margin-bottom:5px;">

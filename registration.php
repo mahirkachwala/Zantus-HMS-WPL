@@ -29,6 +29,8 @@ if(isset($_POST['submit']))
 		if($check && hms_num_rows($check) > 0) {
 			$err = 'Email already registered. Please login.';
 		} else {
+			// Hash the password before storing it.
+			$passwordHash = password_hash($password, PASSWORD_DEFAULT);
 			$query = hms_query(
 				$con,
 				"INSERT INTO users(fullName,address,city,gender,email,password) VALUES('".
@@ -37,7 +39,7 @@ if(isset($_POST['submit']))
 				hms_escape($con, $city)."','".
 				hms_escape($con, $gender)."','".
 				$emailEsc."','".
-				hms_escape($con, $password)."')"
+				hms_escape($con, $passwordHash)."')"
 			);
 			if($query) {
 				$msg = 'Successfully Registered. You can login now.';

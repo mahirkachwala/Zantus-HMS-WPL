@@ -5,7 +5,7 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 date_default_timezone_set('Asia/Kolkata');
-$currentTime = date( 'Y-m-d h:i:s', time () );
+$currentTime = date('Y-m-d H:i:s');
 
 function isStrongPassword($password) {
 	return (bool)preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/', (string)$password);
@@ -18,15 +18,25 @@ if(isset($_POST['submit']))
 	} elseif(!isStrongPassword($_POST['npass'] ?? '')) {
 		$_SESSION['msg1']="Password must be minimum 8 characters with uppercase, lowercase, number and special character.";
 	} else {
-		$sql=hms_query($con,"SELECT password FROM  doctors where password='".$_POST['cpass']."' && id='".$_SESSION['id']."'");
-		$num=hms_fetch_array($sql);
-		if($num)
-		{
-			$updateResult = hms_query($con,"update doctors set `password`='".$_POST['npass']."', `updationDate`='$currentTime' where id='".$_SESSION['id']."'");
-			$_SESSION['msg1']="Password Changed Successfully !!";
+		$userId = (int)($_SESSION['id'] ?? 0);
+		$row = hms_fetch_array(hms_query($con, "SELECT password FROM doctors WHERE id='".$userId."' LIMIT 1"));
+		$stored = $row['password'] ?? '';
+		$currentPass = $_POST['cpass'] ?? '';
+		$newPass = $_POST['npass'] ?? '';
+
+		$isCurrentValid = false;
+		if ($stored !== '' && password_verify($currentPass, $stored)) {
+			$isCurrentValid = true;
+		} elseif ($stored === $currentPass) {
+			// legacy plaintext
+			$isCurrentValid = true;
 		}
-		else
-		{
+
+		if ($isCurrentValid) {
+			$newHash = password_hash($newPass, PASSWORD_DEFAULT);
+			$updateResult = hms_query($con,"update doctors set `password`='".hms_escape($con, $newHash)."', `updationDate`='$currentTime' where id='".$userId."'");
+			$_SESSION['msg1']="Password Changed Successfully !!";
+		} else {
 			$_SESSION['msg1']="Old Password not match !!";
 		}
 	}

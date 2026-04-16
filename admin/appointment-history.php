@@ -22,6 +22,31 @@ $appointmentTable = $hasCurrentAppointments ? 'current_appointments' : 'appointm
 $hasVisitStatus = appointmentColumnExists($con, $appointmentTable, 'visitStatus');
 $hasPrescriptionsTable = tableExists($con, 'prescriptions');
 $hasTransferTable = tableExists($con, 'appointment_transfers');
+$selectedDoctorId = isset($_GET['doctorId']) ? (int)$_GET['doctorId'] : 0;
+$selectedDoctorName = '';
+$doctorOptions = [];
+
+$doctorListQuery = hms_query($con, "SELECT id, doctorName FROM doctors ORDER BY doctorName ASC");
+if($doctorListQuery) {
+	while($doctorRow = hms_fetch_assoc($doctorListQuery)) {
+		$doctorId = (int)($doctorRow['id'] ?? 0);
+		$doctorName = trim((string)($doctorRow['doctorName'] ?? ''));
+		if($doctorId <= 0 || $doctorName === '') {
+			continue;
+		}
+		$doctorOptions[] = [
+			'id' => $doctorId,
+			'doctorName' => $doctorName,
+		];
+		if($doctorId === $selectedDoctorId) {
+			$selectedDoctorName = $doctorName;
+		}
+	}
+}
+
+if($selectedDoctorId > 0 && $selectedDoctorName === '') {
+	$selectedDoctorId = 0;
+}
 
 if(isset($_GET['cancelid']))
 {
@@ -52,6 +77,38 @@ if(isset($_GET['cancelid']))
 			color: #1e3a8a;
 			margin-bottom: 14px;
 		}
+		.page-toolbar {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			justify-content: space-between;
+			gap: 14px;
+			margin-bottom: 16px;
+		}
+		.page-toolbar .page-heading {
+			margin-bottom: 0;
+		}
+		.page-subtext {
+			margin: 6px 0 0;
+			color: #52607a;
+			font-size: 14px;
+		}
+		.doctor-filter-form {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: flex-end;
+			align-items: center;
+			gap: 10px;
+		}
+		.doctor-filter-form .form-control {
+			min-width: 260px;
+			height: 38px;
+			border-radius: 8px;
+		}
+		.doctor-filter-form .btn {
+			min-width: 122px;
+			border-radius: 8px;
+		}
 		.history-table {
 			background: #fff;
 			border: 1px solid #e6ebf5;
@@ -74,7 +131,28 @@ if(isset($_GET['cancelid']))
 	<?php include('include/header.php');?>
 	<div class="row">
 		<div class="col-md-12">
-			<h3 class="page-heading">All Appointments (Active / Checked-In / Completed / Cancelled / Transferred)</h3>
+			<div class="page-toolbar">
+				<div>
+					<h3 class="page-heading">All Appointments (Active / Checked-In / Completed / Cancelled / Transferred)</h3>
+					<?php if($selectedDoctorId > 0): ?>
+						<p class="page-subtext">Viewing appointments for <strong><?php echo htmlentities($selectedDoctorName); ?></strong>.</p>
+					<?php else: ?>
+						<p class="page-subtext">Use the doctor filter on the right to open appointments for a specific doctor.</p>
+					<?php endif; ?>
+				</div>
+				<form method="get" class="doctor-filter-form">
+					<select name="doctorId" class="form-control">
+						<option value="">View Appointments By Doctor</option>
+						<?php foreach($doctorOptions as $doctorOption): ?>
+							<option value="<?php echo (int)$doctorOption['id']; ?>" <?php echo $selectedDoctorId === (int)$doctorOption['id'] ? 'selected' : ''; ?>>
+								<?php echo htmlentities($doctorOption['doctorName']); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
+					<button type="submit" class="btn btn-primary btn-sm">View by Doctor</button>
+					<a href="appointment-history.php" class="btn btn-default btn-sm">Show All</a>
+				</form>
+			</div>
 			<?php if(!empty($_SESSION['msg'])): ?>
 				<div class="alert alert-info"><?php echo htmlentities($_SESSION['msg']); ?></div>
 				<?php $_SESSION['msg']=''; ?>
@@ -110,7 +188,8 @@ if(isset($_GET['cancelid']))
 					}
 
 					foreach($tablesToRead as $tbl) {
-						$q = hms_query($con, "SELECT doctors.doctorName as docname, users.fullName as pname, $tbl.*, '$tbl' as sourceTableName FROM $tbl JOIN doctors ON doctors.id=$tbl.doctorId JOIN users ON users.id=$tbl.userId");
+						$doctorWhere = $selectedDoctorId > 0 ? " WHERE $tbl.doctorId='" . (int)$selectedDoctorId . "'" : '';
+						$q = hms_query($con, "SELECT doctors.doctorName as docname, users.fullName as pname, $tbl.*, '$tbl' as sourceTableName FROM $tbl JOIN doctors ON doctors.id=$tbl.doctorId JOIN users ON users.id=$tbl.userId$doctorWhere");
 						if($q) {
 							while($r = hms_fetch_array($q)) {
 								$rows[] = $r;
@@ -214,7 +293,12 @@ if(isset($_GET['cancelid']))
 						</tr>
 						<?php
 						$cnt=$cnt+1;
-					}?>
+					}
+					if($cnt === 1): ?>
+						<tr>
+							<td colspan="11" class="text-center text-muted">No appointment records found for the selected view.</td>
+						</tr>
+					<?php endif; ?>
 				</tbody>
 			</table>
 		</div>

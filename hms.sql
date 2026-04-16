@@ -8,7 +8,7 @@
 -- PHP Version: 7.4.29
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET time_zone = "+00:00";
+SET time_zone = "+05:30";
 
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -38,7 +38,7 @@ CREATE TABLE `admin` (
 --
 
 INSERT INTO `admin` (`id`, `username`, `password`, `updationDate`) VALUES
-(1, 'admin', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 06:53:09');
+(1, 'admin', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 06:53:09');
 
 -- --------------------------------------------------------
 
@@ -95,15 +95,15 @@ CREATE TABLE `doctors` (
 --
 
 INSERT INTO `doctors` (`id`, `specilization`, `doctorName`, `address`, `docFees`, `contactno`, `docEmail`, `password`, `creationDate`, `updationDate`) VALUES
-(1, 'Dentist', 'Test Doctor', 'New York', '500', 8285703354, 'test@doctor.com', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 13:31:38'),
-(2, 'Homeopath', 'Test Doctor1', 'New York', '600', 2147483647, 'test@test.com2', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 01:08:09'),
-(3, 'General Physician', 'Test Doctor2', 'New York', '1200', 8523699999, 'test@test.com3', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 01:08:09'),
-(4, 'Homeopath', 'Test Doctor3', 'New York', '700', 25668888, 'test@test.com4', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 13:30:07'),
-(5, 'Ayurveda', 'Test Doctor4', 'New York', '8050', 442166644646, 'test@test.com5', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 13:30:13'),
-(6, 'General Physician', 'Test Doctor5', 'New York', '2500', 45497964, 'test@test.com6', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 13:30:15'),
-(7, 'Demo test', 'Test Doctor6', 'New York', '200', 852888888, 'test@test.com7', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 13:30:17'),
-(8, 'Ayurveda', 'Test Doctor7', 'New York', '600', 1234567890, 'test@test.com', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 13:30:19'),
-(9, 'Dermatologist', 'Test Doctor8', 'New York', '500', 1234567890, 'test@test.com8', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 13:30:22');
+(1, 'Dentist', 'Test Doctor', 'New York', '500', 8285703354, 'test@doctor.com', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 13:31:38'),
+(2, 'Homeopath', 'Test Doctor1', 'New York', '600', 2147483647, 'test@test.com2', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 01:08:09'),
+(3, 'General Physician', 'Test Doctor2', 'New York', '1200', 8523699999, 'test@test.com3', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 01:08:09'),
+(4, 'Homeopath', 'Test Doctor3', 'New York', '700', 25668888, 'test@test.com4', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 13:30:07'),
+(5, 'Ayurveda', 'Test Doctor4', 'New York', '8050', 442166644646, 'test@test.com5', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 13:30:13'),
+(6, 'General Physician', 'Test Doctor5', 'New York', '2500', 45497964, 'test@test.com6', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 13:30:15'),
+(7, 'Demo test', 'Test Doctor6', 'New York', '200', 852888888, 'test@test.com7', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 13:30:17'),
+(8, 'Ayurveda', 'Test Doctor7', 'New York', '600', 1234567890, 'test@test.com', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 13:30:19'),
+(9, 'Dermatologist', 'Test Doctor8', 'New York', '500', 1234567890, 'test@test.com8', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 13:30:22');
 
 -- --------------------------------------------------------
 
@@ -316,10 +316,10 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `fullName`, `address`, `city`, `gender`, `email`, `password`, `regDate`, `updationDate`) VALUES
-(2, 'Test User', 'US', 'New york', 'female', 'test@user.com', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 13:31:23'),
-(3, 'Test User1', 'US', 'New york', 'male', 'test1@gmail.com', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 13:29:31'),
-(4, 'Test User1', 'US', 'New york', 'male', 'test2@gmail.com', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 13:29:32'),
-(5, 'Test User2', 'US', 'New york', 'male', 'test2@gmail.com', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 01:08:09', '2022-06-13 13:29:34'),
+(2, 'Test User', 'US', 'New york', 'female', 'test@user.com', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 13:31:23'),
+(3, 'Test User1', 'US', 'New york', 'male', 'test1@gmail.com', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 13:29:31'),
+(4, 'Test User1', 'US', 'New york', 'male', 'test2@gmail.com', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 13:29:32'),
+(5, 'Test User2', 'US', 'New york', 'male', 'test2@gmail.com', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 01:08:09', '2022-06-13 13:29:34'),
 (6, 'Hoyt Drake', 'Dolore aute mollit e', 'Voluptas quas natus ', 'female', 'bofileqe@mailinator.com', 'b916810cd9a5e9689ce64de6223d3da3', '2022-06-13 13:47:50', NULL);
 
 --

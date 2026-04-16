@@ -2,7 +2,7 @@
 function check_login()
 {
 	global $con;
-	$sessionMaxIdleSeconds = 8 * 60 * 60; // 8 hours
+	$sessionMaxIdleSeconds = defined('HMS_SESSION_IDLE_SECONDS') ? HMS_SESSION_IDLE_SECONDS : (8 * 60 * 60);
 
 	if (!isset($_SESSION['user_id']) && isset($_SESSION['id'])) {
 		$_SESSION['user_id'] = (int)$_SESSION['id'];
@@ -40,13 +40,7 @@ function check_login()
 	}
 	$_SESSION['last_activity'] = $now;
 
-	$userEmail = trim((string)($_SESSION['login'] ?? ''));
-	if ($userEmail !== '') {
-		$userEmailEsc = hms_escape($con, $userEmail);
-		$verify = hms_query($con, "SELECT id, fullName, email FROM users WHERE id='$userId' AND email='$userEmailEsc' LIMIT 1");
-	} else {
-		$verify = hms_query($con, "SELECT id, fullName, email FROM users WHERE id='$userId' LIMIT 1");
-	}
+	$verify = hms_query($con, "SELECT id, fullName, email FROM users WHERE id='$userId' LIMIT 1");
 	if($verify === false) {
 		// Avoid hard logout on transient DB issues.
 		return;

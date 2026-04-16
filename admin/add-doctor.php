@@ -56,7 +56,9 @@ if(isset($_POST['submit']))
 	} elseif(!isStrongPassword($password)) {
 		echo "<script>alert('Password must be minimum 8 characters with uppercase, lowercase, number and special character.');</script>";
 	} else {
-		$sql=hms_query($con,"INSERT INTO doctors($doctorSpecColumn,doctorName,address,docFees,contactno,docEmail,password) VALUES('$docspecialization','$docname','$docaddress','$docfees','$doccontactno','$docemail','$password')");
+		// Hash the doctor's password before storing.
+		$passwordHash = password_hash($password, PASSWORD_DEFAULT);
+		$sql=hms_query($con,"INSERT INTO doctors($doctorSpecColumn,doctorName,address,docFees,contactno,docEmail,password) VALUES('".$docspecialization."','".hms_escape($con, $docname)."','".hms_escape($con, $docaddress)."','".hms_escape($con, $docfees)."','".hms_escape($con, $doccontactno)."','".hms_escape($con, $docemail)."','".hms_escape($con, $passwordHash)."')");
 		if($sql)
 		{
 			echo "<script>alert('Doctor info added Successfully');</script>";
@@ -148,7 +150,7 @@ if(isset($_POST['submit']))
 									</label>
 									<select name="Doctorspecialization" class="form-control" required="true">
 										<option value="">Select Specialization</option>
-										<?php $ret=hms_query($con,"SELECT id, $specColumn AS specialization_name FROM $specTable ORDER BY $specColumn ASC");
+										<?php $ret=hms_query($con,"SELECT MIN(id) AS id, $specColumn AS specialization_name FROM $specTable GROUP BY $specColumn ORDER BY $specColumn ASC");
 										while($row=hms_fetch_array($ret))
 										{
 											$optionValue = $isDoctorSpecNumeric ? $row['id'] : $row['specialization_name'];

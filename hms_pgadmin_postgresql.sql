@@ -14,6 +14,8 @@
 -- Database: "hms"
 --
 
+SET TIME ZONE 'Asia/Kolkata';
+
 -- --------------------------------------------------------
 
 --
@@ -35,7 +37,7 @@ CREATE TABLE "admin" (
 --
 
 INSERT INTO "admin" ("id", "username", "password", "updationDate") VALUES
-(1, 'admin', '81dc9bdb52d04dc20036dbd8313ed055', '2022-06-13 06:53:09');
+(1, 'admin', '$2y$10$QDxPQioACPQUQsEVjMsMH.vNK494S7Y8f0wDeNa.GBcSpHuqXGwtK', '2022-06-13 06:53:09');
 
 -- --------------------------------------------------------
 

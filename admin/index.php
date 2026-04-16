@@ -10,20 +10,28 @@ if(isset($_POST['submit']))
 	$ret=hms_query($con,"SELECT * FROM admin WHERE username='".$username."' LIMIT 1");
 	$num=hms_fetch_array($ret);
 	$storedPassword = $num['password'] ?? '';
-	$isPasswordValid = ($storedPassword === $password);
+	$isPasswordValid = false;
+	if ($storedPassword !== '' && password_verify($password, $storedPassword)) {
+		$isPasswordValid = true;
+	} elseif ($storedPassword === $password) {
+		// legacy plaintext, accept and migrate
+		$isPasswordValid = true;
+		$newHash = password_hash($password, PASSWORD_DEFAULT);
+		hms_query($con, "UPDATE admin SET password='".hms_escape($con, $newHash)."' WHERE id='".($num['id'] ?? 0)."'");
+	}
 	if($num && $isPasswordValid)
 	{
 		session_regenerate_id(true);
-$extra="dashboard.php";
-$_SESSION['alogin']=$_POST['username'];
-$_SESSION['admin_id']=$num['id'];
-$_SESSION['login']=$_POST['username'];
-$_SESSION['id']=$num['id'];
-$host=$_SERVER['HTTP_HOST'];
-$uri=rtrim(dirname($_SERVER['PHP_SELF']),'/\\');
-header("location:http://$host$uri/$extra");
-exit();
-}
+		$extra="dashboard.php";
+		$_SESSION['alogin']=$_POST['username'];
+		$_SESSION['admin_id']=$num['id'];
+		$_SESSION['login']=$_POST['username'];
+		$_SESSION['id']=$num['id'];
+		$host=$_SERVER['HTTP_HOST'];
+		$uri=rtrim(dirname($_SERVER['PHP_SELF']),'/\\');
+		header("location:http://$host$uri/$extra");
+		exit();
+	}
 else
 {
 	$_SESSION['errmsg']="Invalid username or password";
@@ -125,23 +133,9 @@ else
 			</div>
 		</div>
 
-		<script src="vendor/jquery/jquery.min.js"></script>
-		<script src="vendor/bootstrap/js/bootstrap.min.js"></script>
-		<script src="vendor/modernizr/modernizr.js"></script>
-		<script src="vendor/jquery-cookie/jquery.cookie.js"></script>
-		<script src="vendor/perfect-scrollbar/perfect-scrollbar.min.js"></script>
-		<script src="vendor/switchery/switchery.min.js"></script>
-		<script src="vendor/jquery-validation/jquery.validate.min.js"></script>
-
-		<script src="assets/js/main.js"></script>
-
-		<script src="assets/js/login.js"></script>
-		<script>
-			jQuery(document).ready(function() {
-				Main.init();
-				Login.init();
-			});
-		</script>
+		<script src="../vendors/jquery/dist/jquery.min.js"></script>
+		<script src="../vendors/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+		<script src="../assets/js/custom.min.js"></script>
 
 	</body>
 	</html>

@@ -120,7 +120,7 @@ if(isset($_POST['submit']))
 												}
 												?>
 												<option value="<?php echo htmlentities($currentSpecValue);?>"><?php echo htmlentities($currentSpecLabel);?></option>
-													<?php $ret=hms_query($con,"SELECT id, $specColumn AS specialization_name FROM $specTable ORDER BY $specColumn ASC");
+													<?php $ret=hms_query($con,"SELECT MIN(id) AS id, $specColumn AS specialization_name FROM $specTable GROUP BY $specColumn ORDER BY $specColumn ASC");
 													while($row=hms_fetch_array($ret))
 													{
 														$optionValue = $isDoctorSpecNumeric ? $row['id'] : $row['specialization_name'];

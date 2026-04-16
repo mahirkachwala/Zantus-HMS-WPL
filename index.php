@@ -1,42 +1,70 @@
 <?php
-session_start();
+require_once __DIR__ . '/include/session.php';
+hms_session_start();
 error_reporting(0);
 include("include/config.php");
 if(isset($_POST['submit']))
 {
-	// PHP session login flow using MySQL query result.
-	$ret=hms_query($con,"SELECT * FROM users WHERE email='".$_POST['username']."' and password='".$_POST['password']."'");
-	$num=hms_fetch_array($ret);
-	if($num)
-	{
-		// Regenerate session id on login to avoid session fixation/collision.
-		session_regenerate_id(true);
-$extra="dashboard.php";
-	$_SESSION['login']=$num['email'];
-$_SESSION['fullName']=$num['fullName'];
-$_SESSION['id']=$num['id'];
-$_SESSION['user_id']=$num['id'];
-$host=$_SERVER['HTTP_HOST'];
-$uip=$_SERVER['REMOTE_ADDR'];
-$status=1;
-$log=hms_query($con,"insert into userlog(uid,username,userip,status) values('".$_SESSION['id']."','".$_SESSION['login']."','$uip','$status')");
-$uri=rtrim(dirname($_SERVER['PHP_SELF']),'/\\');
-header("location:http://$host$uri/$extra");
-exit();
-}
-else
-{
+	// Secure login: fetch user by email and verify password using password_verify().
+	$username = hms_escape($con, trim($_POST['username'] ?? ''));
+	$pwd = $_POST['password'] ?? '';
+
+	// Try to get the user record (using mysqli prepared path when available).
+	$num = null;
+	if ($stmt = $con->prepare('SELECT * FROM users WHERE email = ? LIMIT 1')) {
+		$stmt->bind_param('s', $username);
+		$stmt->execute();
+		$res = $stmt->get_result();
+		if ($res) {
+			$num = $res->fetch_assoc();
+		}
+		$stmt->close();
+	} else {
+		$ret = hms_query($con, "SELECT * FROM users WHERE email='".$username."' LIMIT 1");
+		$num = hms_fetch_array($ret);
+	}
+
+	if ($num) {
+		$stored = $num['password'] ?? '';
+		$isValid = false;
+
+		// Prefer password_verify (bcrypt/argon2 etc.).
+		if ($stored !== '' && password_verify($pwd, $stored)) {
+			$isValid = true;
+		} elseif ($stored === $pwd) {
+			// Legacy plaintext password detected: accept login but migrate to hashed password.
+			$isValid = true;
+			$newHash = password_hash($pwd, PASSWORD_DEFAULT);
+			hms_query($con, "UPDATE users SET password='".hms_escape($con, $newHash)."' WHERE id='".$num['id']."'");
+		}
+
+		if ($isValid) {
+			// Regenerate session id on login to avoid session fixation/collision.
+			session_regenerate_id(true);
+			$extra="dashboard.php";
+			$_SESSION['login']=$num['email'];
+			$_SESSION['fullName']=$num['fullName'];
+			$_SESSION['id']=$num['id'];
+			$_SESSION['user_id']=$num['id'];
+			$host=$_SERVER['HTTP_HOST'];
+			$status=1;
+			hms_query($con,"insert into userlog(uid,username,status) values('".$_SESSION['id']."','".$_SESSION['login']."','$status')");
+			$uri=rtrim(dirname($_SERVER['PHP_SELF']),'/\\');
+			header("location:http://$host$uri/$extra");
+			exit();
+		}
+	}
+
+	// Failed login path
 	$_SESSION['login']=$_POST['username'];
-	$uip=$_SERVER['REMOTE_ADDR'];
 	$status=0;
-	hms_query($con,"insert into userlog(username,userip,status) values('".$_SESSION['login']."','$uip','$status')");
+	hms_query($con,"insert into userlog(username,status) values('".$_SESSION['login']."','$status')");
 	$_SESSION['errmsg']="Invalid username or password";
 	$extra="index.php";
 	$host  = $_SERVER['HTTP_HOST'];
 	$uri  = rtrim(dirname($_SERVER['PHP_SELF']),'/\\');
 	header("location:http://$host$uri/$extra");
 	exit();
-}
 }
 ?>
 

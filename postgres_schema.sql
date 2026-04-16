@@ -1,6 +1,8 @@
 -- PostgreSQL schema for Hospital Management System
 -- Create database hospital_hms first in pgAdmin, then run this script inside that database.
 
+SET TIME ZONE 'Asia/Kolkata';
+
 DROP VIEW IF EXISTS view_current_appointments CASCADE;
 DROP VIEW IF EXISTS completed_appointments CASCADE;
 DROP VIEW IF EXISTS active_appointments CASCADE;

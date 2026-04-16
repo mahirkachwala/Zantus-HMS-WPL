@@ -59,19 +59,34 @@ if (isset($_POST['action']) && isset($_POST['id'])) {
 		} else {
 			$remarkEsc = hms_escape($con, $remark);
 			$disposedBy = hms_escape($con, (string)($_SESSION['alogin'] ?? 'admin'));
-			$archiveSql = "INSERT INTO contact_query_history(
-				original_query_id, portal_type, user_id, doctor_id, name, email, phone, subject, message,
-				final_status, admin_note, created_at, disposed_at, disposed_by
-			)
-			SELECT id, portal_type, user_id, doctor_id, name, email, phone, subject, message,
-			'Closed', '$remarkEsc', created_at, NOW(), '$disposedBy'
-			FROM contact_queries WHERE id='$id' LIMIT 1";
-			$archived = hms_query($con, $archiveSql);
-			if ($archived) {
-				hms_query($con, "DELETE FROM contact_queries WHERE id='$id'");
-				$msg = 'Complaint disposed successfully. It is removed from admin active queue.';
+			$currentQuery = hms_query($con, "SELECT * FROM contact_queries WHERE id='$id' LIMIT 1");
+			$currentRow = $currentQuery ? hms_fetch_assoc($currentQuery) : null;
+			if (!$currentRow) {
+				$err = 'Complaint not found or already disposed.';
 			} else {
-				$err = 'Unable to dispose complaint right now. Please retry.';
+				$portalTypeEsc = hms_escape($con, (string)($currentRow['portal_type'] ?? 'user'));
+				$historyCheck = hms_query($con, "SELECT id FROM contact_query_history WHERE original_query_id='$id' AND portal_type='$portalTypeEsc' LIMIT 1");
+				if ($historyCheck && hms_num_rows($historyCheck) > 0) {
+					$historyRow = hms_fetch_assoc($historyCheck);
+					$historyId = (int)($historyRow['id'] ?? 0);
+					$archived = hms_query($con, "UPDATE contact_query_history SET final_status='Closed', admin_note='$remarkEsc', disposed_at=NOW(), disposed_by='$disposedBy' WHERE id='$historyId' LIMIT 1");
+				} else {
+					$archiveSql = "INSERT INTO contact_query_history(
+						original_query_id, portal_type, user_id, doctor_id, name, email, phone, subject, message,
+						final_status, admin_note, created_at, disposed_at, disposed_by
+					)
+					SELECT id, portal_type, user_id, doctor_id, name, email, phone, subject, message,
+					'Closed', '$remarkEsc', created_at, NOW(), '$disposedBy'
+					FROM contact_queries WHERE id='$id' LIMIT 1";
+					$archived = hms_query($con, $archiveSql);
+				}
+
+				if ($archived) {
+					hms_query($con, "DELETE FROM contact_queries WHERE id='$id' LIMIT 1");
+					$msg = 'Complaint disposed successfully. It is removed from admin active queue.';
+				} else {
+					$err = 'Unable to dispose complaint right now. Please retry.';
+				}
 			}
 		}
 	}
@@ -105,7 +120,10 @@ if (isset($_POST['action']) && isset($_POST['id'])) {
 					<tbody>
 					<?php
 					$cnt=1;
-					$q = hms_query($con, "SELECT * FROM contact_queries ORDER BY id DESC");
+					$q = hms_query($con, "SELECT cq.* FROM contact_queries cq WHERE NOT EXISTS (
+						SELECT 1 FROM contact_query_history cqh
+						WHERE cqh.original_query_id = cq.id AND cqh.portal_type = cq.portal_type
+					) ORDER BY cq.id DESC");
 					if($q) while($r=hms_fetch_assoc($q)) {
 					?>
 					<tr>

@@ -1,13 +1,21 @@
 <?php
+require_once __DIR__ . '/session.php';
+hms_configure_runtime();
+
 // MySQL (mysqli) connection and compatibility helpers
-define('DB_HOST', 'localhost');
+define('DB_HOST', 'sql204.byethost10.com');
 define('DB_PORT', '3306');
-define('DB_NAME', 'hms');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_NAME', 'b10_41663109_HMS');
+define('DB_USER', 'b10_41663109');
+define('DB_PASS', '@Esa9Yfi#_3W5Ud');
+define('DB_TIMEZONE_OFFSET', '+05:30');
 
 if (!function_exists('mysqli_connect')) {
     die('MySQLi extension is not enabled in PHP. Enable mysqli in XAMPP.');
+}
+
+if (function_exists('mysqli_report')) {
+    mysqli_report(MYSQLI_REPORT_OFF);
 }
 
 $con = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME, (int)DB_PORT);
@@ -17,6 +25,7 @@ if (!$con) {
 }
 
 mysqli_set_charset($con, 'utf8');
+@mysqli_query($con, "SET time_zone = '" . DB_TIMEZONE_OFFSET . "'");
 
 if (!function_exists('hms_escape')) {
     function hms_escape($con, $value) {
@@ -219,6 +228,38 @@ if (!function_exists('hms_column_exists')) {
     }
 }
 
+if (!function_exists('hms_index_exists')) {
+    function hms_index_exists($con, $table, $indexName) {
+        $t = mysqli_real_escape_string($con, $table);
+        $i = mysqli_real_escape_string($con, $indexName);
+        $res = mysqli_query($con, "SHOW INDEX FROM {$t} WHERE Key_name = '{$i}'");
+        return ($res && mysqli_num_rows($res) > 0);
+    }
+}
+
+if (!function_exists('hms_add_column_if_missing')) {
+    function hms_add_column_if_missing($con, $table, $column, $definitionSql) {
+        if (hms_column_exists($con, $table, $column)) {
+            return true;
+        }
+
+        $t = mysqli_real_escape_string($con, $table);
+        return (bool)@mysqli_query($con, "ALTER TABLE {$t} ADD COLUMN {$definitionSql}");
+    }
+}
+
+if (!function_exists('hms_create_index_if_missing')) {
+    function hms_create_index_if_missing($con, $table, $indexName, $columnsSql) {
+        if (hms_index_exists($con, $table, $indexName)) {
+            return true;
+        }
+
+        $t = mysqli_real_escape_string($con, $table);
+        $i = mysqli_real_escape_string($con, $indexName);
+        return (bool)@mysqli_query($con, "CREATE INDEX {$i} ON {$t} ({$columnsSql})");
+    }
+}
+
 if (!function_exists('hms_get_table_columns')) {
     function hms_get_table_columns($con, $table) {
         $cols = [];
@@ -245,20 +286,18 @@ if (!function_exists('hms_ensure_schema')) {
             }
 
             $appointmentColumns = [
-                'visitStatus' => "ALTER TABLE {$tableName} ADD COLUMN IF NOT EXISTS visitstatus varchar(30) NOT NULL DEFAULT 'Scheduled'",
-                'checkInTime' => "ALTER TABLE {$tableName} ADD COLUMN IF NOT EXISTS checkintime datetime NULL",
-                'checkOutTime' => "ALTER TABLE {$tableName} ADD COLUMN IF NOT EXISTS checkouttime datetime NULL",
-                'prescription' => "ALTER TABLE {$tableName} ADD COLUMN IF NOT EXISTS prescription text NULL",
-                'paymentStatus' => "ALTER TABLE {$tableName} ADD COLUMN IF NOT EXISTS paymentstatus varchar(20) NOT NULL DEFAULT 'Pending'",
-                'paymentRef' => "ALTER TABLE {$tableName} ADD COLUMN IF NOT EXISTS paymentref varchar(64) NULL",
-                'paidAt' => "ALTER TABLE {$tableName} ADD COLUMN IF NOT EXISTS paidat datetime NULL",
-                'appointmentType' => "ALTER TABLE {$tableName} ADD COLUMN IF NOT EXISTS appointmenttype varchar(50) DEFAULT 'Online'",
+                'visitStatus' => "visitStatus varchar(30) NOT NULL DEFAULT 'Scheduled'",
+                'checkInTime' => "checkInTime datetime NULL",
+                'checkOutTime' => "checkOutTime datetime NULL",
+                'prescription' => "prescription text NULL",
+                'paymentStatus' => "paymentStatus varchar(20) NOT NULL DEFAULT 'Pending'",
+                'paymentRef' => "paymentRef varchar(64) NULL",
+                'paidAt' => "paidAt datetime NULL",
+                'appointmentType' => "appointmentType varchar(50) DEFAULT 'Online'",
             ];
 
-            foreach ($appointmentColumns as $column => $ddl) {
-                if (!hms_column_exists($con, $tableName, $column)) {
-                    @mysqli_query($con, $ddl);
-                }
+            foreach ($appointmentColumns as $column => $definitionSql) {
+                hms_add_column_if_missing($con, $tableName, $column, $definitionSql);
             }
         }
 
@@ -282,12 +321,246 @@ if (!function_exists('hms_ensure_schema')) {
                 next_visit_date date,
                 created_at datetime DEFAULT CURRENT_TIMESTAMP
             )");
-            @mysqli_query($con, "CREATE INDEX IF NOT EXISTS idx_prescriptions_appointment_id ON prescriptions (appointment_id)");
-            @mysqli_query($con, "CREATE INDEX IF NOT EXISTS idx_prescriptions_patient_id ON prescriptions (patient_id)");
-            @mysqli_query($con, "CREATE INDEX IF NOT EXISTS idx_prescriptions_doctor_id ON prescriptions (doctor_id)");
+            hms_create_index_if_missing($con, 'prescriptions', 'idx_prescriptions_appointment_id', 'appointment_id');
+            hms_create_index_if_missing($con, 'prescriptions', 'idx_prescriptions_patient_id', 'patient_id');
+            hms_create_index_if_missing($con, 'prescriptions', 'idx_prescriptions_doctor_id', 'doctor_id');
         } elseif (!hms_column_exists($con, 'prescriptions', 'medicines')) {
-            @mysqli_query($con, "ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS medicines text NULL");
+            hms_add_column_if_missing($con, 'prescriptions', 'medicines', 'medicines text NULL');
         }
+    }
+}
+
+if (!function_exists('hms_ensure_support_schema')) {
+    function hms_ensure_support_schema($con) {
+        if (!$con) {
+            return;
+        }
+
+        if (!hms_table_exists($con, 'contact_queries')) {
+            @mysqli_query($con, "CREATE TABLE IF NOT EXISTS contact_queries (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                portal_type VARCHAR(20) NOT NULL,
+                user_id INT DEFAULT NULL,
+                doctor_id INT DEFAULT NULL,
+                name VARCHAR(150) NOT NULL,
+                email VARCHAR(150) NOT NULL,
+                phone VARCHAR(30) DEFAULT NULL,
+                subject VARCHAR(200) NOT NULL,
+                message TEXT NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'New',
+                admin_note TEXT DEFAULT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+
+        $contactQueryColumns = [
+            'portal_type' => "portal_type VARCHAR(20) NOT NULL DEFAULT 'user'",
+            'user_id' => "user_id INT DEFAULT NULL",
+            'doctor_id' => "doctor_id INT DEFAULT NULL",
+            'name' => "name VARCHAR(150) NOT NULL DEFAULT ''",
+            'email' => "email VARCHAR(150) NOT NULL DEFAULT ''",
+            'phone' => "phone VARCHAR(30) DEFAULT NULL",
+            'subject' => "subject VARCHAR(200) NOT NULL DEFAULT ''",
+            'message' => "message TEXT NOT NULL",
+            'status' => "status VARCHAR(20) NOT NULL DEFAULT 'New'",
+            'admin_note' => "admin_note TEXT DEFAULT NULL",
+            'created_at' => "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+            'updated_at' => "updated_at DATETIME DEFAULT NULL",
+        ];
+        foreach ($contactQueryColumns as $column => $definitionSql) {
+            hms_add_column_if_missing($con, 'contact_queries', $column, $definitionSql);
+        }
+        hms_create_index_if_missing($con, 'contact_queries', 'idx_contact_queries_portal_status', 'portal_type, status');
+        hms_create_index_if_missing($con, 'contact_queries', 'idx_contact_queries_user_id', 'user_id');
+        hms_create_index_if_missing($con, 'contact_queries', 'idx_contact_queries_doctor_id', 'doctor_id');
+
+        if (!hms_table_exists($con, 'contact_query_history')) {
+            @mysqli_query($con, "CREATE TABLE IF NOT EXISTS contact_query_history (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                original_query_id INT NOT NULL,
+                portal_type VARCHAR(20) NOT NULL,
+                user_id INT DEFAULT NULL,
+                doctor_id INT DEFAULT NULL,
+                name VARCHAR(150) NOT NULL,
+                email VARCHAR(150) NOT NULL,
+                phone VARCHAR(30) DEFAULT NULL,
+                subject VARCHAR(200) NOT NULL,
+                message TEXT NOT NULL,
+                final_status VARCHAR(20) NOT NULL DEFAULT 'Closed',
+                admin_note TEXT NOT NULL,
+                created_at DATETIME NOT NULL,
+                disposed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                disposed_by VARCHAR(120) DEFAULT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+
+        $contactHistoryColumns = [
+            'original_query_id' => "original_query_id INT NOT NULL DEFAULT 0",
+            'portal_type' => "portal_type VARCHAR(20) NOT NULL DEFAULT 'user'",
+            'user_id' => "user_id INT DEFAULT NULL",
+            'doctor_id' => "doctor_id INT DEFAULT NULL",
+            'name' => "name VARCHAR(150) NOT NULL DEFAULT ''",
+            'email' => "email VARCHAR(150) NOT NULL DEFAULT ''",
+            'phone' => "phone VARCHAR(30) DEFAULT NULL",
+            'subject' => "subject VARCHAR(200) NOT NULL DEFAULT ''",
+            'message' => "message TEXT NOT NULL",
+            'final_status' => "final_status VARCHAR(20) NOT NULL DEFAULT 'Closed'",
+            'admin_note' => "admin_note TEXT NOT NULL",
+            'created_at' => "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+            'disposed_at' => "disposed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+            'disposed_by' => "disposed_by VARCHAR(120) DEFAULT NULL",
+        ];
+        foreach ($contactHistoryColumns as $column => $definitionSql) {
+            hms_add_column_if_missing($con, 'contact_query_history', $column, $definitionSql);
+        }
+        hms_create_index_if_missing($con, 'contact_query_history', 'idx_contact_query_history_original_query_id', 'original_query_id');
+        hms_create_index_if_missing($con, 'contact_query_history', 'idx_contact_query_history_portal', 'portal_type');
+        hms_create_index_if_missing($con, 'contact_query_history', 'idx_contact_query_history_user_id', 'user_id');
+        hms_create_index_if_missing($con, 'contact_query_history', 'idx_contact_query_history_doctor_id', 'doctor_id');
+        hms_create_index_if_missing($con, 'contact_query_history', 'idx_contact_query_history_disposed_at', 'disposed_at');
+
+        if (!hms_table_exists($con, 'feedback_entries')) {
+            @mysqli_query($con, "CREATE TABLE IF NOT EXISTS feedback_entries (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                portal_type VARCHAR(20) NOT NULL,
+                user_id INT DEFAULT NULL,
+                doctor_id INT DEFAULT NULL,
+                name VARCHAR(150) NOT NULL,
+                email VARCHAR(150) NOT NULL,
+                rating TINYINT DEFAULT NULL,
+                feedback_text TEXT NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'New',
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+
+        $feedbackColumns = [
+            'portal_type' => "portal_type VARCHAR(20) NOT NULL DEFAULT 'user'",
+            'user_id' => "user_id INT DEFAULT NULL",
+            'doctor_id' => "doctor_id INT DEFAULT NULL",
+            'name' => "name VARCHAR(150) NOT NULL DEFAULT ''",
+            'email' => "email VARCHAR(150) NOT NULL DEFAULT ''",
+            'rating' => "rating TINYINT DEFAULT NULL",
+            'feedback_text' => "feedback_text TEXT NOT NULL",
+            'status' => "status VARCHAR(20) NOT NULL DEFAULT 'New'",
+            'created_at' => "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        ];
+        foreach ($feedbackColumns as $column => $definitionSql) {
+            hms_add_column_if_missing($con, 'feedback_entries', $column, $definitionSql);
+        }
+        hms_create_index_if_missing($con, 'feedback_entries', 'idx_feedback_entries_portal_status', 'portal_type, status');
+        hms_create_index_if_missing($con, 'feedback_entries', 'idx_feedback_entries_user_id', 'user_id');
+        hms_create_index_if_missing($con, 'feedback_entries', 'idx_feedback_entries_doctor_id', 'doctor_id');
+        hms_create_index_if_missing($con, 'feedback_entries', 'idx_feedback_entries_created_at', 'created_at');
+
+        if (!hms_table_exists($con, 'appointment_transfers')) {
+            @mysqli_query($con, "CREATE TABLE IF NOT EXISTS appointment_transfers (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                originalAppointmentId INT NOT NULL,
+                transferredAppointmentId INT DEFAULT NULL,
+                patientId INT DEFAULT NULL,
+                doctorId INT DEFAULT NULL,
+                fromType VARCHAR(30) NOT NULL DEFAULT 'Consultancy',
+                toType VARCHAR(30) NOT NULL DEFAULT 'Admitted',
+                transferReason TEXT DEFAULT NULL,
+                transferDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                transferredAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+        $transferColumns = [
+            'originalAppointmentId' => "originalAppointmentId INT NOT NULL DEFAULT 0",
+            'transferredAppointmentId' => "transferredAppointmentId INT DEFAULT NULL",
+            'patientId' => "patientId INT DEFAULT NULL",
+            'doctorId' => "doctorId INT DEFAULT NULL",
+            'fromType' => "fromType VARCHAR(30) NOT NULL DEFAULT 'Consultancy'",
+            'toType' => "toType VARCHAR(30) NOT NULL DEFAULT 'Admitted'",
+            'transferReason' => "transferReason TEXT DEFAULT NULL",
+            'transferDate' => "transferDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+            'transferredAt' => "transferredAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        ];
+        foreach ($transferColumns as $column => $definitionSql) {
+            hms_add_column_if_missing($con, 'appointment_transfers', $column, $definitionSql);
+        }
+        hms_create_index_if_missing($con, 'appointment_transfers', 'idx_appointment_transfers_original_appointment', 'originalAppointmentId');
+        hms_create_index_if_missing($con, 'appointment_transfers', 'idx_appointment_transfers_patient_id', 'patientId');
+        hms_create_index_if_missing($con, 'appointment_transfers', 'idx_appointment_transfers_doctor_id', 'doctorId');
+
+        if (!hms_table_exists($con, 'patients')) {
+            @mysqli_query($con, "CREATE TABLE IF NOT EXISTS patients (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                userId INT DEFAULT NULL,
+                doctorId INT DEFAULT NULL,
+                patientName VARCHAR(255) NOT NULL,
+                patientEmail VARCHAR(255) DEFAULT NULL,
+                patientPhone VARCHAR(30) DEFAULT NULL,
+                patientGender VARCHAR(20) DEFAULT NULL,
+                patientAge INT DEFAULT NULL,
+                patientAddress TEXT DEFAULT NULL,
+                patientType VARCHAR(50) NOT NULL DEFAULT 'consultancy',
+                status VARCHAR(20) NOT NULL DEFAULT 'Active',
+                isEmergency TINYINT(1) NOT NULL DEFAULT 0,
+                admissionDate DATETIME DEFAULT NULL,
+                dischargeDate DATETIME DEFAULT NULL,
+                notes TEXT DEFAULT NULL,
+                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updatedAt DATETIME DEFAULT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+        $patientColumns = [
+            'userId' => "userId INT DEFAULT NULL",
+            'doctorId' => "doctorId INT DEFAULT NULL",
+            'patientName' => "patientName VARCHAR(255) NOT NULL DEFAULT ''",
+            'patientEmail' => "patientEmail VARCHAR(255) DEFAULT NULL",
+            'patientPhone' => "patientPhone VARCHAR(30) DEFAULT NULL",
+            'patientGender' => "patientGender VARCHAR(20) DEFAULT NULL",
+            'patientAge' => "patientAge INT DEFAULT NULL",
+            'patientAddress' => "patientAddress TEXT DEFAULT NULL",
+            'patientType' => "patientType VARCHAR(50) NOT NULL DEFAULT 'consultancy'",
+            'status' => "status VARCHAR(20) NOT NULL DEFAULT 'Active'",
+            'isEmergency' => "isEmergency TINYINT(1) NOT NULL DEFAULT 0",
+            'admissionDate' => "admissionDate DATETIME DEFAULT NULL",
+            'dischargeDate' => "dischargeDate DATETIME DEFAULT NULL",
+            'notes' => "notes TEXT DEFAULT NULL",
+            'createdAt' => "createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+            'updatedAt' => "updatedAt DATETIME DEFAULT NULL",
+        ];
+        foreach ($patientColumns as $column => $definitionSql) {
+            hms_add_column_if_missing($con, 'patients', $column, $definitionSql);
+        }
+        hms_create_index_if_missing($con, 'patients', 'idx_patients_user_id', 'userId');
+        hms_create_index_if_missing($con, 'patients', 'idx_patients_doctor_id', 'doctorId');
+        hms_create_index_if_missing($con, 'patients', 'idx_patients_type_status', 'patientType, status');
+
+        if (!hms_table_exists($con, 'payment_transactions')) {
+            @mysqli_query($con, "CREATE TABLE IF NOT EXISTS payment_transactions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                appointment_id INT NOT NULL,
+                user_id INT NOT NULL,
+                amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                payment_method VARCHAR(50) NOT NULL DEFAULT 'Card',
+                transaction_ref VARCHAR(64) NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'Paid',
+                paid_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+        $paymentColumns = [
+            'appointment_id' => "appointment_id INT NOT NULL DEFAULT 0",
+            'user_id' => "user_id INT NOT NULL DEFAULT 0",
+            'amount' => "amount DECIMAL(10,2) NOT NULL DEFAULT 0.00",
+            'payment_method' => "payment_method VARCHAR(50) NOT NULL DEFAULT 'Card'",
+            'transaction_ref' => "transaction_ref VARCHAR(64) NOT NULL DEFAULT ''",
+            'status' => "status VARCHAR(20) NOT NULL DEFAULT 'Paid'",
+            'paid_at' => "paid_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+            'created_at' => "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        ];
+        foreach ($paymentColumns as $column => $definitionSql) {
+            hms_add_column_if_missing($con, 'payment_transactions', $column, $definitionSql);
+        }
+        hms_create_index_if_missing($con, 'payment_transactions', 'idx_payment_transactions_appointment_id', 'appointment_id');
+        hms_create_index_if_missing($con, 'payment_transactions', 'idx_payment_transactions_user_id', 'user_id');
+        hms_create_index_if_missing($con, 'payment_transactions', 'idx_payment_transactions_status', 'status');
     }
 }
 
@@ -310,9 +583,9 @@ if (!function_exists('hms_ensure_past_appointments')) {
             return false;
         }
 
-        @mysqli_query($con, "ALTER TABLE past_appointments ADD COLUMN IF NOT EXISTS originalappointmentid INT NOT NULL DEFAULT 0");
-        @mysqli_query($con, "ALTER TABLE past_appointments ADD COLUMN IF NOT EXISTS sourcetable varchar(64) NOT NULL DEFAULT '");
-        @mysqli_query($con, "ALTER TABLE past_appointments ADD COLUMN IF NOT EXISTS archivedat datetime NULL");
+        hms_add_column_if_missing($con, 'past_appointments', 'originalappointmentid', "originalappointmentid INT NOT NULL DEFAULT 0");
+        hms_add_column_if_missing($con, 'past_appointments', 'sourcetable', "sourcetable varchar(64) NOT NULL DEFAULT ''");
+        hms_add_column_if_missing($con, 'past_appointments', 'archivedat', "archivedat datetime NULL");
         return true;
     }
 }
@@ -375,4 +648,5 @@ if (!function_exists('hms_archive_appointment')) {
 }
 
 hms_ensure_schema($con);
+hms_ensure_support_schema($con);
 ?>

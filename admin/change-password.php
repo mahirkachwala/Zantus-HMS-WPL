@@ -4,7 +4,7 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 date_default_timezone_set('Asia/Kolkata');
-$currentTime = date( 'Y-m-d h:i:s', time () );
+$currentTime = date('Y-m-d H:i:s');
 
 function isStrongPassword($password) {
 	return (bool)preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/', (string)$password);
@@ -23,11 +23,18 @@ if(isset($_POST['submit']))
 		$sql=hms_query($con,"SELECT password FROM admin where username='".$adminUser."' LIMIT 1");
 		$num=hms_fetch_array($sql);
 		$storedPassword = $num['password'] ?? '';
-		$isCurrentValid = ($storedPassword === $currentPass);
+		$isCurrentValid = false;
+		if ($storedPassword !== '' && password_verify($currentPass, $storedPassword)) {
+			$isCurrentValid = true;
+		} elseif ($storedPassword === $currentPass) {
+			// legacy plaintext
+			$isCurrentValid = true;
+		}
+
 		if($num && $isCurrentValid)
 		{
-			$newPasswordToStore = $newPass;
-			$updateResult = hms_query($con,"update admin set `password`='".$newPasswordToStore."', `updationDate`='$currentTime' where username='".$adminUser."'");
+			$newHash = password_hash($newPass, PASSWORD_DEFAULT);
+			$updateResult = hms_query($con,"update admin set `password`='".hms_escape($con, $newHash)."', `updationDate`='$currentTime' where username='".$adminUser."'");
 			$_SESSION['msg1']="Password Changed Successfully !!";
 		}
 		else

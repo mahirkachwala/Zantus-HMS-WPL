@@ -64,39 +64,87 @@ ensurePrescriptionTables($con);
 $appointmentTable = appointmentTableName($con);
 
 $doctorId = (int)($_SESSION['doctor_id'] ?? $_SESSION['id'] ?? 0);
-$appointmentId = (int)($_GET['appointment_id'] ?? $_POST['appointment_id'] ?? 0);
+$appointmentId = (int)($_GET['appointment_id'] ?? $_GET['id'] ?? $_GET['aid'] ?? $_POST['appointment_id'] ?? $_POST['id'] ?? $_POST['aid'] ?? 0);
+$candidateAppointments = [];
+$showAppointmentChooser = false;
 
 if ($appointmentId <= 0) {
-	$_SESSION['msg'] = 'Invalid appointment selected.';
-	header('location:visit-management.php');
-	exit();
+	$fallbackSql = hms_query(
+		$con,
+		"SELECT $appointmentTable.id, users.fullName, $appointmentTable.appointmentDate, $appointmentTable.appointmentTime
+		FROM $appointmentTable
+		JOIN users ON users.id=$appointmentTable.userId
+		WHERE $appointmentTable.doctorId='$doctorId'
+			AND $appointmentTable.userStatus='1'
+			AND $appointmentTable.doctorStatus='1'
+			AND COALESCE($appointmentTable.visitStatus, 'Scheduled')='Checked In'
+		ORDER BY $appointmentTable.id DESC
+		LIMIT 10"
+	);
+	if ($fallbackSql) {
+		while ($fallbackRow = hms_fetch_assoc($fallbackSql)) {
+			$candidateAppointments[] = $fallbackRow;
+		}
+	}
+
+	if (count($candidateAppointments) === 1) {
+		$appointmentId = (int)($candidateAppointments[0]['id'] ?? 0);
+	} elseif (count($candidateAppointments) > 1) {
+		$showAppointmentChooser = true;
+	} else {
+		$fallbackSql = hms_query(
+			$con,
+			"SELECT id FROM $appointmentTable
+		WHERE doctorId='$doctorId'
+			AND userStatus='1'
+			AND doctorStatus='1'
+			AND COALESCE(visitStatus, 'Scheduled')='Checked In'
+		ORDER BY id DESC
+		LIMIT 2"
+		);
+		if ($fallbackSql && hms_num_rows($fallbackSql) === 1) {
+			$fallbackRow = hms_fetch_assoc($fallbackSql);
+			$appointmentId = (int)($fallbackRow['id'] ?? 0);
+		}
+	}
+
+	if ($appointmentId <= 0 && !$showAppointmentChooser) {
+		$_SESSION['msg'] = 'Invalid appointment selected.';
+		header('location:visit-management.php');
+		exit();
+	}
 }
 
-$appointmentSql = hms_query($con, "SELECT $appointmentTable.*, users.fullName FROM $appointmentTable JOIN users ON users.id=$appointmentTable.userId WHERE $appointmentTable.id='$appointmentId' AND $appointmentTable.doctorId='$doctorId' LIMIT 1");
-$appointment = ($appointmentSql) ? hms_fetch_array($appointmentSql) : null;
+$appointment = null;
+if (!$showAppointmentChooser) {
+	$appointmentSql = hms_query($con, "SELECT $appointmentTable.*, users.fullName FROM $appointmentTable JOIN users ON users.id=$appointmentTable.userId WHERE $appointmentTable.id='$appointmentId' AND $appointmentTable.doctorId='$doctorId' LIMIT 1");
+	$appointment = ($appointmentSql) ? hms_fetch_array($appointmentSql) : null;
+}
 
-if (!$appointment) {
+if (!$showAppointmentChooser && !$appointment) {
 	$_SESSION['msg'] = 'Appointment not found for this doctor.';
 	header('location:visit-management.php');
 	exit();
 }
 
-if (($appointment['userStatus'] ?? 0) != 1 || ($appointment['doctorStatus'] ?? 0) != 1) {
+if (!$showAppointmentChooser && (($appointment['userStatus'] ?? 0) != 1 || ($appointment['doctorStatus'] ?? 0) != 1)) {
 	$_SESSION['msg'] = 'This appointment is not active.';
 	header('location:visit-management.php');
 	exit();
 }
 
-if (($appointment['visitStatus'] ?? 'Scheduled') !== 'Checked In') {
+if (!$showAppointmentChooser && (($appointment['visitStatus'] ?? 'Scheduled') !== 'Checked In')) {
 	$_SESSION['msg'] = 'Please check in the patient before adding prescription.';
 	header('location:visit-management.php');
 	exit();
 }
 
-$isPaid = in_array(strtolower((string)($appointment['paymentStatus'] ?? '')), ['paid', 'paid at hospital'], true)
+$isPaid = !$showAppointmentChooser && (
+	in_array(strtolower((string)($appointment['paymentStatus'] ?? '')), ['paid', 'paid at hospital'], true)
 	|| !empty($appointment['paymentRef'])
-	|| !empty($appointment['paidAt']);
-if (!$isPaid) {
+	|| !empty($appointment['paidAt'])
+);
+if (!$showAppointmentChooser && !$isPaid) {
 	$_SESSION['msg'] = 'Payment must be received before adding prescription.';
 	header('location:visit-management.php');
 	exit();
@@ -217,9 +265,39 @@ include('include/header.php');
 			<?php $_SESSION['msg'] = ''; ?>
 		<?php endif; ?>
 
+		<?php if($showAppointmentChooser): ?>
+			<div class="card-box">
+				<div class="section-title">Select Checked-In Appointment</div>
+				<p class="text-muted">More than one checked-in appointment is available for this doctor. Please choose the patient for whom you want to add the prescription.</p>
+				<table class="table table-bordered table-striped">
+					<thead>
+						<tr>
+							<th>Appointment ID</th>
+							<th>Patient Name</th>
+							<th>Date / Time</th>
+							<th>Action</th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach($candidateAppointments as $candidate): ?>
+							<tr>
+								<td><?php echo (int)($candidate['id'] ?? 0); ?></td>
+								<td><?php echo htmlentities($candidate['fullName'] ?? 'Patient'); ?></td>
+								<td><?php echo htmlentities(trim((string)($candidate['appointmentDate'] ?? '') . ' ' . (string)($candidate['appointmentTime'] ?? ''))); ?></td>
+								<td>
+									<a class="btn btn-primary btn-sm" href="add-prescription.php?appointment_id=<?php echo (int)($candidate['id'] ?? 0); ?>&id=<?php echo (int)($candidate['id'] ?? 0); ?>">Open Prescription Form</a>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+				<a href="visit-management.php" class="btn btn-cancel">Back to Visit Management</a>
+			</div>
+		<?php else: ?>
 		<form method="post">
 			<!-- Form groups collect clinical inputs using Bootstrap grid columns. -->
 			<input type="hidden" name="appointment_id" value="<?php echo (int)$appointmentId; ?>">
+			<input type="hidden" name="id" value="<?php echo (int)$appointmentId; ?>">
 
 			<div class="card-box">
 				<div class="section-title">Patient & Visit Info</div>
@@ -315,6 +393,7 @@ include('include/header.php');
 			<button type="submit" name="submit_prescription" class="btn btn-primary">Save Prescription</button>
 			<a href="visit-management.php" class="btn btn-cancel">Cancel</a>
 		</form>
+		<?php endif; ?>
 	</div>
 </div>
 

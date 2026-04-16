@@ -4,38 +4,36 @@ include("include/config.php");
 error_reporting(0);
 if(isset($_POST['submit']))
 {
-	// Server-side login check creates doctor session state.
-	$ret=hms_query($con,"SELECT * FROM doctors WHERE docEmail='".$_POST['username']."' and password='".$_POST['password']."'");
-	$num=hms_fetch_array($ret);
-	if($num)
+	// Keep shared-host login logic minimal to avoid redirect/logging failures.
+	$username = hms_escape($con, trim($_POST['username'] ?? ''));
+	$password = trim($_POST['password'] ?? '');
+	$ret = hms_query($con, "SELECT id, doctorName, docEmail, password FROM doctors WHERE docEmail='".$username."' LIMIT 1");
+	$num = hms_fetch_array($ret);
+	$stored = (string)($num['password'] ?? '');
+	$isPasswordValid = false;
+
+	if ($num) {
+		if ($stored === $password) {
+			$isPasswordValid = true;
+		} elseif ($stored !== '' && password_verify($password, $stored)) {
+			$isPasswordValid = true;
+		}
+	}
+
+	if($num && $isPasswordValid)
 	{
 		session_regenerate_id(true);
-		$extra="dashboard.php";
-		$_SESSION['dlogin']=$_POST['username'];
-		$_SESSION['id']=$num['id'];
-		$_SESSION['doctor_id']=$num['id'];
-		$_SESSION['doctorName']=$num['doctorName'];
-		$uip=$_SERVER['REMOTE_ADDR'];
-		$status=1;
-		$log=hms_query($con,"insert into doctorslog(uid,username,userip,status) values('".$_SESSION['id']."','".$_SESSION['dlogin']."','$uip','$status')");
-		$host=$_SERVER['HTTP_HOST'];
-		$uri=rtrim(dirname($_SERVER['PHP_SELF']),'/\\');
-		header("location:http://$host$uri/$extra");
+		$_SESSION['dlogin'] = $num['docEmail'];
+		$_SESSION['id'] = (int)$num['id'];
+		$_SESSION['doctor_id'] = (int)$num['id'];
+		$_SESSION['doctorName'] = $num['doctorName'];
+		header("Location: dashboard.php");
 		exit();
 	}
-	else
-	{
-		$host  = $_SERVER['HTTP_HOST'];
-		$_SESSION['dlogin']=$_POST['username'];
-		$uip=$_SERVER['REMOTE_ADDR'];
-		$status=0;
-		hms_query($con,"insert into doctorslog(username,userip,status) values('".$_SESSION['dlogin']."','$uip','$status')");
-		$_SESSION['errmsg']="Invalid username or password";
-		$extra="index.php";
-		$uri  = rtrim(dirname($_SERVER['PHP_SELF']),'/\\');
-		header("location:http://$host$uri/$extra");
-		exit();
-	}
+
+	$_SESSION['errmsg'] = "Invalid username or password";
+	header("Location: index.php");
+	exit();
 }
 ?>
 <!DOCTYPE html>

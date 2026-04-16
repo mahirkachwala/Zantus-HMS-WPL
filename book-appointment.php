@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/include/session.php';
+hms_session_start();
 include('include/config.php');
 include('include/checklogin.php');
 check_login();
@@ -322,7 +323,7 @@ if(isset($_POST['submit'])) {
 									<select name="Doctorspecialization" class="form-control" onChange="getdoctor(this.value);" required="required">
 										<option value="">Select Specialization</option>
 										<?php 
-										$ret=hms_query($con,"SELECT id, $specColumn AS specialization_name FROM $specTable ORDER BY $specColumn ASC");
+										$ret=hms_query($con,"SELECT MIN(id) AS id, $specColumn AS specialization_name FROM $specTable GROUP BY $specColumn ORDER BY $specColumn ASC");
 										while($row=hms_fetch_array($ret)) {
 											$optionValue = $isDoctorSpecNumeric ? $row['id'] : $row['specialization_name'];
 											echo "<option value='".htmlentities($optionValue)."'>".htmlentities($row['specialization_name'])."</option>";
