@@ -26,7 +26,7 @@ if(isset($_POST['submit'])){
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<title>Password Recovery</title>
+	<title>Zantus HMS | Doctor Password Recovery</title>
 
 
 	<link href="../vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -44,6 +44,27 @@ if(isset($_POST['submit'])){
 	<link href="../vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
 
 	<link href="../assets/css/custom.min.css" rel="stylesheet">
+	<style>
+		.login-brand {
+			text-align: center;
+			margin-bottom: 12px;
+		}
+		.login-brand img {
+			width: 70px;
+			height: 70px;
+			border-radius: 12px;
+			padding: 6px;
+			background: #fff;
+			box-shadow: 0 2px 8px rgba(0,0,0,.12);
+		}
+		.login_content legend {
+			color: #1e3a8a;
+			font-weight: 600;
+		}
+		body.login {
+			background: #f4f7fb;
+		}
+	</style>
 </head>
 <body class="login">
 	<div>
@@ -55,12 +76,15 @@ if(isset($_POST['submit'])){
 
 					<div class="box-login">
 						<form class="form-login" method="post">
+							<div class="login-brand">
+								<img src="../assets/images/zantus-logo.jpg" alt="Zantus Life Science Hospital">
+							</div>
 							<fieldset>
 								<legend>
-									HMS | Doctor Password Recovery
+									Zantus HMS | Doctor Password Recovery
 								</legend>
 								<p>
-									Please enter your  Contact number and Email to recover your password.<br />
+									Please enter your registered contact number and email to continue.<br />
 
 								</p>
 
@@ -91,7 +115,7 @@ if(isset($_POST['submit'])){
 							</form>
 
 							<div class="copyright">
-								&copy; <span class="current-year"></span><span class="text-bold text-uppercase"> HMS</span>. <span>All rights reserved</span>
+								&copy; <span class="current-year"></span><span class="text-bold text-uppercase"> Zantus Life Science Hospital</span>. <span>All rights reserved</span>
 							</div>
 
 						</div>

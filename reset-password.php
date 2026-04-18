@@ -35,7 +35,7 @@ $newpassword=$_POST['password'];
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>Password Reset</title>
+		<title>Zantus HMS | Patient Reset Password</title>
 
 		<link href="vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
 		<link href="vendors/font-awesome/css/font-awesome.min.css" rel="stylesheet">
@@ -46,27 +46,24 @@ $newpassword=$_POST['password'];
 		<link href="vendors/bootstrap-daterangepicker/daterangepicker.css" rel="stylesheet">
 		<link href="assets/css/custom.min.css" rel="stylesheet">
 		<style>
+			.login-brand {
+				text-align: center;
+				margin-bottom: 12px;
+			}
+			.login-brand img {
+				width: 70px;
+				height: 70px;
+				border-radius: 12px;
+				padding: 6px;
+				background: #fff;
+				box-shadow: 0 2px 8px rgba(0,0,0,.12);
+			}
+			.login_content legend {
+				color: #1e3a8a;
+				font-weight: 600;
+			}
 			body.login {
 				background: #f4f7fb;
-			}
-			.main-login {
-				margin-top: 40px;
-			}
-			.logo h2 {
-				color: #1e3a8a;
-				font-weight: 700;
-				text-align: center;
-			}
-			.box-login {
-				background: #fff;
-				border: 1px solid #e6ebf5;
-				border-radius: 14px;
-				box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-				padding: 14px 18px;
-			}
-			.box-login legend {
-				color: #1e3a8a;
-				font-weight: 700;
 			}
 		</style>
 
@@ -90,17 +87,21 @@ return true;
 </script>
 	</head>
 	<body class="login">
-		<div class="row">
-			<div class="main-login col-xs-10 col-xs-offset-1 col-sm-8 col-sm-offset-2 col-md-4 col-md-offset-4">
-				<div class="logo margin-top-30">
-				<a href="../index.html"><h2> HMS | Patient Reset Password</h2></a>
-				</div>
-
-				<div class="box-login">
+		<div>
+			<a class="hiddenanchor" id="signup"></a>
+			<a class="hiddenanchor" id="signin"></a>
+			<div class="login_wrapper">
+				<div class="animate form login_form">
+					<section class="login_content">
+						<div class="box-login">
+							<div class="box-login">
 					<form class="form-login" name="passwordreset" method="post" onSubmit="return valid();">
+						<div class="login-brand">
+							<img src="assets/images/zantus-logo.jpg" alt="Zantus Life Science Hospital">
+						</div>
 						<fieldset>
 							<legend>
-								Patient Reset Password
+								Zantus HMS | Patient Reset Password
 							</legend>
 							<p>
 								Please set your new password.<br />
@@ -137,11 +138,13 @@ return true;
 					</form>
 
 					<div class="copyright">
-						&copy; <span class="current-year"></span><span class="text-bold text-uppercase"> HMS</span>. <span>All rights reserved</span>
+						&copy; <span class="current-year"></span><span class="text-bold text-uppercase"> Zantus Life Science Hospital</span>. <span>All rights reserved</span>
 					</div>
 
 				</div>
-
+						</div>
+					</section>
+				</div>
 			</div>
 		</div>
 		<script src="vendors/jquery/dist/jquery.min.js"></script>
