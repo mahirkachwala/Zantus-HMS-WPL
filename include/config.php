@@ -590,6 +590,59 @@ if (!function_exists('hms_ensure_past_appointments')) {
     }
 }
 
+if (!function_exists('hms_record_payment_transaction')) {
+    function hms_record_payment_transaction($con, $appointmentId, $userId, $amount, $paymentMethod, $transactionRef, $status = 'Paid', $paidAt = null) {
+        $appointmentId = (int)$appointmentId;
+        $userId = (int)$userId;
+        $amount = (float)$amount;
+        $paymentMethod = trim((string)$paymentMethod);
+        $transactionRef = trim((string)$transactionRef);
+        $status = trim((string)$status);
+        $paidAt = trim((string)$paidAt);
+
+        if ($appointmentId <= 0 || $userId <= 0 || $transactionRef === '') {
+            return false;
+        }
+
+        if ($paymentMethod === '') {
+            $paymentMethod = 'Card';
+        }
+        if ($status === '') {
+            $status = 'Paid';
+        }
+
+        if (!hms_table_exists($con, 'payment_transactions')) {
+            hms_ensure_support_schema($con);
+        }
+        if (!hms_table_exists($con, 'payment_transactions')) {
+            return false;
+        }
+
+        $existing = hms_query_params($con, "SELECT id FROM payment_transactions WHERE transaction_ref=$1 LIMIT 1", [$transactionRef]);
+        if ($existing && hms_num_rows($existing) > 0) {
+            return true;
+        }
+
+        $amountText = number_format($amount, 2, '.', '');
+        $paidAtSql = ($paidAt !== '') ? "'" . hms_escape($con, $paidAt) . "'" : "CURRENT_TIMESTAMP";
+
+        return (bool)hms_query(
+            $con,
+            "INSERT INTO payment_transactions(appointment_id, user_id, amount, payment_method, transaction_ref, status, paid_at, created_at)
+            VALUES(
+                '$appointmentId',
+                '$userId',
+                '$amountText',
+                '" . hms_escape($con, $paymentMethod) . "',
+                '" . hms_escape($con, $transactionRef) . "',
+                '" . hms_escape($con, $status) . "',
+                $paidAtSql,
+                CURRENT_TIMESTAMP
+            )"
+        );
+    }
+}
+
 if (!function_exists('hms_archive_appointment')) {
     function hms_archive_appointment($con, $sourceTable, $appointmentId) {
         $appointmentId = (int)$appointmentId;

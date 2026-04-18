@@ -64,7 +64,27 @@ $doctorId = (int)($_SESSION['doctor_id'] ?? $_SESSION['id'] ?? 0);
 
 if (isset($_GET['markpaid'])) {
 	$aid = (int)$_GET['markpaid'];
+	$apptSql = hms_query($con, "SELECT id, userId, consultancyFees, paymentStatus, paymentRef, paidAt FROM $appointmentTable WHERE id='$aid' AND doctorId='$doctorId' LIMIT 1");
+	$apptData = ($apptSql) ? hms_fetch_assoc($apptSql) : null;
+
+	if (!$apptData) {
+		$_SESSION['msg'] = 'Appointment not found for payment update.';
+		header('location:visit-management.php');
+		exit();
+	}
+
+	$alreadyPaid = ($hasPaymentStatus && in_array(strtolower((string)($apptData['paymentStatus'] ?? '')), ['paid', 'paid at hospital'], true))
+		|| ($hasPaymentRef && !empty($apptData['paymentRef']))
+		|| ($hasPaidAt && !empty($apptData['paidAt']));
+
+	if ($alreadyPaid) {
+		$_SESSION['msg'] = 'Payment is already recorded for this appointment.';
+		header('location:visit-management.php');
+		exit();
+	}
+
 	$txnRef = 'HOSPITAL-' . date('YmdHis') . '-' . $aid;
+	$paidAt = date('Y-m-d H:i:s');
 	$updates = [];
 	if ($hasPaymentStatus) {
 		$updates[] = "paymentStatus='Paid at Hospital'";
@@ -73,11 +93,37 @@ if (isset($_GET['markpaid'])) {
 		$updates[] = "paymentRef='" . hms_escape($con, $txnRef) . "'";
 	}
 	if ($hasPaidAt) {
-		$updates[] = "paidAt=NOW()";
+		$updates[] = "paidAt='" . hms_escape($con, $paidAt) . "'";
 	}
 	if (!empty($updates)) {
-		hms_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
-		$_SESSION['msg'] = 'Payment marked as received successfully.';
+		$transactionStarted = function_exists('mysqli_begin_transaction') ? @mysqli_begin_transaction($con) : false;
+		$updateOk = (bool)hms_query($con, "UPDATE $appointmentTable SET " . implode(', ', $updates) . " WHERE id='$aid' AND doctorId='$doctorId'");
+		$paymentLogOk = $updateOk && hms_record_payment_transaction(
+			$con,
+			$aid,
+			(int)($apptData['userId'] ?? 0),
+			(float)($apptData['consultancyFees'] ?? 0),
+			'Pay at Hospital',
+			$txnRef,
+			'Paid',
+			$paidAt
+		);
+
+		if ($transactionStarted) {
+			if ($updateOk && $paymentLogOk) {
+				@mysqli_commit($con);
+			} else {
+				@mysqli_rollback($con);
+			}
+		}
+
+		if ($updateOk && $paymentLogOk) {
+			$_SESSION['msg'] = 'Payment marked as received successfully.';
+		} elseif ($updateOk) {
+			$_SESSION['msg'] = 'Payment status updated, but the payment transaction log could not be created.';
+		} else {
+			$_SESSION['msg'] = 'Unable to update payment status. Please try again.';
+		}
 	}
 	header('location:visit-management.php');
 	exit();

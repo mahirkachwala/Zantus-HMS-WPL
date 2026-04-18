@@ -134,24 +134,48 @@ if (isset($_POST['submit_payment'])) {
 
 	if (empty($errors)) {
 		$txnRef = 'ZTXN' . time() . rand(100, 999);
+		$paidAt = date('Y-m-d H:i:s');
 		$_SESSION['lastPayment'] = [
 			'txnRef' => $txnRef,
 			'amount' => $amountInput,
 			'appointmentId' => $appointmentId,
-			'paidAt' => date('Y-m-d H:i:s'),
+			'paidAt' => $paidAt,
 			'cardLast4' => substr($cardNumber, -4)
 		];
 		if ($appointmentId > 0) {
-			$updateResult = hms_query_params($con, "UPDATE $appointmentTable SET paymentStatus='Paid', paymentRef=$1, paidAt=NOW() WHERE id=$2 AND userId=$3", [$txnRef, $appointmentId, $userId]);
+			$transactionStarted = function_exists('mysqli_begin_transaction') ? @mysqli_begin_transaction($con) : false;
+			$updateResult = hms_query_params($con, "UPDATE $appointmentTable SET paymentStatus='Paid', paymentRef=$1, paidAt=$2 WHERE id=$3 AND userId=$4", [$txnRef, $paidAt, $appointmentId, $userId]);
 			$ok = (bool)$updateResult;
+			$paymentLogOk = $ok && hms_record_payment_transaction(
+				$con,
+				$appointmentId,
+				$userId,
+				(float)$amountInput,
+				'Card',
+				$txnRef,
+				'Paid',
+				$paidAt
+			);
 
-			if ($ok) {
+			if ($transactionStarted) {
+				if ($ok && $paymentLogOk) {
+					@mysqli_commit($con);
+				} else {
+					@mysqli_rollback($con);
+				}
+			}
+
+			if ($ok && $paymentLogOk) {
 				$_SESSION['msg'] = 'Payment successful for appointment #'.$appointmentId.'.';
 				header('Location: appointments.php');
 				exit();
 			}
 
-			$errors[] = 'Payment recorded but appointment update failed. Please refresh and try again.';
+			if ($ok) {
+				$errors[] = 'Payment status updated, but the payment transaction log could not be created. Please refresh and try again.';
+			} else {
+				$errors[] = 'Payment recorded but appointment update failed. Please refresh and try again.';
+			}
 		}
 
 		$successMsg = 'Payment successful. Transaction Ref: ' . $txnRef;
