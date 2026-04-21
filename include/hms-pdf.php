@@ -2,6 +2,26 @@
 require_once __DIR__ . '/config.php';
 
 $hmsTcpdfMain = dirname(__DIR__) . '/vendor/tecnickcom/tcpdf/tcpdf.php';
+$hmsTcpdfBase = dirname(__DIR__) . '/vendor/tecnickcom/tcpdf/';
+
+if (!defined('K_TCPDF_EXTERNAL_CONFIG')) {
+	define('K_TCPDF_EXTERNAL_CONFIG', true);
+}
+if (!defined('K_PATH_MAIN')) {
+	define('K_PATH_MAIN', $hmsTcpdfBase);
+}
+if (!defined('K_PATH_FONTS')) {
+	define('K_PATH_FONTS', $hmsTcpdfBase . 'fonts/');
+}
+if (!defined('K_PATH_CACHE')) {
+	$hmsCachePath = sys_get_temp_dir();
+	if ($hmsCachePath === '' || $hmsCachePath === false) {
+		$hmsCachePath = dirname(__DIR__) . '/assets/';
+	}
+	$hmsCachePath = rtrim(str_replace('\\', '/', $hmsCachePath), '/') . '/';
+	define('K_PATH_CACHE', $hmsCachePath);
+}
+
 if (!class_exists('TCPDF', false) && file_exists($hmsTcpdfMain)) {
 	require_once $hmsTcpdfMain;
 }
@@ -39,16 +59,16 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 			}
 
 			$this->SetTextColor(255, 255, 255);
-			$this->SetFont('helvetica', 'B', 16);
+			hms_pdf_apply_font($this, 'B', 16);
 			$this->SetXY(32, 7);
 			$this->Cell(0, 7, 'Zantus HMS', 0, 1, 'L', false, '', 0, false, 'T', 'M');
 
-			$this->SetFont('helvetica', '', 9);
+			hms_pdf_apply_font($this, '', 9);
 			$this->SetX(32);
 			$this->Cell(0, 5, $this->hmsSubtitle, 0, 1, 'L', false, '', 0, false, 'T', 'M');
 
 			$this->SetTextColor(30, 58, 138);
-			$this->SetFont('helvetica', 'B', 14);
+			hms_pdf_apply_font($this, 'B', 14);
 			$this->SetXY(12, 33);
 			$this->Cell(0, 8, $this->hmsDocumentTitle, 0, 1, 'L', false, '', 0, false, 'T', 'M');
 		}
@@ -59,7 +79,7 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 			$this->Line(12, $this->GetY(), $this->getPageWidth() - 12, $this->GetY());
 			$this->SetY(-12);
 			$this->SetTextColor(100, 116, 139);
-			$this->SetFont('helvetica', '', 8);
+			hms_pdf_apply_font($this, '', 8);
 			$this->Cell(0, 6, 'Generated on ' . date('d M Y h:i A') . ' | Page ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, 0, 'C');
 		}
 	}
@@ -69,6 +89,46 @@ if (!function_exists('hms_pdf_logo_path')) {
 	function hms_pdf_logo_path() {
 		$path = dirname(__DIR__) . '/assets/images/zantus-logo.jpg';
 		return file_exists($path) ? $path : '';
+	}
+}
+
+if (!function_exists('hms_pdf_font_file')) {
+	function hms_pdf_font_file($family = 'helvetica', $style = '') {
+		$family = strtolower(trim((string)$family));
+		$style = strtoupper(trim((string)$style));
+		$style = str_replace(['U', 'D', 'O'], '', $style);
+
+		if ($family !== 'helvetica') {
+			return '';
+		}
+
+		$fontMap = [
+			'' => 'helvetica.php',
+			'B' => 'helveticab.php',
+			'I' => 'helveticai.php',
+			'BI' => 'helveticabi.php',
+			'IB' => 'helveticabi.php',
+		];
+
+		$fontFile = $fontMap[$style] ?? $fontMap[''];
+		$fontPath = dirname(__DIR__) . '/vendor/tecnickcom/tcpdf/fonts/' . $fontFile;
+		if (file_exists($fontPath)) {
+			return $fontPath;
+		}
+
+		$fallbackPath = dirname(__DIR__) . '/vendor/tecnickcom/tcpdf/fonts/helvetica.php';
+		return file_exists($fallbackPath) ? $fallbackPath : '';
+	}
+}
+
+if (!function_exists('hms_pdf_apply_font')) {
+	function hms_pdf_apply_font($pdf, $style = '', $size = 10, $family = 'helvetica') {
+		$fontFile = hms_pdf_font_file($family, $style);
+		if ($fontFile !== '') {
+			$pdf->setFont($family, $style, $size, $fontFile);
+			return;
+		}
+		$pdf->setFont($family, $style, $size);
 	}
 }
 
@@ -89,7 +149,7 @@ if (!function_exists('hms_create_pdf_document')) {
 		$pdf->SetHeaderMargin(0);
 		$pdf->SetFooterMargin(10);
 		$pdf->SetAutoPageBreak(true, 22);
-		$pdf->SetFont('helvetica', '', 10);
+		hms_pdf_apply_font($pdf, '', 10);
 		$pdf->AddPage();
 		return $pdf;
 	}
