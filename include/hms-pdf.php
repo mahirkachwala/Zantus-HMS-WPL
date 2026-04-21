@@ -1,11 +1,6 @@
 <?php
 require_once __DIR__ . '/config.php';
 
-$hmsPdfAutoload = dirname(__DIR__) . '/vendor/autoload.php';
-if (file_exists($hmsPdfAutoload)) {
-	require_once $hmsPdfAutoload;
-}
-
 $hmsTcpdfMain = dirname(__DIR__) . '/vendor/tecnickcom/tcpdf/tcpdf.php';
 if (!class_exists('TCPDF', false) && file_exists($hmsTcpdfMain)) {
 	require_once $hmsTcpdfMain;
