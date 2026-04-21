@@ -137,9 +137,13 @@ if(isset($_GET['cancel']))
 						<td><span class="status-active">Active</span></td>
 						<td>
 							<div style="display:flex; gap:5px; flex-wrap:wrap;">
+								<a href="appointment-receipt.php?appointment_id=<?php echo (int)$row['id']; ?>" target="_blank" class="btn btn-default btn-sm">Appointment Receipt</a>
 								<a href="appointments.php?id=<?php echo (int)$row['id']; ?>&cancel=update" onClick="return confirm('Are you sure you want to cancel this appointment ?')" class="btn btn-cancel btn-sm">Cancel</a>
 								<?php if(!$isPaid && strcasecmp((string)($row['paymentStatus'] ?? 'Pending'), 'Pay at Hospital') !== 0): ?>
 									<a href="pay-fees.php?appointment_id=<?php echo (int)$row['id']; ?>" class="btn btn-primary btn-sm">Pay Now</a>
+								<?php endif; ?>
+								<?php if($isPaid): ?>
+									<a href="payment-receipt.php?appointment_id=<?php echo (int)$row['id']; ?>" target="_blank" class="btn btn-info btn-sm">Payment Receipt</a>
 								<?php endif; ?>
 							</div>
 						</td>

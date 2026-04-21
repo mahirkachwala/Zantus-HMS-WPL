@@ -249,11 +249,18 @@ if(isset($_GET['cancel']))
 										}
 									}
 								}
+								echo '<div style="display:flex; gap:5px; flex-wrap:wrap;">';
+								echo '<a href="appointment-receipt.php?appointment_id='.(int)$row['id'].'" target="_blank" class="btn btn-default btn-sm">Appointment Receipt</a>';
+								if($isPaid) {
+									echo '<a href="payment-receipt.php?appointment_id='.(int)$row['id'].'" target="_blank" class="btn btn-info btn-sm">Payment Receipt</a>';
+								}
 								if($hasStructured) {
 									echo '<a href="view-prescription.php?prescription_id='.(int)$prescriptionId.'" class="btn btn-primary btn-sm">View</a>';
+									echo '<a href="prescription-receipt.php?prescription_id='.(int)$prescriptionId.'" target="_blank" class="btn btn-success btn-sm">Prescription PDF</a>';
 								} else {
 									echo '<span class="text-muted">History Record</span>';
 								}
+								echo '</div>';
 								?>
 							</td>
 						</tr>

@@ -188,7 +188,14 @@ if ($medicinesText !== '') {
 	<div class="block"><div class="tt">Doctor Notes</div><?php echo nl2br(htmlentities($prescription['notes'] ?: '-')); ?></div>
 	<div class="block"><div class="tt">Follow-up Date</div><?php echo htmlentities($prescription['next_visit_date'] ?: '-'); ?></div>
 
-	<a href="appointment-history.php" class="btn btn-primary">Back to History</a>
+	<div style="display:flex; gap:8px; flex-wrap:wrap;">
+		<a href="prescription-receipt.php?prescription_id=<?php echo (int)($prescription['id'] ?? 0); ?>" target="_blank" class="btn btn-success">Download Prescription PDF</a>
+		<?php if(!empty($prescription['appointment_id'])): ?>
+			<a href="appointment-receipt.php?appointment_id=<?php echo (int)$prescription['appointment_id']; ?>" target="_blank" class="btn btn-default">Appointment Receipt</a>
+			<a href="payment-receipt.php?appointment_id=<?php echo (int)$prescription['appointment_id']; ?>" target="_blank" class="btn btn-info">Payment Receipt</a>
+		<?php endif; ?>
+		<a href="appointment-history.php" class="btn btn-primary">Back to History</a>
+	</div>
 </div></div>
 <?php include('include/footer.php');?>
 <script src="vendors/jquery/dist/jquery.min.js"></script>
