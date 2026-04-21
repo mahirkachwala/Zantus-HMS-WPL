@@ -23,11 +23,13 @@ if (!defined('PDF_PAGE_FORMAT')) {
 	define('PDF_PAGE_FORMAT', 'A4');
 }
 
-if (!class_exists('TCPDF')) {
-	die('TCPDF is not installed. Run composer install and upload the vendor folder.');
+if (!function_exists('hms_pdf_is_available')) {
+	function hms_pdf_is_available() {
+		return class_exists('TCPDF');
+	}
 }
 
-if (!class_exists('HMSReceiptPDF')) {
+if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 	class HMSReceiptPDF extends TCPDF {
 		public $hmsDocumentTitle = 'Zantus HMS Document';
 		public $hmsSubtitle = 'Zantus Life Science Hospital';
@@ -77,6 +79,10 @@ if (!function_exists('hms_pdf_logo_path')) {
 
 if (!function_exists('hms_create_pdf_document')) {
 	function hms_create_pdf_document($title) {
+		if (!hms_pdf_is_available()) {
+			throw new \RuntimeException('TCPDF is not installed correctly on the server.');
+		}
+
 		$pdf = new HMSReceiptPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 		$pdf->hmsDocumentTitle = (string)$title;
 		$pdf->hmsLogoPath = hms_pdf_logo_path();
