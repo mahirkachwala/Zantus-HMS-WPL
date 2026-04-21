@@ -49,38 +49,98 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 		public $hmsDocumentTitle = 'Zantus HMS Document';
 		public $hmsSubtitle = 'Zantus Life Science Hospital';
 		public $hmsLogoPath = '';
+		public $hmsVariant = 'receipt';
 
 		public function Header() {
-			$this->SetFillColor(30, 58, 138);
-			$this->Rect(0, 0, $this->getPageWidth(), 30, 'F');
+			$pageWidth = $this->getPageWidth();
+
+			if ($this->hmsVariant === 'prescription') {
+				$this->SetFillColor(247, 250, 255);
+				$this->Rect(0, 0, $pageWidth, 48, 'F');
+				$this->SetFillColor(227, 238, 255);
+				$this->Ellipse(28, 6, 24, 12, 0, 0, 360, 'F');
+				$this->Ellipse(17, 43, 22, 10, 0, 0, 360, 'F');
+				$this->SetDrawColor(191, 219, 254);
+				$this->Line(14, 40, $pageWidth - 14, 40);
+
+				if ($this->hmsLogoPath !== '' && file_exists($this->hmsLogoPath)) {
+					$this->Image($this->hmsLogoPath, $pageWidth - 28, 8, 14, 14, 'JPG', '', '', true, 300, '', false, false, 0, false, false, false);
+				}
+
+				$this->SetTextColor(37, 99, 235);
+				hms_pdf_apply_font($this, 'B', 18);
+				$this->SetXY(15, 10);
+				$this->Cell(0, 7, 'Zantus HMS', 0, 1, 'L', false, '', 0, false, 'T', 'M');
+
+				$this->SetTextColor(71, 85, 105);
+				hms_pdf_apply_font($this, '', 9);
+				$this->SetX(15);
+				$this->Cell(0, 5, $this->hmsSubtitle, 0, 1, 'L', false, '', 0, false, 'T', 'M');
+
+				$this->SetTextColor(15, 23, 42);
+				hms_pdf_apply_font($this, 'B', 15);
+				$this->SetXY(15, 27);
+				$this->Cell(0, 8, $this->hmsDocumentTitle, 0, 1, 'L', false, '', 0, false, 'T', 'M');
+				return;
+			}
+
+			$this->SetFillColor(245, 249, 255);
+			$this->Rect(0, 0, $pageWidth, 54, 'F');
+			$this->SetFillColor(37, 99, 235);
+			$this->RoundedRect(14, 12, 46, 24, 4, '1111', 'F');
+			$this->SetFillColor(52, 211, 153);
+			$this->Rect(14, 12, 8, 24, 'F');
 
 			if ($this->hmsLogoPath !== '' && file_exists($this->hmsLogoPath)) {
-				$this->Image($this->hmsLogoPath, 12, 6, 16, 16, 'JPG', '', '', true, 300, '', false, false, 0, false, false, false);
+				$this->Image($this->hmsLogoPath, 25, 16, 12, 12, 'JPG', '', '', true, 300, '', false, false, 0, false, false, false);
 			}
 
 			$this->SetTextColor(255, 255, 255);
-			hms_pdf_apply_font($this, 'B', 16);
-			$this->SetXY(32, 7);
-			$this->Cell(0, 7, 'Zantus HMS', 0, 1, 'L', false, '', 0, false, 'T', 'M');
+			hms_pdf_apply_font($this, 'B', 12);
+			$this->SetXY(39, 17);
+			$this->Cell(17, 5, 'Zantus', 0, 1, 'L', false, '', 0, false, 'T', 'M');
+			hms_pdf_apply_font($this, '', 7);
+			$this->SetXY(39, 22);
+			$this->Cell(17, 4, 'HMS', 0, 1, 'L', false, '', 0, false, 'T', 'M');
 
+			$this->SetTextColor(29, 78, 216);
+			hms_pdf_apply_font($this, 'B', 19);
+			$this->SetXY(72, 13);
+			$this->Cell(0, 9, strtoupper($this->hmsDocumentTitle), 0, 1, 'L', false, '', 0, false, 'T', 'M');
+
+			$this->SetTextColor(100, 116, 139);
 			hms_pdf_apply_font($this, '', 9);
-			$this->SetX(32);
+			$this->SetXY(72, 24);
 			$this->Cell(0, 5, $this->hmsSubtitle, 0, 1, 'L', false, '', 0, false, 'T', 'M');
 
-			$this->SetTextColor(30, 58, 138);
-			hms_pdf_apply_font($this, 'B', 14);
-			$this->SetXY(12, 33);
-			$this->Cell(0, 8, $this->hmsDocumentTitle, 0, 1, 'L', false, '', 0, false, 'T', 'M');
+			$this->SetFillColor(191, 219, 254);
+			$this->Rect(72, 33, 24, 3, 'F');
+			$this->SetDrawColor(203, 213, 225);
+			$this->Line(14, 45, $pageWidth - 14, 45);
 		}
 
 		public function Footer() {
-			$this->SetY(-15);
-			$this->SetDrawColor(203, 213, 225);
-			$this->Line(12, $this->GetY(), $this->getPageWidth() - 12, $this->GetY());
-			$this->SetY(-12);
-			$this->SetTextColor(100, 116, 139);
+			$pageWidth = $this->getPageWidth();
+			$pageHeight = $this->getPageHeight();
+
+			if ($this->hmsVariant === 'prescription') {
+				$this->SetDrawColor(191, 219, 254);
+				$this->Line(15, $pageHeight - 18, $pageWidth - 15, $pageHeight - 18);
+				$this->SetY(-15);
+				$this->SetTextColor(71, 85, 105);
+				hms_pdf_apply_font($this, '', 8);
+				$this->Cell(0, 5, 'Zantus HMS | care@zantushms.com | www.zantushms.com | Page ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, 0, 'C');
+				return;
+			}
+
+			$this->SetFillColor(30, 64, 175);
+			$this->Rect(0, $pageHeight - 16, $pageWidth, 16, 'F');
+			$this->SetTextColor(255, 255, 255);
 			hms_pdf_apply_font($this, '', 8);
-			$this->Cell(0, 6, 'Generated on ' . date('d M Y h:i A') . ' | Page ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, 0, 'C');
+			$this->SetY(-12);
+			$this->Cell(0, 5, 'care@zantushms.com   |   www.zantushms.com   |   Generated on ' . date('d M Y h:i A'), 0, 1, 'C');
+			hms_pdf_apply_font($this, 'B', 8);
+			$this->Cell(0, 4, 'Page ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, 0, 'C');
 		}
 	}
 }
@@ -133,7 +193,7 @@ if (!function_exists('hms_pdf_apply_font')) {
 }
 
 if (!function_exists('hms_create_pdf_document')) {
-	function hms_create_pdf_document($title) {
+	function hms_create_pdf_document($title, $variant = 'receipt') {
 		if (!hms_pdf_is_available()) {
 			throw new \RuntimeException('TCPDF is not installed correctly on the server.');
 		}
@@ -141,14 +201,17 @@ if (!function_exists('hms_create_pdf_document')) {
 		$pdf = new HMSReceiptPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 		$pdf->hmsDocumentTitle = (string)$title;
 		$pdf->hmsLogoPath = hms_pdf_logo_path();
+		$pdf->hmsVariant = $variant === 'prescription' ? 'prescription' : 'receipt';
 		$pdf->SetCreator('Zantus HMS');
 		$pdf->SetAuthor('Zantus HMS');
 		$pdf->SetTitle((string)$title);
 		$pdf->SetSubject((string)$title);
-		$pdf->SetMargins(12, 45, 12);
+		$topMargin = $pdf->hmsVariant === 'prescription' ? 50 : 58;
+		$bottomMargin = $pdf->hmsVariant === 'prescription' ? 20 : 22;
+		$pdf->SetMargins(14, $topMargin, 14);
 		$pdf->SetHeaderMargin(0);
-		$pdf->SetFooterMargin(10);
-		$pdf->SetAutoPageBreak(true, 22);
+		$pdf->SetFooterMargin(0);
+		$pdf->SetAutoPageBreak(true, $bottomMargin);
 		hms_pdf_apply_font($pdf, '', 10);
 		$pdf->AddPage();
 		return $pdf;
@@ -186,6 +249,141 @@ if (!function_exists('hms_pdf_label_value_table')) {
 if (!function_exists('hms_pdf_block_title')) {
 	function hms_pdf_block_title($title) {
 		return '<div style="font-size:12px;font-weight:bold;color:#1e3a8a;margin:8px 0 6px 0;">' . htmlspecialchars((string)$title) . '</div>';
+	}
+}
+
+if (!function_exists('hms_pdf_html_escape')) {
+	function hms_pdf_html_escape($value, $default = '-') {
+		return htmlspecialchars(hms_pdf_text($value, $default), ENT_QUOTES, 'UTF-8');
+	}
+}
+
+if (!function_exists('hms_pdf_status_badge_html')) {
+	function hms_pdf_status_badge_html($status) {
+		$label = trim((string)$status);
+		$key = strtolower($label);
+		$background = '#dbeafe';
+		$color = '#1d4ed8';
+
+		if (strpos($key, 'paid') !== false || strpos($key, 'complete') !== false) {
+			$background = '#d1fae5';
+			$color = '#047857';
+		} elseif (strpos($key, 'check') !== false || strpos($key, 'schedule') !== false) {
+			$background = '#e0f2fe';
+			$color = '#0369a1';
+		} elseif (strpos($key, 'pending') !== false) {
+			$background = '#fef3c7';
+			$color = '#b45309';
+		} elseif (strpos($key, 'cancel') !== false || strpos($key, 'failed') !== false) {
+			$background = '#fee2e2';
+			$color = '#b91c1c';
+		}
+
+		return '<span style="background-color:' . $background . ';color:' . $color . ';font-size:8px;font-weight:bold;padding:4px 9px;border-radius:12px;">' . hms_pdf_html_escape($label) . '</span>';
+	}
+}
+
+if (!function_exists('hms_pdf_kv_grid_html')) {
+	function hms_pdf_kv_grid_html(array $pairs, $columns = 2) {
+		$columns = max(1, min(3, (int)$columns));
+		$items = [];
+		foreach ($pairs as $label => $value) {
+			$items[] = ['label' => (string)$label, 'value' => (string)$value];
+		}
+
+		$cellWidth = $columns === 1 ? 100 : ($columns === 2 ? 48 : 31);
+		$gapWidth = $columns === 1 ? 0 : ($columns === 2 ? 4 : 3.5);
+		$html = '<table cellpadding="0" cellspacing="0" border="0" width="100%">';
+
+		for ($index = 0; $index < count($items); $index += $columns) {
+			$html .= '<tr>';
+			for ($column = 0; $column < $columns; ++$column) {
+				$itemIndex = $index + $column;
+				if ($column > 0) {
+					$html .= '<td width="' . $gapWidth . '%"></td>';
+				}
+
+				if (isset($items[$itemIndex])) {
+					$item = $items[$itemIndex];
+					$html .= '<td width="' . $cellWidth . '%" style="border:1px solid #dbeafe;background-color:#ffffff;">';
+					$html .= '<div style="font-size:7px;color:#64748b;letter-spacing:0.4px;text-transform:uppercase;padding:6px 7px 0 7px;">' . hms_pdf_html_escape($item['label']) . '</div>';
+					$html .= '<div style="font-size:11px;color:#0f172a;font-weight:bold;padding:2px 7px 7px 7px;">' . hms_pdf_html_escape($item['value']) . '</div>';
+					$html .= '</td>';
+				} else {
+					$html .= '<td width="' . $cellWidth . '%"></td>';
+				}
+			}
+			$html .= '</tr>';
+			$html .= '<tr><td colspan="' . (($columns * 2) - 1) . '" height="4"></td></tr>';
+		}
+
+		$html .= '</table>';
+		return $html;
+	}
+}
+
+if (!function_exists('hms_pdf_note_box_html')) {
+	function hms_pdf_note_box_html($title, $body, $tone = 'blue') {
+		$background = $tone === 'teal' ? '#ecfdf5' : '#f8fbff';
+		$border = $tone === 'teal' ? '#a7f3d0' : '#dbeafe';
+		$titleColor = $tone === 'teal' ? '#047857' : '#1d4ed8';
+
+		return '<div style="border:1px solid ' . $border . ';background-color:' . $background . ';padding:10px 12px;">'
+			. '<div style="font-size:10px;font-weight:bold;color:' . $titleColor . ';margin-bottom:4px;">' . hms_pdf_html_escape($title) . '</div>'
+			. '<div style="font-size:9px;line-height:1.7;color:#334155;">' . nl2br(htmlspecialchars(trim((string)$body), ENT_QUOTES, 'UTF-8')) . '</div>'
+			. '</div>';
+	}
+}
+
+if (!function_exists('hms_pdf_simple_table_html')) {
+	function hms_pdf_simple_table_html(array $headers, array $rows, array $widths = [], $headerBackground = '#2563eb', $headerColor = '#ffffff') {
+		$columnCount = count($headers);
+		if ($columnCount === 0) {
+			return '';
+		}
+
+		if (empty($widths)) {
+			$widths = array_fill(0, $columnCount, round(100 / $columnCount, 2));
+		}
+
+		$html = '<table cellpadding="6" cellspacing="0" border="0" width="100%">';
+		$html .= '<tr>';
+		foreach ($headers as $index => $header) {
+			$width = isset($widths[$index]) ? (float)$widths[$index] : round(100 / $columnCount, 2);
+			$html .= '<td width="' . $width . '%" style="background-color:' . $headerBackground . ';color:' . $headerColor . ';font-size:9px;font-weight:bold;">' . hms_pdf_html_escape($header) . '</td>';
+		}
+		$html .= '</tr>';
+
+		if (empty($rows)) {
+			$html .= '<tr><td width="100%" colspan="' . $columnCount . '" style="border:1px solid #e2e8f0;color:#64748b;text-align:center;">No records available.</td></tr>';
+		} else {
+			foreach ($rows as $rowIndex => $row) {
+				$background = $rowIndex % 2 === 0 ? '#ffffff' : '#f8fafc';
+				$html .= '<tr>';
+				foreach ($headers as $index => $header) {
+					$width = isset($widths[$index]) ? (float)$widths[$index] : round(100 / $columnCount, 2);
+					$cell = isset($row[$index]) ? $row[$index] : '';
+					$html .= '<td width="' . $width . '%" style="border:1px solid #e2e8f0;background-color:' . $background . ';font-size:9px;color:#0f172a;">' . $cell . '</td>';
+				}
+				$html .= '</tr>';
+			}
+		}
+
+		$html .= '</table>';
+		return $html;
+	}
+}
+
+if (!function_exists('hms_pdf_add_logo_watermark')) {
+	function hms_pdf_add_logo_watermark($pdf, $x = 58, $y = 95, $w = 95, $opacity = 0.06) {
+		$logo = hms_pdf_logo_path();
+		if ($logo === '' || !method_exists($pdf, 'setAlpha')) {
+			return;
+		}
+
+		$pdf->setAlpha($opacity);
+		$pdf->Image($logo, $x, $y, $w, 0, 'JPG', '', '', true, 300, '', false, false, 0, false, false, false);
+		$pdf->setAlpha(1);
 	}
 }
 
