@@ -217,6 +217,94 @@ if (!function_exists('hms_get_razorpay_client')) {
 	}
 }
 
+if (!function_exists('hms_create_razorpay_order')) {
+	function hms_create_razorpay_order($amountPaise, $currency, $receipt, array $notes = []) {
+		$amountPaise = (int)$amountPaise;
+		$currency = strtoupper(trim((string)$currency));
+		$receipt = trim((string)$receipt);
+
+		if (!hms_razorpay_is_configured()) {
+			throw new \RuntimeException('Razorpay is not configured.');
+		}
+
+		if ($amountPaise < 100) {
+			throw new \InvalidArgumentException('Amount must be at least 100 paise.');
+		}
+
+		if ($currency === '') {
+			$currency = 'INR';
+		}
+
+		$payload = [
+			'receipt' => $receipt,
+			'amount' => $amountPaise,
+			'currency' => $currency,
+			'notes' => $notes,
+		];
+
+		$client = hms_get_razorpay_client();
+		if ($client) {
+			$order = $client->order->create($payload);
+			return [
+				'id' => (string)($order['id'] ?? ''),
+				'amount' => (int)($order['amount'] ?? $amountPaise),
+				'currency' => (string)($order['currency'] ?? $currency),
+				'receipt' => (string)($order['receipt'] ?? $receipt),
+			];
+		}
+
+		if (!function_exists('curl_init')) {
+			throw new \RuntimeException('Razorpay SDK is unavailable and cURL is not enabled on the server.');
+		}
+
+		$ch = curl_init('https://api.razorpay.com/v1/orders');
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+		curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+		curl_setopt($ch, CURLOPT_USERPWD, hms_razorpay_key_id() . ':' . hms_razorpay_key_secret());
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [
+			'Content-Type: application/json',
+			'Accept: application/json',
+		]);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+
+		$responseBody = curl_exec($ch);
+		$curlError = curl_error($ch);
+		$httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
+
+		if ($responseBody === false) {
+			throw new \RuntimeException($curlError !== '' ? $curlError : 'Unable to connect to Razorpay.');
+		}
+
+		$decoded = json_decode((string)$responseBody, true);
+		if ($httpCode === 401) {
+			throw new \RuntimeException('Razorpay authentication failed.');
+		}
+
+		if ($httpCode < 200 || $httpCode >= 300 || !is_array($decoded) || empty($decoded['id'])) {
+			$errorMessage = '';
+			if (is_array($decoded)) {
+				$errorMessage = (string)($decoded['error']['description'] ?? $decoded['error']['reason'] ?? $decoded['message'] ?? '');
+			}
+			if ($errorMessage === '') {
+				$errorMessage = 'Unable to create Razorpay order.';
+			}
+
+			throw new \RuntimeException($errorMessage);
+		}
+
+		return [
+			'id' => (string)$decoded['id'],
+			'amount' => (int)($decoded['amount'] ?? $amountPaise),
+			'currency' => (string)($decoded['currency'] ?? $currency),
+			'receipt' => (string)($decoded['receipt'] ?? $receipt),
+		];
+	}
+}
+
 if (!function_exists('hms_verify_razorpay_signature')) {
 	function hms_verify_razorpay_signature($orderId, $paymentId, $signature) {
 		$orderId = trim((string)$orderId);

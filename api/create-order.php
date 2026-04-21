@@ -36,21 +36,17 @@ if ($amountPaise < 100) {
 }
 
 $receipt = 'appt_' . $appointmentId . '_u_' . $userId . '_' . time();
-$api = hms_get_razorpay_client();
-if (!$api) {
-	hms_json_response(500, ['success' => false, 'message' => 'Unable to initialize Razorpay client.']);
-}
 
 try {
-	$order = $api->order->create([
-		'receipt' => $receipt,
-		'amount' => $amountPaise,
-		'currency' => $currency,
-		'notes' => [
+	$order = hms_create_razorpay_order(
+		$amountPaise,
+		$currency,
+		$receipt,
+		[
 			'appointment_id' => (string)$appointmentId,
 			'user_id' => (string)$userId,
-		],
-	]);
+		]
+	);
 
 	hms_json_response(200, [
 		'success' => true,
@@ -66,8 +62,15 @@ try {
 	}
 	hms_json_response(500, ['success' => false, 'message' => 'Unable to create Razorpay order.']);
 } catch (\Throwable $e) {
-	hms_json_response(500, ['success' => false, 'message' => 'Unable to create Razorpay order.']);
+	$message = trim((string)$e->getMessage());
+	if ($message === '') {
+		$message = 'Unable to create Razorpay order.';
+	}
+
+	if (stripos($message, 'authentication') !== false) {
+		hms_json_response(401, ['success' => false, 'message' => $message]);
+	}
+
+	hms_json_response(500, ['success' => false, 'message' => $message]);
 }
 ?>
-
-
