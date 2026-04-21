@@ -175,8 +175,12 @@ if (!function_exists('hms_pdf_invoice_signature_path')) {
 
 if (!function_exists('hms_pdf_invoice_stamp_path')) {
 	function hms_pdf_invoice_stamp_path() {
-		$path = dirname(__DIR__) . '/assets/images/invoice-stamp.png';
-		return file_exists($path) ? $path : '';
+		$preferred = dirname(__DIR__) . '/assets/images/invoice-stamp-real.png';
+		if (file_exists($preferred)) {
+			return $preferred;
+		}
+		$fallback = dirname(__DIR__) . '/assets/images/invoice-stamp.png';
+		return file_exists($fallback) ? $fallback : '';
 	}
 }
 
