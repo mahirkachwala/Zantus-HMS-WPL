@@ -6,6 +6,23 @@ if (file_exists($hmsPdfAutoload)) {
 	require_once $hmsPdfAutoload;
 }
 
+$hmsTcpdfMain = dirname(__DIR__) . '/vendor/tecnickcom/tcpdf/tcpdf.php';
+if (!class_exists('TCPDF', false) && file_exists($hmsTcpdfMain)) {
+	require_once $hmsTcpdfMain;
+}
+
+if (!defined('PDF_PAGE_ORIENTATION')) {
+	define('PDF_PAGE_ORIENTATION', 'P');
+}
+
+if (!defined('PDF_UNIT')) {
+	define('PDF_UNIT', 'mm');
+}
+
+if (!defined('PDF_PAGE_FORMAT')) {
+	define('PDF_PAGE_FORMAT', 'A4');
+}
+
 if (!class_exists('TCPDF')) {
 	die('TCPDF is not installed. Run composer install and upload the vendor folder.');
 }

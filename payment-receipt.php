@@ -27,30 +27,36 @@ $paidAt = (string)($payment['paid_at'] ?? '');
 $method = (string)($payment['payment_method'] ?? '');
 $receiptNumber = 'PAY-' . (int)$appointment['id'] . '-' . ($transactionRef !== '' ? $transactionRef : date('YmdHis'));
 
-$pdf = hms_create_pdf_document('Payment Receipt');
-$pdf->writeHTML(
-	hms_pdf_block_title('Payment Details') .
-	hms_pdf_label_value_table([
-		'Receipt Number' => $receiptNumber,
-		'Appointment ID' => (int)$appointment['id'],
-		'Patient Name' => $appointment['patientName'] ?? '',
-		'Doctor Name' => $appointment['doctorName'] ?? '',
-		'Specialization' => $appointment['doctorSpecialization'] ?? '',
-		'Amount Paid' => hms_pdf_money($payment['amount'] ?? $appointment['consultancyFees'] ?? 0),
-		'Payment Status' => $paymentStatus,
-		'Payment Method' => $method !== '' ? $method : $appointment['paymentStatusResolved'],
-		'Transaction Reference' => $transactionRef !== '' ? $transactionRef : ($appointment['paymentRef'] ?? ''),
-		'Paid At' => $paidAt !== '' ? $paidAt : ($appointment['paidAt'] ?? ''),
-		'Appointment Date' => $appointment['appointmentDate'] ?? '',
-		'Appointment Time' => $appointment['appointmentTime'] ?? '',
-	])
-);
+try {
+	$pdf = hms_create_pdf_document('Payment Receipt');
+	$pdf->writeHTML(
+		hms_pdf_block_title('Payment Details') .
+		hms_pdf_label_value_table([
+			'Receipt Number' => $receiptNumber,
+			'Appointment ID' => (int)$appointment['id'],
+			'Patient Name' => $appointment['patientName'] ?? '',
+			'Doctor Name' => $appointment['doctorName'] ?? '',
+			'Specialization' => $appointment['doctorSpecialization'] ?? '',
+			'Amount Paid' => hms_pdf_money($payment['amount'] ?? $appointment['consultancyFees'] ?? 0),
+			'Payment Status' => $paymentStatus,
+			'Payment Method' => $method !== '' ? $method : $appointment['paymentStatusResolved'],
+			'Transaction Reference' => $transactionRef !== '' ? $transactionRef : ($appointment['paymentRef'] ?? ''),
+			'Paid At' => $paidAt !== '' ? $paidAt : ($appointment['paidAt'] ?? ''),
+			'Appointment Date' => $appointment['appointmentDate'] ?? '',
+			'Appointment Time' => $appointment['appointmentTime'] ?? '',
+		])
+	);
 
-$pdf->Ln(4);
-$pdf->writeHTML(
-	hms_pdf_block_title('Important') .
-	'<div style="line-height:1.6;color:#334155;">This is a computer-generated payment receipt from Zantus HMS. Please quote the transaction reference shown above for any billing or support query.</div>'
-);
+	$pdf->Ln(4);
+	$pdf->writeHTML(
+		hms_pdf_block_title('Important') .
+		'<div style="line-height:1.6;color:#334155;">This is a computer-generated payment receipt from Zantus HMS. Please quote the transaction reference shown above for any billing or support query.</div>'
+	);
 
-hms_pdf_output_inline($pdf, 'payment-receipt-' . (int)$appointment['id'] . '.pdf');
+	hms_pdf_output_inline($pdf, 'payment-receipt-' . (int)$appointment['id'] . '.pdf');
+} catch (\Throwable $e) {
+	$_SESSION['msg'] = 'Payment receipt is temporarily unavailable. Please verify the TCPDF upload on the server.';
+	header('location:appointment-history.php');
+	exit();
+}
 ?>
