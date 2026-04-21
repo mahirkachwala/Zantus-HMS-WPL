@@ -42,7 +42,13 @@ if (!defined('K_PATH_FONTS')) {
 	define('K_PATH_FONTS', $tcpdfBase . 'fonts/');
 }
 if (!defined('K_PATH_CACHE')) {
-	$cachePath = sys_get_temp_dir();
+	$cachePath = $baseDir . '/assets/pdf-cache';
+	if (!is_dir($cachePath)) {
+		@mkdir($cachePath, 0775, true);
+	}
+	if (!is_dir($cachePath) || !is_writable($cachePath)) {
+		$cachePath = sys_get_temp_dir();
+	}
 	if ($cachePath === '' || $cachePath === false) {
 		$cachePath = $baseDir . '/assets/';
 	}
@@ -77,4 +83,3 @@ echo "STEP 8: text written\n";
 $pdf->Output('tcpdf-step-debug.pdf', 'I');
 echo "STEP 9: output sent\n";
 exit();
-

@@ -14,7 +14,13 @@ if (!defined('K_PATH_FONTS')) {
 	define('K_PATH_FONTS', $hmsTcpdfBase . 'fonts/');
 }
 if (!defined('K_PATH_CACHE')) {
-	$hmsCachePath = sys_get_temp_dir();
+	$hmsCachePath = dirname(__DIR__) . '/assets/pdf-cache';
+	if (!is_dir($hmsCachePath)) {
+		@mkdir($hmsCachePath, 0775, true);
+	}
+	if (!is_dir($hmsCachePath) || !is_writable($hmsCachePath)) {
+		$hmsCachePath = sys_get_temp_dir();
+	}
 	if ($hmsCachePath === '' || $hmsCachePath === false) {
 		$hmsCachePath = dirname(__DIR__) . '/assets/';
 	}
@@ -64,7 +70,7 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 				$this->Line(14, 40, $pageWidth - 14, 40);
 
 				if ($this->hmsLogoPath !== '' && file_exists($this->hmsLogoPath)) {
-					$this->Image($this->hmsLogoPath, $pageWidth - 28, 8, 14, 14, 'JPG', '', '', true, 300, '', false, false, 0, false, false, false);
+					$this->Image($this->hmsLogoPath, $pageWidth - 28, 8, 14, 14, 'JPG', '', '', false, 300, '', false, false, 0, false, false, false);
 				}
 
 				$this->SetTextColor(37, 99, 235);
@@ -92,7 +98,7 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 			$this->Rect(14, 12, 8, 24, 'F');
 
 			if ($this->hmsLogoPath !== '' && file_exists($this->hmsLogoPath)) {
-				$this->Image($this->hmsLogoPath, 25, 16, 12, 12, 'JPG', '', '', true, 300, '', false, false, 0, false, false, false);
+				$this->Image($this->hmsLogoPath, 25, 16, 12, 12, 'JPG', '', '', false, 300, '', false, false, 0, false, false, false);
 			}
 
 			$this->SetTextColor(255, 255, 255);
@@ -382,7 +388,7 @@ if (!function_exists('hms_pdf_add_logo_watermark')) {
 		}
 
 		$pdf->setAlpha($opacity);
-		$pdf->Image($logo, $x, $y, $w, 0, 'JPG', '', '', true, 300, '', false, false, 0, false, false, false);
+		$pdf->Image($logo, $x, $y, $w, 0, 'JPG', '', '', false, 300, '', false, false, 0, false, false, false);
 		$pdf->setAlpha(1);
 	}
 }

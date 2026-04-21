@@ -18,7 +18,13 @@ if (!defined('K_PATH_FONTS')) {
 	define('K_PATH_FONTS', $tcpdfBase . 'fonts/');
 }
 if (!defined('K_PATH_CACHE')) {
-	$cachePath = sys_get_temp_dir();
+	$cachePath = $baseDir . '/assets/pdf-cache';
+	if (!is_dir($cachePath)) {
+		@mkdir($cachePath, 0775, true);
+	}
+	if (!is_dir($cachePath) || !is_writable($cachePath)) {
+		$cachePath = sys_get_temp_dir();
+	}
 	if ($cachePath === '' || $cachePath === false) {
 		$cachePath = $baseDir . '/assets/';
 	}
@@ -36,6 +42,8 @@ $status = [
 	'helveticab_php' => file_exists($tcpdfFonts . '/helveticab.php'),
 	'helveticai_php' => file_exists($tcpdfFonts . '/helveticai.php'),
 	'helveticabi_php' => file_exists($tcpdfFonts . '/helveticabi.php'),
+	'local_pdf_cache_dir' => is_dir($baseDir . '/assets/pdf-cache'),
+	'local_pdf_cache_writable' => is_writable($baseDir . '/assets/pdf-cache'),
 	'curl_enabled' => function_exists('curl_init'),
 	'gd_enabled' => function_exists('gd_info'),
 	'composer_platform_check_skipped' => true,

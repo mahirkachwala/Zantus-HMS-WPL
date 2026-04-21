@@ -16,7 +16,13 @@ try {
 		define('K_PATH_FONTS', $tcpdfBase . 'fonts/');
 	}
 	if (!defined('K_PATH_CACHE')) {
-		$cachePath = sys_get_temp_dir();
+		$cachePath = __DIR__ . '/assets/pdf-cache';
+		if (!is_dir($cachePath)) {
+			@mkdir($cachePath, 0775, true);
+		}
+		if (!is_dir($cachePath) || !is_writable($cachePath)) {
+			$cachePath = sys_get_temp_dir();
+		}
 		if ($cachePath === '' || $cachePath === false) {
 			$cachePath = __DIR__ . '/assets/';
 		}
@@ -65,7 +71,7 @@ try {
 
 	$logoPath = __DIR__ . '/assets/images/zantus-logo.jpg';
 	if (file_exists($logoPath)) {
-		$pdf->Image($logoPath, 25, 16, 12, 12, 'JPG', '', '', true, 300, '', false, false, 0, false, false, false);
+		$pdf->Image($logoPath, 25, 16, 12, 12, 'JPG', '', '', false, 300, '', false, false, 0, false, false, false);
 	}
 
 	$pdf->setFont('helvetica', 'B', 12, file_exists($helveticaBold) ? $helveticaBold : (file_exists($helveticaRegular) ? $helveticaRegular : ''));
