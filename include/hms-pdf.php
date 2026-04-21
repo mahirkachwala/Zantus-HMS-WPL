@@ -92,18 +92,6 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 
 			$this->SetFillColor(255, 255, 255);
 			$this->Rect(0, 0, $pageWidth, 58, 'F');
-			$this->SetFillColor(243, 248, 255);
-			$this->Rect($pageWidth - 30, 0, 30, 58, 'F');
-			$this->SetFillColor(37, 99, 235);
-			$this->RoundedRect($pageWidth - 22, 8, 16, 24, 3, '1111', 'F');
-			$this->SetFillColor(45, 212, 191);
-			$this->RoundedRect($pageWidth - 14, 35, 9, 10, 2, '1111', 'F');
-			$this->SetFillColor(226, 232, 240);
-			for ($i = 0; $i < 5; $i++) {
-				$x = $pageWidth - 28 + ($i * 5.2);
-				$this->Line($x, 4, $x + 18, 22);
-				$this->Line($x, 25, $x + 18, 43);
-			}
 
 			if ($this->hmsLogoPath !== '' && file_exists($this->hmsLogoPath)) {
 				$this->Image($this->hmsLogoPath, 15, 11, 14, 14, 'JPG', '', '', false, 300, '', false, false, 0, false, false, false);
@@ -150,10 +138,10 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 				return;
 			}
 
-			$this->SetFillColor(45, 212, 191);
-			$this->RoundedRect(0, $pageHeight - 12, 10, 12, 0, '1111', 'F');
-			$this->SetFillColor(37, 99, 235);
-			$this->RoundedRect(16, $pageHeight - 16, 18, 16, 0, '1111', 'F');
+			$stampPath = hms_pdf_invoice_stamp_path();
+			if ($stampPath !== '' && file_exists($stampPath)) {
+				$this->Image($stampPath, 0, $pageHeight - 44, 28, 0, 'PNG', '', '', false, 300, '', false, false, 0, false, false, false);
+			}
 			$this->SetDrawColor(191, 219, 254);
 			$this->Line(15, $pageHeight - 18, $pageWidth - 15, $pageHeight - 18);
 			$this->SetY(-15);
@@ -181,6 +169,13 @@ if (!function_exists('hms_pdf_razorpay_logo_path')) {
 if (!function_exists('hms_pdf_invoice_signature_path')) {
 	function hms_pdf_invoice_signature_path() {
 		$path = dirname(__DIR__) . '/assets/images/invoice-signature.png';
+		return file_exists($path) ? $path : '';
+	}
+}
+
+if (!function_exists('hms_pdf_invoice_stamp_path')) {
+	function hms_pdf_invoice_stamp_path() {
+		$path = dirname(__DIR__) . '/assets/images/invoice-stamp.png';
 		return file_exists($path) ? $path : '';
 	}
 }
