@@ -90,39 +90,50 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 				return;
 			}
 
-			$this->SetFillColor(245, 249, 255);
-			$this->Rect(0, 0, $pageWidth, 54, 'F');
+			$this->SetFillColor(255, 255, 255);
+			$this->Rect(0, 0, $pageWidth, 58, 'F');
+			$this->SetFillColor(243, 248, 255);
+			$this->Rect($pageWidth - 30, 0, 30, 58, 'F');
 			$this->SetFillColor(37, 99, 235);
-			$this->RoundedRect(14, 12, 46, 24, 4, '1111', 'F');
-			$this->SetFillColor(52, 211, 153);
-			$this->Rect(14, 12, 8, 24, 'F');
-
-			if ($this->hmsLogoPath !== '' && file_exists($this->hmsLogoPath)) {
-				$this->Image($this->hmsLogoPath, 25, 16, 12, 12, 'JPG', '', '', false, 300, '', false, false, 0, false, false, false);
+			$this->RoundedRect($pageWidth - 22, 8, 16, 24, 3, '1111', 'F');
+			$this->SetFillColor(45, 212, 191);
+			$this->RoundedRect($pageWidth - 14, 35, 9, 10, 2, '1111', 'F');
+			$this->SetFillColor(226, 232, 240);
+			for ($i = 0; $i < 5; $i++) {
+				$x = $pageWidth - 28 + ($i * 5.2);
+				$this->Line($x, 4, $x + 18, 22);
+				$this->Line($x, 25, $x + 18, 43);
 			}
 
-			$this->SetTextColor(255, 255, 255);
-			hms_pdf_apply_font($this, 'B', 12);
-			$this->SetXY(39, 17);
-			$this->Cell(17, 5, 'Zantus', 0, 1, 'L', false, '', 0, false, 'T', 'M');
-			hms_pdf_apply_font($this, '', 7);
-			$this->SetXY(39, 22);
-			$this->Cell(17, 4, 'HMS', 0, 1, 'L', false, '', 0, false, 'T', 'M');
+			if ($this->hmsLogoPath !== '' && file_exists($this->hmsLogoPath)) {
+				$this->Image($this->hmsLogoPath, 15, 11, 14, 14, 'JPG', '', '', false, 300, '', false, false, 0, false, false, false);
+			}
 
-			$this->SetTextColor(29, 78, 216);
+			$this->SetTextColor(37, 99, 235);
 			hms_pdf_apply_font($this, 'B', 19);
-			$this->SetXY(72, 13);
-			$this->Cell(0, 9, strtoupper($this->hmsDocumentTitle), 0, 1, 'L', false, '', 0, false, 'T', 'M');
+			$this->SetXY(31, 12);
+			$this->Cell(55, 8, 'Zantus HMS', 0, 1, 'L', false, '', 0, false, 'T', 'M');
+
+			$this->SetTextColor(71, 85, 105);
+			hms_pdf_apply_font($this, '', 8);
+			$this->SetXY(31, 20);
+			$this->Cell(55, 5, $this->hmsSubtitle, 0, 1, 'L', false, '', 0, false, 'T', 'M');
+
+			$this->SetFillColor(45, 212, 191);
+			$this->Rect(15, 31, 32, 1.4, 'F');
+
+			$this->SetTextColor(15, 23, 42);
+			hms_pdf_apply_font($this, 'B', 18);
+			$this->SetXY(0, 10);
+			$this->Cell($pageWidth, 9, strtoupper($this->hmsDocumentTitle), 0, 1, 'C', false, '', 0, false, 'T', 'M');
 
 			$this->SetTextColor(100, 116, 139);
-			hms_pdf_apply_font($this, '', 9);
-			$this->SetXY(72, 24);
-			$this->Cell(0, 5, $this->hmsSubtitle, 0, 1, 'L', false, '', 0, false, 'T', 'M');
+			hms_pdf_apply_font($this, '', 8);
+			$this->SetXY(0, 20);
+			$this->Cell($pageWidth, 5, 'Medical Billing Invoice', 0, 1, 'C', false, '', 0, false, 'T', 'M');
 
-			$this->SetFillColor(191, 219, 254);
-			$this->Rect(72, 33, 24, 3, 'F');
 			$this->SetDrawColor(203, 213, 225);
-			$this->Line(14, 45, $pageWidth - 14, 45);
+			$this->Line(14, 42, $pageWidth - 14, 42);
 		}
 
 		public function Footer() {
@@ -139,14 +150,16 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 				return;
 			}
 
-			$this->SetFillColor(30, 64, 175);
-			$this->Rect(0, $pageHeight - 16, $pageWidth, 16, 'F');
-			$this->SetTextColor(255, 255, 255);
+			$this->SetFillColor(45, 212, 191);
+			$this->RoundedRect(0, $pageHeight - 12, 10, 12, 0, '1111', 'F');
+			$this->SetFillColor(37, 99, 235);
+			$this->RoundedRect(16, $pageHeight - 16, 18, 16, 0, '1111', 'F');
+			$this->SetDrawColor(191, 219, 254);
+			$this->Line(15, $pageHeight - 18, $pageWidth - 15, $pageHeight - 18);
+			$this->SetY(-15);
+			$this->SetTextColor(71, 85, 105);
 			hms_pdf_apply_font($this, '', 8);
-			$this->SetY(-12);
-			$this->Cell(0, 5, 'care@zantushms.com   |   www.zantushms.com   |   Generated on ' . date('d M Y h:i A'), 0, 1, 'C');
-			hms_pdf_apply_font($this, 'B', 8);
-			$this->Cell(0, 4, 'Page ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, 0, 'C');
+			$this->Cell(0, 5, 'Zantus HMS | care@zantushms.com | www.zantushms.com | Page ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, 0, 'C');
 		}
 	}
 }
@@ -154,6 +167,20 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 if (!function_exists('hms_pdf_logo_path')) {
 	function hms_pdf_logo_path() {
 		$path = dirname(__DIR__) . '/assets/images/zantus-logo.jpg';
+		return file_exists($path) ? $path : '';
+	}
+}
+
+if (!function_exists('hms_pdf_razorpay_logo_path')) {
+	function hms_pdf_razorpay_logo_path() {
+		$path = dirname(__DIR__) . '/assets/images/razorpay-logo.png';
+		return file_exists($path) ? $path : '';
+	}
+}
+
+if (!function_exists('hms_pdf_invoice_signature_path')) {
+	function hms_pdf_invoice_signature_path() {
+		$path = dirname(__DIR__) . '/assets/images/invoice-signature.png';
 		return file_exists($path) ? $path : '';
 	}
 }
