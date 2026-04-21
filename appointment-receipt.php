@@ -2,8 +2,11 @@
 if (!ob_get_level()) {
 	ob_start();
 }
+@ini_set('display_errors', '1');
+error_reporting(E_ALL);
 require_once __DIR__ . '/include/session.php';
 hms_session_start();
+require_once __DIR__ . '/include/config.php';
 require_once __DIR__ . '/include/checklogin.php';
 check_login();
 require_once __DIR__ . '/include/hms-pdf.php';
@@ -71,8 +74,9 @@ try {
 
 	hms_pdf_output_inline($pdf, 'appointment-receipt-' . (int)$appointment['id'] . '.pdf');
 } catch (\Throwable $e) {
-	$_SESSION['msg'] = 'Appointment receipt is temporarily unavailable. Please verify the TCPDF upload on the server.';
-	header('location:appointments.php');
+	header('Content-Type: text/plain; charset=utf-8');
+	echo 'APPOINTMENT RECEIPT DEBUG ERROR: ' . $e->getMessage() . "\n";
+	echo 'File: ' . $e->getFile() . ':' . $e->getLine() . "\n";
 	exit();
 }
 ?>
