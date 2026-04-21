@@ -158,6 +158,56 @@ if (!function_exists('hms_pdf_logo_path')) {
 	}
 }
 
+if (!function_exists('hms_pdf_clean_doctor_name')) {
+	function hms_pdf_clean_doctor_name($doctorName, $default = 'Consulting Doctor') {
+		$doctorName = trim((string)$doctorName);
+		$doctorName = preg_replace('/^\s*(dr\.?\s*)+/i', '', $doctorName);
+		$doctorName = trim((string)$doctorName);
+		return $doctorName === '' ? $default : $doctorName;
+	}
+}
+
+if (!function_exists('hms_pdf_signature_assets')) {
+	function hms_pdf_signature_assets() {
+		static $assets = null;
+		if ($assets !== null) {
+			return $assets;
+		}
+
+		$assets = [];
+		$signatureDir = dirname(__DIR__) . '/assets/images/signatures';
+		if (!is_dir($signatureDir)) {
+			return $assets;
+		}
+
+		$paths = glob($signatureDir . '/signature-*.png');
+		if (!is_array($paths)) {
+			return $assets;
+		}
+
+		sort($paths, SORT_NATURAL);
+		foreach ($paths as $path) {
+			if (is_file($path)) {
+				$assets[] = $path;
+			}
+		}
+
+		return $assets;
+	}
+}
+
+if (!function_exists('hms_pdf_signature_path')) {
+	function hms_pdf_signature_path($seed = '') {
+		$assets = hms_pdf_signature_assets();
+		if (empty($assets)) {
+			return '';
+		}
+
+		$index = abs((int)crc32((string)$seed)) % count($assets);
+		return $assets[$index];
+	}
+}
+
 if (!function_exists('hms_pdf_font_file')) {
 	function hms_pdf_font_file($family = 'helvetica', $style = '') {
 		$family = strtolower(trim((string)$family));

@@ -2,8 +2,6 @@
 if (!ob_get_level()) {
 	ob_start();
 }
-@ini_set('display_errors', '1');
-error_reporting(E_ALL);
 require_once __DIR__ . '/include/session.php';
 hms_session_start();
 require_once __DIR__ . '/include/config.php';
@@ -28,11 +26,17 @@ try {
 	$pdf = hms_create_pdf_document('Prescription Sheet', 'prescription');
 	hms_pdf_add_logo_watermark($pdf, 63, 103, 82, 0.05);
 
-	$doctorLine = trim((string)($prescription['doctorName'] ?? ''));
+	$doctorLine = hms_pdf_clean_doctor_name($prescription['doctorName'] ?? '');
+	$doctorDisplay = 'Dr. ' . $doctorLine;
 	$specialization = trim((string)($appointment['doctorSpecialization'] ?? 'Consultation'));
+	$signaturePath = hms_pdf_signature_path(
+		($prescription['id'] ?? 0) . '|'
+		. ($prescription['doctor_id'] ?? 0) . '|'
+		. ($prescription['appointment_id'] ?? 0)
+	);
 	$metaHtml = '<table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>'
 		. '<td width="72%">'
-		. '<div style="font-size:20px;color:#2563eb;font-weight:bold;">Dr. ' . hms_pdf_html_escape($doctorLine, '') . '</div>'
+		. '<div style="font-size:20px;color:#2563eb;font-weight:bold;">' . hms_pdf_html_escape($doctorDisplay, '') . '</div>'
 		. '<div style="font-size:10px;color:#64748b;letter-spacing:1px;padding-top:2px;">' . hms_pdf_html_escape(strtoupper($specialization)) . '</div>'
 		. '<div style="font-size:9px;color:#475569;padding-top:4px;">Zantus Life Science Hospital</div>'
 		. '</td>'
@@ -67,72 +71,95 @@ try {
 	$medicineRows = (array)($prescription['medicineRows'] ?? []);
 	$medicineHtml = '<div style="font-size:11px;font-weight:bold;color:#1d4ed8;margin-bottom:4px;">Medicines</div>';
 	$medicineHtml .= '<table cellpadding="5" cellspacing="0" border="0" width="100%">';
-	$medicineHtml .= '<tr style="background-color:#2563eb;color:#ffffff;">';
-	$medicineHtml .= '<th width="22%"><strong>Medicine</strong></th>';
-	$medicineHtml .= '<th width="15%"><strong>Dosage</strong></th>';
-	$medicineHtml .= '<th width="18%"><strong>Frequency</strong></th>';
-	$medicineHtml .= '<th width="15%"><strong>Duration</strong></th>';
-	$medicineHtml .= '<th width="30%"><strong>Instructions</strong></th>';
+	$medicineHtml .= '<tr>';
+	$medicineHtml .= '<th width="22%" style="border-bottom:1px solid #2563eb;color:#1d4ed8;font-size:9px;font-weight:bold;"><strong>Medicine</strong></th>';
+	$medicineHtml .= '<th width="15%" style="border-bottom:1px solid #2563eb;color:#1d4ed8;font-size:9px;font-weight:bold;"><strong>Dosage</strong></th>';
+	$medicineHtml .= '<th width="18%" style="border-bottom:1px solid #2563eb;color:#1d4ed8;font-size:9px;font-weight:bold;"><strong>Frequency</strong></th>';
+	$medicineHtml .= '<th width="15%" style="border-bottom:1px solid #2563eb;color:#1d4ed8;font-size:9px;font-weight:bold;"><strong>Duration</strong></th>';
+	$medicineHtml .= '<th width="30%" style="border-bottom:1px solid #2563eb;color:#1d4ed8;font-size:9px;font-weight:bold;"><strong>Instructions</strong></th>';
 	$medicineHtml .= '</tr>';
 	if (!empty($medicineRows)) {
 		foreach ($medicineRows as $index => $row) {
-			$background = $index % 2 === 0 ? '#ffffff' : '#f8fafc';
-			$medicineHtml .= '<tr style="background-color:' . $background . ';">';
-			$medicineHtml .= '<td width="22%">' . htmlspecialchars(hms_pdf_text($row['medicine_name'] ?? '')) . '</td>';
-			$medicineHtml .= '<td width="15%">' . htmlspecialchars(hms_pdf_text($row['dosage'] ?? '')) . '</td>';
-			$medicineHtml .= '<td width="18%">' . htmlspecialchars(hms_pdf_text($row['frequency'] ?? '')) . '</td>';
-			$medicineHtml .= '<td width="15%">' . htmlspecialchars(hms_pdf_text($row['duration'] ?? '')) . '</td>';
-			$medicineHtml .= '<td width="30%">' . htmlspecialchars(hms_pdf_text($row['instructions'] ?? '')) . '</td>';
+			$medicineHtml .= '<tr>';
+			$medicineHtml .= '<td width="22%" style="border-bottom:1px solid #e2e8f0;color:#0f172a;">' . htmlspecialchars(hms_pdf_text($row['medicine_name'] ?? '')) . '</td>';
+			$medicineHtml .= '<td width="15%" style="border-bottom:1px solid #e2e8f0;color:#0f172a;">' . htmlspecialchars(hms_pdf_text($row['dosage'] ?? '')) . '</td>';
+			$medicineHtml .= '<td width="18%" style="border-bottom:1px solid #e2e8f0;color:#0f172a;">' . htmlspecialchars(hms_pdf_text($row['frequency'] ?? '')) . '</td>';
+			$medicineHtml .= '<td width="15%" style="border-bottom:1px solid #e2e8f0;color:#0f172a;">' . htmlspecialchars(hms_pdf_text($row['duration'] ?? '')) . '</td>';
+			$medicineHtml .= '<td width="30%" style="border-bottom:1px solid #e2e8f0;color:#334155;">' . htmlspecialchars(hms_pdf_text($row['instructions'] ?? '')) . '</td>';
 			$medicineHtml .= '</tr>';
 		}
 	} else {
-		$medicineHtml .= '<tr><td width="100%" align="center">No medicines added.</td></tr>';
+		$medicineHtml .= '<tr><td width="100%" align="center" style="border-bottom:1px solid #e2e8f0;color:#64748b;">No medicines added.</td></tr>';
 	}
 	$medicineHtml .= '</table>';
 	$pdf->writeHTML($medicineHtml, true, false, true, false, '');
 
-	$pdf->Ln(4);
-	$pdf->writeHTML(hms_pdf_kv_grid_html([
-		'Temperature' => $prescription['temperature'] ?? '',
-		'Blood Pressure' => $prescription['blood_pressure'] ?? '',
-		'Pulse' => $prescription['pulse'] ?? '',
-		'Weight' => $prescription['weight'] ?? '',
-	], 2), true, false, true, false, '');
+	$pdf->Ln(3);
+	$vitalsHtml = '<div style="font-size:11px;font-weight:bold;color:#1d4ed8;margin-bottom:4px;">Clinical Snapshot</div>';
+	$vitalsHtml .= '<table cellpadding="2" cellspacing="0" border="0" width="100%">';
+	$vitalsHtml .= '<tr>'
+		. '<td width="48%">'
+		. '<div style="font-size:8px;color:#64748b;letter-spacing:0.4px;text-transform:uppercase;">Temperature</div>'
+		. '<div style="border-bottom:1px solid #cbd5e1;font-size:11px;font-weight:bold;color:#0f172a;padding:4px 0 5px 0;">' . hms_pdf_html_escape($prescription['temperature'] ?? '') . '</div>'
+		. '</td>'
+		. '<td width="4%"></td>'
+		. '<td width="48%">'
+		. '<div style="font-size:8px;color:#64748b;letter-spacing:0.4px;text-transform:uppercase;">Blood Pressure</div>'
+		. '<div style="border-bottom:1px solid #cbd5e1;font-size:11px;font-weight:bold;color:#0f172a;padding:4px 0 5px 0;">' . hms_pdf_html_escape($prescription['blood_pressure'] ?? '') . '</div>'
+		. '</td>'
+		. '</tr>';
+	$vitalsHtml .= '<tr><td colspan="3" height="4"></td></tr>';
+	$vitalsHtml .= '<tr>'
+		. '<td width="48%">'
+		. '<div style="font-size:8px;color:#64748b;letter-spacing:0.4px;text-transform:uppercase;">Pulse</div>'
+		. '<div style="border-bottom:1px solid #cbd5e1;font-size:11px;font-weight:bold;color:#0f172a;padding:4px 0 5px 0;">' . hms_pdf_html_escape($prescription['pulse'] ?? '') . '</div>'
+		. '</td>'
+		. '<td width="4%"></td>'
+		. '<td width="48%">'
+		. '<div style="font-size:8px;color:#64748b;letter-spacing:0.4px;text-transform:uppercase;">Weight</div>'
+		. '<div style="border-bottom:1px solid #cbd5e1;font-size:11px;font-weight:bold;color:#0f172a;padding:4px 0 5px 0;">' . hms_pdf_html_escape($prescription['weight'] ?? '') . '</div>'
+		. '</td>'
+		. '</tr>';
+	$vitalsHtml .= '</table>';
+	$pdf->writeHTML($vitalsHtml, true, false, true, false, '');
 
 	$pdf->Ln(3);
-	$pdf->writeHTML(
-		hms_pdf_note_box_html('Symptoms', $prescription['symptoms'] ?? '', 'blue'),
-		true,
-		false,
-		true,
-		false,
-		''
-	);
-	$pdf->Ln(3);
-	$pdf->writeHTML(
-		hms_pdf_note_box_html('Tests', $prescription['tests'] ?? '', 'blue'),
-		true,
-		false,
-		true,
-		false,
-		''
-	);
-	$pdf->Ln(3);
-	$pdf->writeHTML(
-		hms_pdf_note_box_html('Doctor Notes', $prescription['notes'] ?? '', 'teal'),
-		true,
-		false,
-		true,
-		false,
-		''
-	);
+	$linearSection = static function ($title, $body) {
+		$content = trim((string)$body);
+		if ($content === '') {
+			$content = '-';
+		}
 
-	$pdf->Ln(10);
+		return '<div style="font-size:10px;font-weight:bold;color:#1d4ed8;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;">'
+			. hms_pdf_html_escape($title)
+			. '</div>'
+			. '<div style="font-size:9px;line-height:1.7;color:#334155;padding-bottom:5px;">'
+			. nl2br(htmlspecialchars($content, ENT_QUOTES, 'UTF-8'))
+			. '</div>'
+			. '<div style="border-bottom:1px solid #dbeafe;"></div>';
+	};
+
+	$pdf->writeHTML($linearSection('Symptoms', $prescription['symptoms'] ?? ''), true, false, true, false, '');
+	$pdf->Ln(3);
+	$pdf->writeHTML($linearSection('Tests', $prescription['tests'] ?? ''), true, false, true, false, '');
+	$pdf->Ln(3);
+	$pdf->writeHTML($linearSection('Doctor Notes', $prescription['notes'] ?? ''), true, false, true, false, '');
+
+	$pdf->Ln(6);
+	$signatureStartY = $pdf->GetY();
+	$signatureWidth = 46;
+	$signatureHeight = 16;
+	$signatureX = $pdf->getPageWidth() - 14 - $signatureWidth;
+	if ($signaturePath !== '' && file_exists($signaturePath)) {
+		$pdf->Image($signaturePath, $signatureX, $signatureStartY, $signatureWidth, $signatureHeight, 'PNG', '', '', false, 300, '', false, false, 0, false, false, false);
+	}
+	$pdf->SetY($signatureStartY + 14);
 	$pdf->writeHTML(
 		'<table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>'
 		. '<td width="58%"></td>'
 		. '<td width="42%" align="center">'
-		. '<div style="border-top:1px solid #94a3b8;padding-top:6px;font-size:9px;color:#475569;">Authorized by Dr. ' . hms_pdf_html_escape($doctorLine, '') . '</div>'
+		. '<div style="border-top:1px solid #94a3b8;padding-top:6px;font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:0.6px;">Authorized by</div>'
+		. '<div style="font-size:10px;color:#0f172a;font-weight:bold;padding-top:2px;">' . hms_pdf_html_escape($doctorDisplay, '') . '</div>'
 		. '</td>'
 		. '</tr></table>',
 		true,
