@@ -68,8 +68,4 @@ if (!function_exists('hms_session_start')) {
 }
 
 hms_configure_runtime();
-?>
-
-
-
-
+ 

@@ -608,4 +608,3 @@ if (!function_exists('hms_pdf_output_inline')) {
 		exit();
 	}
 }
-?>

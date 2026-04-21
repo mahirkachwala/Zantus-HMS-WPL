@@ -702,4 +702,3 @@ if (!function_exists('hms_archive_appointment')) {
 
 hms_ensure_schema($con);
 hms_ensure_support_schema($con);
-?>

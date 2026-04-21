@@ -57,9 +57,4 @@ function check_login()
 	$_SESSION['fullName'] = $currentUser['fullName'];
 	$_SESSION['login'] = $currentUser['email'];
 }
-?>
-
-
-
-
-
+ 

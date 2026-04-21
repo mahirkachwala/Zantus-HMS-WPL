@@ -1,4 +1,7 @@
 <?php
+if (!ob_get_level()) {
+	ob_start();
+}
 require_once __DIR__ . '/include/session.php';
 hms_session_start();
 require_once __DIR__ . '/include/checklogin.php';
