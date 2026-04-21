@@ -1,10 +1,9 @@
 <?php
 require_once __DIR__ . '/config.php';
-
-$hmsRazorpayAutoload = dirname(__DIR__) . '/vendor/autoload.php';
-if (file_exists($hmsRazorpayAutoload)) {
-	require_once $hmsRazorpayAutoload;
-}
+// Razorpay order creation can run fully through cURL on shared hosting.
+// Avoid loading Composer autoload here because a partial vendor upload on the
+// server can fatal before checkout starts. If the SDK is already loaded by
+// some other bootstrap, hms_get_razorpay_client() will still use it.
 
 if (!function_exists('hms_load_env')) {
 	function hms_load_env($path = null) {
