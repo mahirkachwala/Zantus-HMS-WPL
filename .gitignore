@@ -12,6 +12,7 @@ Thumbs.db
 # Secrets / local env
 .env
 .env.*
+composer.phar
 
 # Runtime uploads/cache (if added later)
 uploads/
