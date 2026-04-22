@@ -3,7 +3,7 @@ require_once __DIR__ . '/include/session.php';
 hms_session_start();
 require_once __DIR__ . '/include/config.php';
 require_once __DIR__ . '/include/checklogin.php';
-require_once __DIR__ . '/include/razorpay.php';
+require_once __DIR__ . '/include/payu.php';
 check_login();
 
 $userId = (int)($_SESSION['id'] ?? 0);
@@ -11,6 +11,7 @@ $appointmentId = isset($_GET['appointment_id']) ? (int)$_GET['appointment_id'] :
 $errors = [];
 $appointment = null;
 $amount = '';
+$checkoutRequest = null;
 
 $context = hms_get_payable_appointment_context($con, $appointmentId, $userId);
 $appointment = $context['appointment'] ?? null;
@@ -21,20 +22,26 @@ if (!empty($context['error'])) {
 	$errors[] = $context['error'];
 }
 
-$razorpayConfigured = hms_razorpay_is_configured();
-if (!$razorpayConfigured) {
-	$errors[] = 'Razorpay configuration is missing. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to the local .env file.';
+$flashPayuError = trim((string)($_SESSION['payu_error'] ?? ''));
+if ($flashPayuError !== '') {
+	$errors[] = $flashPayuError;
+	unset($_SESSION['payu_error']);
 }
 
-$canStartPayment = $appointment && empty($context['error']) && $razorpayConfigured;
-$frontendConfig = [
-	'ready' => (bool)$canStartPayment,
-	'appointmentId' => (int)$appointmentId,
-	'keyId' => hms_razorpay_key_id(),
-	'fullName' => (string)($_SESSION['fullName'] ?? ''),
-	'email' => (string)($_SESSION['login'] ?? ''),
-	'amountRupees' => (float)($appointment['consultancyFees'] ?? 0),
-];
+$payuConfigured = hms_payu_is_configured();
+if (!$payuConfigured) {
+	$errors[] = 'PayU configuration is missing. Add PAYU_MERCHANT_KEY and PAYU_MERCHANT_SALT to the local .env file.';
+}
+
+$canStartPayment = $appointment && empty($context['error']) && $payuConfigured;
+if ($canStartPayment) {
+	try {
+		$checkoutRequest = hms_build_payu_checkout_request($con, $appointmentId, $userId);
+	} catch (\Throwable $e) {
+		$errors[] = trim((string)$e->getMessage()) !== '' ? trim((string)$e->getMessage()) : 'Unable to prepare PayU checkout.';
+		$canStartPayment = false;
+	}
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -71,7 +78,6 @@ $frontendConfig = [
 			color: #1e3a8a;
 		}
 	</style>
-	<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body class="nav-md">
 	<?php
@@ -82,10 +88,8 @@ $frontendConfig = [
 	<div class="row">
 		<div class="col-md-10 col-md-offset-1">
 			<div class="payment-panel">
-				<h3 style="margin-top:0;color:#1e3a8a;font-weight:700;">Razorpay Secure Payment</h3>
-				<p class="help-note">Use Razorpay Standard Checkout to complete your appointment fee payment. Card and UPI details are entered only inside Razorpay&apos;s hosted modal.</p>
-
-				<div id="payment-message" class="alert" style="display:none;"></div>
+				<h3 style="margin-top:0;color:#1e3a8a;font-weight:700;">PayU Secure Payment</h3>
+				<p class="help-note">Use PayU Hosted Checkout to complete your appointment fee payment. Payment details are entered only on PayU&apos;s hosted payment page.</p>
 
 				<?php if (!empty($errors)): ?>
 					<div class="alert alert-danger">
@@ -113,15 +117,26 @@ $frontendConfig = [
 				<div class="well" style="background:#f8fafc;border-color:#e2e8f0;">
 					<p style="margin:0 0 12px 0;"><strong>What happens next?</strong></p>
 					<ol style="margin-bottom:0;padding-left:18px;">
-						<li>Click the payment button to create a secure Razorpay order.</li>
-						<li>Complete payment inside the Razorpay modal.</li>
-						<li>The payment signature will be verified on the server before the appointment is marked as paid.</li>
+						<li>Click the payment button to redirect securely to PayU Hosted Checkout.</li>
+						<li>Complete payment on the PayU payment page using a supported test method.</li>
+						<li>PayU will redirect back and the response hash will be verified on the server before the appointment is marked as paid.</li>
 					</ol>
 				</div>
 
-				<button type="button" id="razorpay-pay-button" class="btn btn-primary btn-lg" <?php echo $canStartPayment ? '' : 'disabled'; ?>>
-					<i class="fa fa-credit-card"></i> Pay with Razorpay
-				</button>
+				<?php if ($checkoutRequest): ?>
+					<form id="payu-payment-form" method="post" action="<?php echo htmlentities((string)$checkoutRequest['action']); ?>" style="display:inline;">
+						<?php foreach (($checkoutRequest['fields'] ?? []) as $fieldName => $fieldValue): ?>
+							<input type="hidden" name="<?php echo htmlentities((string)$fieldName); ?>" value="<?php echo htmlentities((string)$fieldValue); ?>">
+						<?php endforeach; ?>
+						<button type="submit" id="payu-pay-button" class="btn btn-primary btn-lg">
+							<i class="fa fa-credit-card"></i> Pay with PayU
+						</button>
+					</form>
+				<?php else: ?>
+					<button type="button" class="btn btn-primary btn-lg" disabled>
+						<i class="fa fa-credit-card"></i> Pay with PayU
+					</button>
+				<?php endif; ?>
 				<a href="appointments.php" class="btn btn-default btn-lg">Back to Appointments</a>
 			</div>
 		</div>
@@ -154,137 +169,20 @@ $frontendConfig = [
 	<script src="assets/js/custom.min.js"></script>
 	<script>
 	(function () {
-		const config = <?php echo json_encode($frontendConfig, JSON_UNESCAPED_SLASHES); ?>;
-		const payButton = document.getElementById('razorpay-pay-button');
-		const messageBox = document.getElementById('payment-message');
-		const defaultButtonHtml = payButton ? payButton.innerHTML : '';
-
-		function showMessage(type, message) {
-			if (!messageBox) {
-				return;
-			}
-			messageBox.className = 'alert alert-' + type;
-			messageBox.textContent = message;
-			messageBox.style.display = 'block';
-		}
-
-		function setButtonState(isBusy, busyLabel) {
-			if (!payButton) {
-				return;
-			}
-			payButton.disabled = isBusy;
-			payButton.innerHTML = isBusy
-				? '<i class="fa fa-spinner fa-spin"></i> ' + busyLabel
-				: defaultButtonHtml;
-		}
-
-		async function postJson(url, payload) {
-			const response = await fetch(url, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json'
-				},
-				body: JSON.stringify(payload || {})
-			});
-
-			let data = {};
-			try {
-				data = await response.json();
-			} catch (error) {
-				data = {};
-			}
-
-			if (!response.ok || !data.success) {
-				throw new Error(data.message || 'The request could not be completed.');
-			}
-
-			return data;
-		}
-
-		if (!payButton) {
+		var form = document.getElementById('payu-payment-form');
+		var button = document.getElementById('payu-pay-button');
+		if (!form || !button) {
 			return;
 		}
 
-		payButton.addEventListener('click', async function () {
-			if (!config.ready) {
-				showMessage('danger', 'Payment is not available for this appointment.');
-				return;
-			}
-
-			if (typeof Razorpay === 'undefined') {
-				showMessage('danger', 'Razorpay checkout failed to load. Please refresh and try again.');
-				return;
-			}
-
-			setButtonState(true, 'Creating order...');
-
-			try {
-				const order = await postJson('api/create-order.php', {
-					appointment_id: config.appointmentId,
-					currency: 'INR'
-				});
-
-				setButtonState(false, 'Creating order...');
-
-				const options = {
-					key: config.keyId,
-					order_id: order.order_id,
-					amount: order.amount,
-					currency: order.currency,
-					name: 'Zantus HMS',
-					description: 'Appointment fee payment',
-					prefill: {
-						name: config.fullName || '',
-						email: config.email || ''
-					},
-					notes: {
-						appointment_id: String(config.appointmentId || ''),
-						receipt: order.receipt || ''
-					},
-					handler: async function (response) {
-						setButtonState(true, 'Verifying payment...');
-						showMessage('info', 'Payment received. Verifying signature...');
-
-						try {
-							const verification = await postJson('api/verify-payment.php', {
-								appointment_id: config.appointmentId,
-								razorpay_payment_id: response.razorpay_payment_id,
-								razorpay_order_id: response.razorpay_order_id,
-								razorpay_signature: response.razorpay_signature
-							});
-
-							showMessage('success', verification.message || 'Payment successful. Redirecting...');
-							window.location.href = verification.redirect_url || 'appointments.php';
-						} catch (error) {
-							setButtonState(false, 'Verifying payment...');
-							showMessage('danger', error.message || 'Payment verification failed.');
-						}
-					},
-					modal: {
-						ondismiss: function () {
-							setButtonState(false, 'Creating order...');
-							showMessage('warning', 'Payment popup was closed before completion.');
-						}
-					},
-					theme: {
-						color: '#1e3a8a'
-					}
-				};
-
-				const rzp = new Razorpay(options);
-				rzp.on('payment.failed', function (response) {
-					const description = response && response.error && response.error.description
-						? response.error.description
-						: 'Payment failed. Please try again.';
-					setButtonState(false, 'Creating order...');
-					showMessage('danger', description);
-				});
-				rzp.open();
-			} catch (error) {
-				setButtonState(false, 'Creating order...');
-				showMessage('danger', error.message || 'Unable to start Razorpay checkout.');
-			}
+		var defaultHtml = button.innerHTML;
+		form.addEventListener('submit', function () {
+			button.disabled = true;
+			button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Redirecting to PayU...';
+			window.setTimeout(function () {
+				button.disabled = false;
+				button.innerHTML = defaultHtml;
+			}, 8000);
 		});
 	})();
 	</script>
