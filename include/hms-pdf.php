@@ -677,3 +677,13 @@ if (!function_exists('hms_pdf_output_inline')) {
 		exit();
 	}
 }
+
+if (!function_exists('hms_pdf_output_download')) {
+	function hms_pdf_output_download($pdf, $filename) {
+		while (ob_get_level() > 0) {
+			ob_end_clean();
+		}
+		$pdf->Output($filename, 'D');
+		exit();
+	}
+}

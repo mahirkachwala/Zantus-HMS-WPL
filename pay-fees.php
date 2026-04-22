@@ -124,7 +124,7 @@ if ($canStartPayment) {
 				</div>
 
 				<?php if ($checkoutRequest): ?>
-					<form id="payu-payment-form" method="post" action="<?php echo htmlentities((string)$checkoutRequest['action']); ?>" style="display:inline;">
+					<form id="payu-payment-form" method="post" action="<?php echo htmlentities((string)$checkoutRequest['action']); ?>" target="_self" style="display:inline;">
 						<?php foreach (($checkoutRequest['fields'] ?? []) as $fieldName => $fieldValue): ?>
 							<input type="hidden" name="<?php echo htmlentities((string)$fieldName); ?>" value="<?php echo htmlentities((string)$fieldValue); ?>">
 						<?php endforeach; ?>

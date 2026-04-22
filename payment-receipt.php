@@ -30,6 +30,7 @@ $transactionRef = (string)($payment['transaction_ref'] ?? '');
 $paidAt = (string)($payment['paid_at'] ?? '');
 $method = (string)($payment['payment_method'] ?? '');
 $receiptNumber = 'PAY-' . (int)$appointment['id'] . '-' . ($transactionRef !== '' ? $transactionRef : date('YmdHis'));
+$forceDownload = isset($_GET['download']) && (string)$_GET['download'] === '1';
 
 try {
 	$pdf = hms_create_pdf_document('Payment Receipt', 'receipt');
@@ -150,7 +151,11 @@ try {
 		''
 	);
 
-	hms_pdf_output_inline($pdf, 'payment-receipt-' . (int)$appointment['id'] . '.pdf');
+	$filename = 'payment-receipt-' . (int)$appointment['id'] . '.pdf';
+	if ($forceDownload) {
+		hms_pdf_output_download($pdf, $filename);
+	}
+	hms_pdf_output_inline($pdf, $filename);
 } catch (\Throwable $e) {
 	header('Content-Type: text/plain; charset=utf-8');
 	echo 'PAYMENT RECEIPT DEBUG ERROR: ' . $e->getMessage() . "\n";

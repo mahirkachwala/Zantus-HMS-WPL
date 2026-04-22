@@ -17,6 +17,10 @@ if ($appointmentId > 0) {
 	$backUrl = 'pay-fees.php?appointment_id=' . $appointmentId;
 }
 
+if ($userId > 0) {
+	hms_restore_user_session($con, $userId);
+}
+
 if (empty($payload)) {
 	$_SESSION['payu_error'] = 'PayU did not return a payment response.';
 	hms_payu_redirect($backUrl);
@@ -72,7 +76,7 @@ if ($status !== 'success') {
 
 if (!empty($context['is_paid'])) {
 	$_SESSION['msg'] = 'Payment already recorded for appointment #' . $appointmentId . '.';
-	hms_payu_redirect('appointments.php');
+	hms_payu_redirect('payment-receipt.php?appointment_id=' . $appointmentId . '&download=1');
 }
 
 if ($transactionRef === '') {
@@ -83,7 +87,7 @@ if ($transactionRef === '') {
 $existing = hms_query_params($con, "SELECT id FROM payment_transactions WHERE transaction_ref=$1 LIMIT 1", [$transactionRef]);
 if ($existing && hms_num_rows($existing) > 0) {
 	$_SESSION['msg'] = 'Payment already recorded for appointment #' . $appointmentId . '.';
-	hms_payu_redirect('appointments.php');
+	hms_payu_redirect('payment-receipt.php?appointment_id=' . $appointmentId . '&download=1');
 }
 
 $amount = (float)($appointment['consultancyFees'] ?? 0);
@@ -120,5 +124,5 @@ if (!$updateOk || !$logOk) {
 }
 
 $_SESSION['msg'] = 'Payment successful for appointment #' . $appointmentId . '.';
-hms_payu_redirect('appointments.php');
+hms_payu_redirect('payment-receipt.php?appointment_id=' . $appointmentId . '&download=1');
 ?>

@@ -14,8 +14,12 @@ if (!function_exists('hms_configure_runtime')) {
 		@ini_set('session.gc_maxlifetime', (string)HMS_SESSION_IDLE_SECONDS);
 		@ini_set('session.cookie_lifetime', (string)HMS_SESSION_IDLE_SECONDS);
 		@ini_set('session.cookie_httponly', '1');
+		$isSecure = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
+		if (strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https') {
+			$isSecure = true;
+		}
 		if (defined('PHP_VERSION_ID') && PHP_VERSION_ID >= 70300) {
-			@ini_set('session.cookie_samesite', 'Lax');
+			@ini_set('session.cookie_samesite', $isSecure ? 'None' : 'Lax');
 		}
 	}
 }
@@ -33,6 +37,10 @@ if (!function_exists('hms_session_start')) {
 		$path = !empty($params['path']) ? $params['path'] : '/';
 		$domain = $params['domain'] ?? '';
 		$secure = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
+		if (strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https') {
+			$secure = true;
+		}
+		$sameSite = $secure ? 'None' : 'Lax';
 
 		if (defined('PHP_VERSION_ID') && PHP_VERSION_ID >= 70300) {
 			session_set_cookie_params([
@@ -41,7 +49,7 @@ if (!function_exists('hms_session_start')) {
 				'domain' => $domain,
 				'secure' => $secure,
 				'httponly' => true,
-				'samesite' => 'Lax',
+				'samesite' => $sameSite,
 			]);
 		} else {
 			session_set_cookie_params($lifetime, $path, $domain, $secure, true);
@@ -58,7 +66,7 @@ if (!function_exists('hms_session_start')) {
 					'domain' => $domain,
 					'secure' => $secure,
 					'httponly' => true,
-					'samesite' => 'Lax',
+					'samesite' => $sameSite,
 				]);
 			} else {
 				setcookie(session_name(), session_id(), $expires, $path, $domain, $secure, true);

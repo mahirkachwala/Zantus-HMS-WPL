@@ -120,6 +120,28 @@ if (!function_exists('hms_payu_format_amount')) {
 	}
 }
 
+if (!function_exists('hms_restore_user_session')) {
+	function hms_restore_user_session($con, $userId) {
+		$userId = (int)$userId;
+		if ($userId <= 0) {
+			return false;
+		}
+
+		$result = hms_query_params($con, "SELECT id, fullName, email FROM users WHERE id=$1 LIMIT 1", [$userId]);
+		$user = $result ? hms_fetch_assoc($result) : null;
+		if (!$user) {
+			return false;
+		}
+
+		$_SESSION['id'] = (int)$user['id'];
+		$_SESSION['user_id'] = (int)$user['id'];
+		$_SESSION['fullName'] = (string)($user['fullName'] ?? '');
+		$_SESSION['login'] = (string)($user['email'] ?? '');
+		$_SESSION['last_activity'] = time();
+		return true;
+	}
+}
+
 if (!function_exists('hms_payu_generate_txnid')) {
 	function hms_payu_generate_txnid($appointmentId, $userId) {
 		$appointmentId = (int)$appointmentId;
