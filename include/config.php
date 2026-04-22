@@ -643,6 +643,68 @@ if (!function_exists('hms_record_payment_transaction')) {
     }
 }
 
+if (!function_exists('hms_get_latest_payment_transaction')) {
+    function hms_get_latest_payment_transaction($con, $appointmentId, $userId) {
+        $appointmentId = (int)$appointmentId;
+        $userId = (int)$userId;
+
+        if ($appointmentId <= 0 || $userId <= 0 || !hms_table_exists($con, 'payment_transactions')) {
+            return null;
+        }
+
+        $result = hms_query_params(
+            $con,
+            "SELECT * FROM payment_transactions WHERE appointment_id=$1 AND user_id=$2 ORDER BY paid_at DESC, id DESC LIMIT 1",
+            [$appointmentId, $userId]
+        );
+        return $result ? hms_fetch_assoc($result) : null;
+    }
+}
+
+if (!function_exists('hms_payment_transaction_implies_paid')) {
+    function hms_payment_transaction_implies_paid($paymentTransaction) {
+        if (!is_array($paymentTransaction) || empty($paymentTransaction)) {
+            return false;
+        }
+
+        $status = strtolower(trim((string)($paymentTransaction['status'] ?? '')));
+        return in_array($status, ['paid', 'paid at hospital', 'success'], true);
+    }
+}
+
+if (!function_exists('hms_sync_appointment_payment_from_transaction')) {
+    function hms_sync_appointment_payment_from_transaction($con, $table, $appointmentId, $userId, $paymentTransaction) {
+        $appointmentId = (int)$appointmentId;
+        $userId = (int)$userId;
+        $table = trim((string)$table);
+
+        if ($appointmentId <= 0 || $userId <= 0 || $table === '' || !preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+            return false;
+        }
+        if (!hms_payment_transaction_implies_paid($paymentTransaction)) {
+            return false;
+        }
+
+        $paymentMethod = strtolower(trim((string)($paymentTransaction['payment_method'] ?? '')));
+        $status = $paymentMethod === 'pay at hospital' ? 'Paid at Hospital' : 'Paid';
+        $transactionRef = trim((string)($paymentTransaction['transaction_ref'] ?? ''));
+        $paidAt = trim((string)($paymentTransaction['paid_at'] ?? ''));
+        if ($paidAt === '') {
+            $paidAt = date('Y-m-d H:i:s');
+        }
+        if ($transactionRef === '') {
+            return false;
+        }
+
+        $result = hms_query_params(
+            $con,
+            "UPDATE $table SET paymentStatus=$1, paymentRef=$2, paidAt=$3 WHERE id=$4 AND userId=$5",
+            [$status, $transactionRef, $paidAt, $appointmentId, $userId]
+        );
+        return (bool)$result;
+    }
+}
+
 if (!function_exists('hms_archive_appointment')) {
     function hms_archive_appointment($con, $sourceTable, $appointmentId) {
         $appointmentId = (int)$appointmentId;

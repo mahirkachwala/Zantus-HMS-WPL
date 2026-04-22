@@ -107,6 +107,13 @@ if(isset($_GET['cancel']))
 					$sql=hms_query($con,"select doctors.doctorName as docname,$appointmentTable.* from $appointmentTable join doctors on doctors.id=$appointmentTable.doctorId where $appointmentTable.userId='".$_SESSION['id']."' and (".$activeWhere.") order by $appointmentTable.id desc");
 					$cnt=1;
 					while($row=hms_fetch_array($sql)) {
+						$paymentTransaction = hms_get_latest_payment_transaction($con, (int)($row['id'] ?? 0), (int)($_SESSION['id'] ?? 0));
+						if (hms_payment_transaction_implies_paid($paymentTransaction)) {
+							hms_sync_appointment_payment_from_transaction($con, $appointmentTable, (int)($row['id'] ?? 0), (int)($_SESSION['id'] ?? 0), $paymentTransaction);
+							$row['paymentStatus'] = strtolower(trim((string)($paymentTransaction['payment_method'] ?? ''))) === 'pay at hospital' ? 'Paid at Hospital' : 'Paid';
+							$row['paymentRef'] = (string)($paymentTransaction['transaction_ref'] ?? ($row['paymentRef'] ?? ''));
+							$row['paidAt'] = (string)($paymentTransaction['paid_at'] ?? ($row['paidAt'] ?? ''));
+						}
 					?>
 					<tr>
 						<td><?php echo $cnt; ?>.</td>

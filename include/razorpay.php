@@ -161,6 +161,14 @@ if (!function_exists('hms_get_payable_appointment_context')) {
 			return ['table' => $table, 'appointment' => null, 'is_paid' => false, 'error' => 'Selected appointment is invalid.'];
 		}
 
+		$paymentTransaction = hms_get_latest_payment_transaction($con, $appointmentId, $userId);
+		if (hms_payment_transaction_implies_paid($paymentTransaction)) {
+			hms_sync_appointment_payment_from_transaction($con, $table, $appointmentId, $userId, $paymentTransaction);
+			$appointment['paymentStatus'] = strtolower(trim((string)($paymentTransaction['payment_method'] ?? ''))) === 'pay at hospital' ? 'Paid at Hospital' : 'Paid';
+			$appointment['paymentRef'] = (string)($paymentTransaction['transaction_ref'] ?? ($appointment['paymentRef'] ?? ''));
+			$appointment['paidAt'] = (string)($paymentTransaction['paid_at'] ?? ($appointment['paidAt'] ?? ''));
+		}
+
 		$visitStatusNow = (string)($appointment['visitStatus'] ?? 'Scheduled');
 		$isCancelled = ((int)($appointment['userStatus'] ?? 1) === 0 || (int)($appointment['doctorStatus'] ?? 1) === 0 || strcasecmp($visitStatusNow, 'Cancelled') === 0);
 		$isTransferred = (stripos((string)($appointment['paymentStatus'] ?? ''), 'Transferred') !== false);

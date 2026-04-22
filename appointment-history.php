@@ -146,6 +146,13 @@ if(isset($_GET['cancel']))
 					$cnt=1;
 					while($row=hms_fetch_array($sql))
 					{
+						$paymentTransaction = hms_get_latest_payment_transaction($con, (int)($row['id'] ?? 0), (int)($_SESSION['id'] ?? 0));
+						if (hms_payment_transaction_implies_paid($paymentTransaction)) {
+							hms_sync_appointment_payment_from_transaction($con, $appointmentTable, (int)($row['id'] ?? 0), (int)($_SESSION['id'] ?? 0), $paymentTransaction);
+							$row['paymentStatus'] = strtolower(trim((string)($paymentTransaction['payment_method'] ?? ''))) === 'pay at hospital' ? 'Paid at Hospital' : 'Paid';
+							$row['paymentRef'] = (string)($paymentTransaction['transaction_ref'] ?? ($row['paymentRef'] ?? ''));
+							$row['paidAt'] = (string)($paymentTransaction['paid_at'] ?? ($row['paidAt'] ?? ''));
+						}
 						$isTransferred = false;
 						if($hasTransferTable) {
 							$tr = hms_query($con, "SELECT id FROM appointment_transfers WHERE originalAppointmentId='".(int)$row['id']."' ORDER BY id DESC LIMIT 1");
