@@ -4,6 +4,13 @@ error_reporting(0);
 include('include/config.php');
 include('include/checklogin.php');
 check_login();
+
+function tableExists($con, $tableName) {
+	$check = hms_query($con, "SHOW TABLES LIKE '" . hms_escape($con, $tableName) . "'");
+	return ($check && hms_num_rows($check) > 0);
+}
+
+$usePatientsTable = tableExists($con, 'patients');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -65,7 +72,11 @@ check_login();
 					</thead>
 					<tbody>
 						<?php
-						$sql=hms_query($con,"select * from tblpatient where PatientName like '%$sdata%'|| PatientContno like '%$sdata%'");
+						if($usePatientsTable) {
+							$sql=hms_query($con,"SELECT p.*, d.doctorName FROM patients p LEFT JOIN doctors d ON d.id=p.doctorId WHERE p.patientName LIKE '%$sdata%' OR p.patientPhone LIKE '%$sdata%' OR p.patientEmail LIKE '%$sdata%' ORDER BY p.id DESC");
+						} else {
+							$sql=hms_query($con,"SELECT * FROM tblpatient WHERE PatientName LIKE '%$sdata%' OR PatientContno LIKE '%$sdata%' ORDER BY ID DESC");
+						}
 						$num=hms_num_rows($sql);
 						if($num>0){
 							$cnt=1;
@@ -74,14 +85,14 @@ check_login();
 								?>
 								<tr>
 									<td class="center"><?php echo $cnt;?>.</td>
-									<td class="hidden-xs"><?php echo $row['PatientName'];?></td>
-									<td><?php echo $row['PatientContno'];?></td>
-									<td><?php echo $row['PatientGender'];?></td>
-									<td><?php echo $row['CreationDate'];?></td>
-									<td><?php echo $row['UpdationDate'];?>
+									<td class="hidden-xs"><?php echo htmlentities($row['patientName'] ?? $row['PatientName'] ?? '');?></td>
+									<td><?php echo htmlentities($row['patientPhone'] ?? $row['PatientContno'] ?? '');?></td>
+									<td><?php echo htmlentities($row['patientGender'] ?? $row['PatientGender'] ?? '');?></td>
+									<td><?php echo htmlentities($row['createdAt'] ?? $row['CreationDate'] ?? '');?></td>
+									<td><?php echo htmlentities($row['updatedAt'] ?? $row['UpdationDate'] ?? '--');?>
 								</td>
 								<td>
-									<a href="view-patient.php?viewid=<?php echo $row['ID'];?>"><i class="fa fa-eye"></i></a>
+									<a href="view-patient.php?viewid=<?php echo (int)($row['id'] ?? $row['ID'] ?? 0);?>"><i class="fa fa-eye"></i></a>
 								</td>
 							</tr>
 							<?php

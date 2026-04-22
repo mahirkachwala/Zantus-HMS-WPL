@@ -4,6 +4,22 @@ error_reporting(0);
 include('include/config.php');
 include('include/checklogin.php');
 check_login();
+
+function dashboard_count_rows($con, $tableName, $whereSql = '')
+{
+  if (!hms_table_exists($con, $tableName)) {
+    return 0;
+  }
+
+  $query = "SELECT COUNT(*) AS total FROM $tableName";
+  if ($whereSql !== '') {
+    $query .= " WHERE $whereSql";
+  }
+
+  $result = hms_query($con, $query);
+  $row = $result ? hms_fetch_assoc($result) : null;
+  return (int)($row['total'] ?? 0);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -112,30 +128,15 @@ check_login();
     <div class="stats-grid">
       <?php
 
-      $tableCheck = hms_query($con,"SHOW TABLES LIKE 'current_appointments'");
-      $appointmentTable = ($tableCheck && hms_num_rows($tableCheck) > 0) ? 'current_appointments' : 'appointment';
+      $appointmentTable = hms_table_exists($con, 'current_appointments') ? 'current_appointments' : 'appointment';
+      $patientTable = hms_table_exists($con, 'patients') ? 'patients' : 'tblpatient';
 
-      $result = hms_query($con,"SELECT * FROM users ");
-      $num_rows = hms_num_rows($result);
-      $total_users = htmlentities($num_rows);
-
-      $result1 = hms_query($con,"SELECT * FROM doctors ");
-      $num_rows1 = hms_num_rows($result1);
-      $total_doctors = htmlentities($num_rows1);
-
-      $sql= hms_query($con,"SELECT * FROM $appointmentTable");
-      $num_rows2 = hms_num_rows($sql);
-      $total_appointments = htmlentities($num_rows2);
-
-      $result = hms_query($con,"SELECT * FROM tblpatient ");
-      $num_rows = hms_num_rows($result);
-      $total_patients = htmlentities($num_rows);
-
-      $sql= hms_query($con,"SELECT * FROM $appointmentTable where visitStatus='Completed'");
-      $total_completed = htmlentities(hms_num_rows($sql));
-
-      $sql= hms_query($con,"SELECT * FROM $appointmentTable where paymentStatus IN ('Paid','Paid at Hospital')");
-      $total_paid = htmlentities(hms_num_rows($sql));
+      $total_users = dashboard_count_rows($con, 'users');
+      $total_doctors = dashboard_count_rows($con, 'doctors');
+      $total_appointments = dashboard_count_rows($con, $appointmentTable);
+      $total_patients = dashboard_count_rows($con, $patientTable);
+      $total_completed = dashboard_count_rows($con, $appointmentTable, "visitStatus='Completed'");
+      $total_paid = dashboard_count_rows($con, $appointmentTable, "paymentStatus IN ('Paid','Paid at Hospital')");
 
       $total_contact_queries = 0;
       $total_feedbacks = 0;
@@ -156,42 +157,42 @@ check_login();
       <div class="stat-col">
         <div class="stat-card">
           <div class="stat-top"><i class="fa fa-users"></i> Registered Users</div>
-          <div class="stat-count"><?php echo $total_users; ?></div>
+          <div class="stat-count"><?php echo (int)$total_users; ?></div>
           <div class="stat-link"><a href="manage-users.php">View all users</a></div>
         </div>
       </div>
       <div class="stat-col">
         <div class="stat-card">
           <div class="stat-top"><i class="fa fa-user-md"></i> Active Doctors</div>
-          <div class="stat-count"><?php echo $total_doctors; ?></div>
+          <div class="stat-count"><?php echo (int)$total_doctors; ?></div>
           <div class="stat-link"><a href="manage-doctors.php">View all doctors</a></div>
         </div>
       </div>
       <div class="stat-col">
         <div class="stat-card">
           <div class="stat-top"><i class="fa fa-list-alt"></i> Total Appointments</div>
-          <div class="stat-count"><?php echo $total_appointments; ?></div>
+          <div class="stat-count"><?php echo (int)$total_appointments; ?></div>
           <div class="stat-link"><a href="appointment-history.php">View all appointments</a></div>
         </div>
       </div>
       <div class="stat-col">
         <div class="stat-card">
           <div class="stat-top"><i class="fa fa-user"></i> Total Patients</div>
-          <div class="stat-count"><?php echo $total_patients; ?></div>
+          <div class="stat-count"><?php echo (int)$total_patients; ?></div>
           <div class="stat-link"><a href="manage-patient.php">View all patients</a></div>
         </div>
       </div>
       <div class="stat-col">
         <div class="stat-card">
           <div class="stat-top"><i class="fa fa-check-circle"></i> Completed Visits</div>
-          <div class="stat-count"><?php echo $total_completed; ?></div>
+          <div class="stat-count"><?php echo (int)$total_completed; ?></div>
           <div class="stat-link"><a href="appointment-history.php">Review completed visits</a></div>
         </div>
       </div>
       <div class="stat-col">
         <div class="stat-card">
           <div class="stat-top"><i class="fa fa-credit-card"></i> Payments Received</div>
-          <div class="stat-count"><?php echo $total_paid; ?></div>
+          <div class="stat-count"><?php echo (int)$total_paid; ?></div>
           <div class="stat-link"><a href="payments.php">Check payment status</a></div>
         </div>
       </div>

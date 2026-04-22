@@ -5,8 +5,34 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
+function tableExists($con, $tableName) {
+	$check = hms_query($con, "SHOW TABLES LIKE '" . hms_escape($con, $tableName) . "'");
+	return ($check && hms_num_rows($check) > 0);
+}
+
+function findAppointmentSourceTable($con, $appointmentId) {
+	foreach (['current_appointments', 'appointment', 'past_appointments'] as $tableName) {
+		if (!tableExists($con, $tableName)) {
+			continue;
+		}
+
+		$check = hms_query($con, "SELECT id FROM $tableName WHERE id='$appointmentId' LIMIT 1");
+		if ($check && hms_num_rows($check) > 0) {
+			return $tableName;
+		}
+	}
+
+	return '';
+}
+
 $aid = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($aid <= 0) {
+	header('location:appointment-history.php');
+	exit();
+}
+
+$appointmentTable = findAppointmentSourceTable($con, $aid);
+if ($appointmentTable === '') {
 	header('location:appointment-history.php');
 	exit();
 }
@@ -18,16 +44,16 @@ if (isset($_POST['submit'])) {
 	$paymentStatus = hms_escape($con, $_POST['paymentStatus']);
 	$visitStatus = hms_escape($con, $_POST['visitStatus']);
 
-	hms_query($con, "UPDATE appointment SET appointmentDate='$appDate', appointmentTime='$appTime', consultancyFees='$fees', paymentStatus='$paymentStatus', visitStatus='$visitStatus' WHERE id='$aid'");
-	if (in_array($visitStatus, ['Completed', 'Cancelled'], true)) {
-		hms_archive_appointment($con, 'appointment', $aid);
+	hms_query($con, "UPDATE $appointmentTable SET appointmentDate='$appDate', appointmentTime='$appTime', consultancyFees='$fees', paymentStatus='$paymentStatus', visitStatus='$visitStatus' WHERE id='$aid'");
+	if ($appointmentTable !== 'past_appointments' && in_array($visitStatus, ['Completed', 'Cancelled'], true)) {
+		hms_archive_appointment($con, $appointmentTable, $aid);
 	}
 	$_SESSION['msg'] = 'Appointment updated successfully.';
 	header('location:appointment-history.php');
 	exit();
 }
 
-$q = hms_query($con, "SELECT appointment.*, users.fullName as patientName, doctors.doctorName as doctorName FROM appointment JOIN users ON users.id=appointment.userId JOIN doctors ON doctors.id=appointment.doctorId WHERE appointment.id='$aid'");
+$q = hms_query($con, "SELECT $appointmentTable.*, users.fullName as patientName, doctors.doctorName as doctorName FROM $appointmentTable JOIN users ON users.id=$appointmentTable.userId JOIN doctors ON doctors.id=$appointmentTable.doctorId WHERE $appointmentTable.id='$aid'");
 $row = hms_fetch_array($q);
 if (!$row) {
 	header('location:appointment-history.php');

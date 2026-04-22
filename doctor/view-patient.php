@@ -5,6 +5,26 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
+function tableExists($con, $tableName) {
+  $check = hms_query($con, "SHOW TABLES LIKE '" . hms_escape($con, $tableName) . "'");
+  return ($check && hms_num_rows($check) > 0);
+}
+
+$doctorId = (int)($_SESSION['doctor_id'] ?? $_SESSION['id'] ?? 0);
+$viewId = (int)($_GET['viewid'] ?? 0);
+$usePatientsTable = tableExists($con, 'patients');
+$patient = null;
+
+if ($viewId > 0) {
+  if ($usePatientsTable) {
+    $ret = hms_query($con, "SELECT * FROM patients WHERE id='$viewId' AND doctorId='$doctorId' LIMIT 1");
+  } else {
+    $ret = hms_query($con, "SELECT * FROM tblpatient WHERE ID='$viewId' AND Docid='$doctorId' LIMIT 1");
+  }
+  if ($ret) {
+    $patient = hms_fetch_array($ret);
+  }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -37,12 +57,9 @@ check_login();
     <div class="row">
       <div class="col-md-12">
       <h5 class="over-title margin-bottom-15">Patient <span class="text-bold">Details</span></h5>
-        <?php
-        $vid=$_GET['viewid'];
-        $ret=hms_query($con,"select * from tblpatient where ID='$vid'");
-        $cnt=1;
-        while ($row=hms_fetch_array($ret)) {
-         ?>
+        <?php if(!$patient): ?>
+          <div class="alert alert-warning">Patient record not found.</div>
+        <?php else: ?>
          <table border="1" class="table table-bordered">
            <tr align="center">
             <td colspan="4" style="font-size:20px;color:blue">
@@ -50,31 +67,30 @@ check_login();
 
             <tr>
               <th scope>Patient Name</th>
-              <td><?php  echo $row['PatientName'];?></td>
+              <td><?php  echo htmlentities($patient['patientName'] ?? $patient['PatientName'] ?? '');?></td>
               <th scope>Patient Email</th>
-              <td><?php  echo $row['PatientEmail'];?></td>
+              <td><?php  echo htmlentities($patient['patientEmail'] ?? $patient['PatientEmail'] ?? '');?></td>
             </tr>
             <tr>
               <th scope>Patient Mobile Number</th>
-              <td><?php  echo $row['PatientContno'];?></td>
+              <td><?php  echo htmlentities($patient['patientPhone'] ?? $patient['PatientContno'] ?? '');?></td>
               <th>Patient Address</th>
-              <td><?php  echo $row['PatientAdd'];?></td>
+              <td><?php  echo htmlentities($patient['patientAddress'] ?? $patient['PatientAdd'] ?? '');?></td>
             </tr>
             <tr>
               <th>Patient Gender</th>
-              <td><?php  echo $row['PatientGender'];?></td>
+              <td><?php  echo htmlentities($patient['patientGender'] ?? $patient['PatientGender'] ?? '');?></td>
               <th>Patient Age</th>
-              <td><?php  echo $row['PatientAge'];?></td>
+              <td><?php  echo htmlentities($patient['patientAge'] ?? $patient['PatientAge'] ?? '');?></td>
             </tr>
             <tr>
               <th>Patient Reg Date</th>
-              <td><?php  echo $row['CreationDate'];?></td>
+              <td><?php  echo htmlentities($patient['createdAt'] ?? $patient['CreationDate'] ?? '');?></td>
               <th>Last Updated</th>
-              <td><?php  echo $row['UpdationDate'];?></td>
+              <td><?php  echo htmlentities($patient['updatedAt'] ?? $patient['UpdationDate'] ?? '');?></td>
             </tr>
-
-            <?php }?>
           </table>
+          <?php endif; ?>
           <p>
             <a href="manage-patient.php" class="btn btn-default">Back</a>
           </p>

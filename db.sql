@@ -1,5 +1,6 @@
 -- Zantus HMS
 -- Clean MySQL schema for the current PHP codebase
+-- Legacy tables removed from this schema: appointment, tblpatient, tblmedicalhistory, tblcontactus
 -- Import target: MySQL / MariaDB
 -- Time zone: IST
 
@@ -74,33 +75,6 @@ CREATE TABLE `users` (
   `updationDate` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_users_email` (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE `appointment` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `doctorSpecialization` varchar(255) DEFAULT NULL,
-  `doctorId` int DEFAULT NULL,
-  `userId` int DEFAULT NULL,
-  `consultancyFees` int DEFAULT NULL,
-  `appointmentDate` varchar(255) DEFAULT NULL,
-  `appointmentTime` varchar(255) DEFAULT NULL,
-  `postingDate` datetime DEFAULT CURRENT_TIMESTAMP,
-  `userStatus` int DEFAULT 1,
-  `doctorStatus` int DEFAULT 1,
-  `visitStatus` varchar(30) NOT NULL DEFAULT 'Scheduled',
-  `checkInTime` datetime DEFAULT NULL,
-  `checkOutTime` datetime DEFAULT NULL,
-  `prescription` text DEFAULT NULL,
-  `paymentStatus` varchar(20) NOT NULL DEFAULT 'Pending',
-  `paymentRef` varchar(64) DEFAULT NULL,
-  `paidAt` datetime DEFAULT NULL,
-  `appointmentType` varchar(50) DEFAULT 'Online',
-  `paymentOption` varchar(30) DEFAULT 'BookOnly',
-  `updationDate` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_appointment_userId` (`userId`),
-  KEY `idx_appointment_doctorId` (`doctorId`),
-  KEY `idx_appointment_visitStatus` (`visitStatus`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `current_appointments` (
@@ -186,35 +160,6 @@ CREATE TABLE `patients` (
   KEY `idx_patients_userId` (`userId`),
   KEY `idx_patients_doctorId` (`doctorId`),
   KEY `idx_patients_type_status` (`patientType`, `status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE `tblpatient` (
-  `ID` int NOT NULL AUTO_INCREMENT,
-  `Docid` int DEFAULT NULL,
-  `PatientName` varchar(200) DEFAULT NULL,
-  `PatientContno` varchar(20) DEFAULT NULL,
-  `PatientEmail` varchar(200) DEFAULT NULL,
-  `PatientGender` varchar(50) DEFAULT NULL,
-  `PatientAdd` text DEFAULT NULL,
-  `PatientAge` int DEFAULT NULL,
-  `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `UpdationDate` datetime DEFAULT NULL,
-  PRIMARY KEY (`ID`),
-  KEY `idx_tblpatient_Docid` (`Docid`),
-  KEY `idx_tblpatient_PatientEmail` (`PatientEmail`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE `tblmedicalhistory` (
-  `ID` int NOT NULL AUTO_INCREMENT,
-  `PatientID` int DEFAULT NULL,
-  `BloodPressure` varchar(200) DEFAULT NULL,
-  `BloodSugar` varchar(200) DEFAULT NULL,
-  `Weight` varchar(100) DEFAULT NULL,
-  `Temperature` varchar(200) DEFAULT NULL,
-  `MedicalPres` text DEFAULT NULL,
-  `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`ID`),
-  KEY `idx_tblmedicalhistory_PatientID` (`PatientID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `prescriptions` (
@@ -335,19 +280,6 @@ CREATE TABLE `feedback_entries` (
   KEY `idx_feedback_entries_user_id` (`user_id`),
   KEY `idx_feedback_entries_doctor_id` (`doctor_id`),
   KEY `idx_feedback_entries_created_at` (`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE `tblcontactus` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `fullname` varchar(255) DEFAULT NULL,
-  `email` varchar(255) DEFAULT NULL,
-  `contactno` varchar(20) DEFAULT NULL,
-  `message` text DEFAULT NULL,
-  `PostingDate` datetime DEFAULT CURRENT_TIMESTAMP,
-  `AdminRemark` text DEFAULT NULL,
-  `LastupdationDate` datetime DEFAULT NULL,
-  `IsRead` tinyint DEFAULT NULL,
-  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `userlog` (

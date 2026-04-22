@@ -110,15 +110,17 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 			$this->SetFillColor(45, 212, 191);
 			$this->Rect(15, 31, 32, 1.4, 'F');
 
+			$titleX = 82;
+			$titleWidth = $pageWidth - 96;
 			$this->SetTextColor(15, 23, 42);
-			hms_pdf_apply_font($this, 'B', 18);
-			$this->SetXY(0, 10);
-			$this->Cell($pageWidth, 9, strtoupper($this->hmsDocumentTitle), 0, 1, 'C', false, '', 0, false, 'T', 'M');
+			hms_pdf_apply_font($this, 'B', 17);
+			$this->SetXY($titleX, 10);
+			$this->Cell($titleWidth, 9, strtoupper($this->hmsDocumentTitle), 0, 1, 'C', false, '', 0, false, 'T', 'M');
 
 			$this->SetTextColor(100, 116, 139);
 			hms_pdf_apply_font($this, '', 8);
-			$this->SetXY(0, 20);
-			$this->Cell($pageWidth, 5, 'Medical Billing Invoice', 0, 1, 'C', false, '', 0, false, 'T', 'M');
+			$this->SetXY($titleX, 20);
+			$this->Cell($titleWidth, 5, 'Medical Billing Invoice', 0, 1, 'C', false, '', 0, false, 'T', 'M');
 
 			$this->SetDrawColor(203, 213, 225);
 			$this->Line(14, 42, $pageWidth - 14, 42);
@@ -138,10 +140,6 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 				return;
 			}
 
-			$stampPath = hms_pdf_invoice_stamp_path();
-			if ($stampPath !== '' && file_exists($stampPath)) {
-				$this->Image($stampPath, 0, $pageHeight - 44, 28, 0, 'PNG', '', '', false, 300, '', false, false, 0, false, false, false);
-			}
 			$this->SetDrawColor(191, 219, 254);
 			$this->Line(15, $pageHeight - 18, $pageWidth - 15, $pageHeight - 18);
 			$this->SetY(-15);
@@ -170,17 +168,6 @@ if (!function_exists('hms_pdf_invoice_signature_path')) {
 	function hms_pdf_invoice_signature_path() {
 		$path = dirname(__DIR__) . '/assets/images/invoice-signature.png';
 		return file_exists($path) ? $path : '';
-	}
-}
-
-if (!function_exists('hms_pdf_invoice_stamp_path')) {
-	function hms_pdf_invoice_stamp_path() {
-		$preferred = dirname(__DIR__) . '/assets/images/invoice-stamp-real.png';
-		if (file_exists($preferred)) {
-			return $preferred;
-		}
-		$fallback = dirname(__DIR__) . '/assets/images/invoice-stamp.png';
-		return file_exists($fallback) ? $fallback : '';
 	}
 }
 

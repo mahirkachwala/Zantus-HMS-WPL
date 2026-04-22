@@ -5,6 +5,11 @@ include('include/config.php');
 include('include/checklogin.php');
 check_login();
 
+function tableExists($con, $tableName) {
+	$check = hms_query($con, "SHOW TABLES LIKE '" . hms_escape($con, $tableName) . "'");
+	return ($check && hms_num_rows($check) > 0);
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -61,30 +66,36 @@ $tdate=$_POST['todate'];
 <th>Patient Name</th>
 <th>Patient Contact Number</th>
 <th>Patient Gender </th>
+<th>Patient Type</th>
 <th>Creation Date </th>
-<th>Updation Date </th>
+<th>Updation Date / Doctor</th>
 <th>Action</th>
 </tr>
 </thead>
 <tbody>
 <?php
 
-$sql=hms_query($con,"select * from tblpatient where date(CreationDate) between '$fdate' and '$tdate'");
+if (tableExists($con, 'patients')) {
+	$sql=hms_query($con,"SELECT p.*, d.doctorName FROM patients p LEFT JOIN doctors d ON d.id=p.doctorId WHERE DATE(COALESCE(p.createdAt, p.admissionDate)) BETWEEN '$fdate' AND '$tdate' ORDER BY p.id DESC");
+} else {
+	$sql=hms_query($con,"SELECT * FROM tblpatient WHERE DATE(CreationDate) BETWEEN '$fdate' AND '$tdate' ORDER BY ID DESC");
+}
 $cnt=1;
 while($row=hms_fetch_array($sql))
 {
 ?>
 <tr>
 <td class="center"><?php echo $cnt;?>.</td>
-<td class="hidden-xs"><?php echo $row['PatientName'];?></td>
-<td><?php echo $row['PatientContno'];?></td>
-<td><?php echo $row['PatientGender'];?></td>
-<td><?php echo $row['CreationDate'];?></td>
-<td><?php echo $row['UpdationDate'];?>
+<td class="hidden-xs"><?php echo htmlentities($row['patientName'] ?? $row['PatientName'] ?? '');?></td>
+<td><?php echo htmlentities($row['patientPhone'] ?? $row['PatientContno'] ?? '');?></td>
+<td><?php echo htmlentities($row['patientGender'] ?? $row['PatientGender'] ?? '');?></td>
+<td><?php echo ucfirst(htmlentities($row['patientType'] ?? 'consultancy'));?></td>
+<td><?php echo htmlentities($row['createdAt'] ?? $row['CreationDate'] ?? $row['admissionDate'] ?? '');?></td>
+<td><?php echo htmlentities($row['updatedAt'] ?? $row['UpdationDate'] ?? $row['doctorName'] ?? '--');?>
 </td>
 <td>
 
-<a href="view-patient.php?viewid=<?php echo $row['ID'];?>"><i class="fa fa-eye"></i></a>
+<a href="view-patient.php?viewid=<?php echo (int)($row['id'] ?? $row['ID'] ?? 0);?>"><i class="fa fa-eye"></i></a>
 
 </td>
 </tr>
