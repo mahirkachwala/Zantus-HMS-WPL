@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="520" viewBox="0 0 820 520">
+  <rect width="820" height="520" fill="#ffffff"/>
+  <g transform="translate(48 78)">
+    <text x="0" y="270" font-family="Arial, Helvetica, sans-serif" font-size="252" font-weight="700" fill="#2f3137">pay</text>
+    <text x="425" y="270" font-family="Arial, Helvetica, sans-serif" font-size="252" font-weight="700" fill="#11b48c">U</text>
+    <path d="M468 38 L740 112 L740 308 L468 384" fill="none" stroke="#2f3137" stroke-width="34" stroke-linecap="square" stroke-linejoin="miter"/>
+  </g>
+</svg>

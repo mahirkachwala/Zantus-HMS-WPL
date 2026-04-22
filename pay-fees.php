@@ -16,6 +16,15 @@ $checkoutRequest = null;
 $context = hms_get_payable_appointment_context($con, $appointmentId, $userId);
 $appointment = $context['appointment'] ?? null;
 if ($appointment) {
+	$pendingTxnId = trim((string)($appointment['paymentRef'] ?? ($_SESSION['payu_pending_txn_' . $appointmentId] ?? '')));
+	$isStillPending = empty($context['is_paid']) && $pendingTxnId !== '';
+	if ($isStillPending) {
+		$reconciled = hms_reconcile_payu_transaction($con, $appointmentId, $userId, $pendingTxnId);
+		if ($reconciled !== false) {
+			$context = hms_get_payable_appointment_context($con, $appointmentId, $userId);
+			$appointment = $context['appointment'] ?? $appointment;
+		}
+	}
 	$amount = (string)($appointment['consultancyFees'] ?? '');
 }
 if (!empty($context['error'])) {

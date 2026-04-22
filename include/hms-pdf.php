@@ -110,8 +110,8 @@ if (hms_pdf_is_available() && !class_exists('HMSReceiptPDF')) {
 			$this->SetFillColor(45, 212, 191);
 			$this->Rect(15, 31, 32, 1.4, 'F');
 
-			$titleX = 82;
-			$titleWidth = $pageWidth - 96;
+			$titleX = 88;
+			$titleWidth = $pageWidth - 102;
 			$this->SetTextColor(15, 23, 42);
 			hms_pdf_apply_font($this, 'B', 17);
 			$this->SetXY($titleX, 10);
@@ -157,10 +157,20 @@ if (!function_exists('hms_pdf_logo_path')) {
 	}
 }
 
-if (!function_exists('hms_pdf_razorpay_logo_path')) {
-	function hms_pdf_razorpay_logo_path() {
-		$path = dirname(__DIR__) . '/assets/images/razorpay-logo.png';
-		return file_exists($path) ? $path : '';
+if (!function_exists('hms_pdf_payu_logo_path')) {
+	function hms_pdf_payu_logo_path() {
+		$svgPath = dirname(__DIR__) . '/assets/images/payu-logo.svg';
+		if (file_exists($svgPath)) {
+			return $svgPath;
+		}
+
+		$jpgPath = dirname(__DIR__) . '/assets/images/payu-logo.jpg';
+		if (file_exists($jpgPath)) {
+			return $jpgPath;
+		}
+
+		$pngPath = dirname(__DIR__) . '/assets/images/payu-logo.png';
+		return file_exists($pngPath) ? $pngPath : '';
 	}
 }
 
@@ -168,6 +178,62 @@ if (!function_exists('hms_pdf_invoice_signature_path')) {
 	function hms_pdf_invoice_signature_path() {
 		$path = dirname(__DIR__) . '/assets/images/invoice-signature.png';
 		return file_exists($path) ? $path : '';
+	}
+}
+
+if (!function_exists('hms_pdf_image_type_from_path')) {
+	function hms_pdf_image_type_from_path($path) {
+		$path = (string)$path;
+		if ($path === '' || !is_file($path)) {
+			return '';
+		}
+
+		$imageInfo = @getimagesize($path);
+		if (is_array($imageInfo) && !empty($imageInfo['mime'])) {
+			$mime = strtolower((string)$imageInfo['mime']);
+			if ($mime === 'image/jpeg' || $mime === 'image/jpg') {
+				return 'JPG';
+			}
+			if ($mime === 'image/png') {
+				return 'PNG';
+			}
+			if ($mime === 'image/svg+xml') {
+				return 'SVG';
+			}
+		}
+
+		$extension = strtolower((string)pathinfo($path, PATHINFO_EXTENSION));
+		if ($extension === 'jpg' || $extension === 'jpeg') {
+			return 'JPG';
+		}
+		if ($extension === 'png') {
+			return 'PNG';
+		}
+		if ($extension === 'svg') {
+			return 'SVG';
+		}
+
+		return '';
+	}
+}
+
+if (!function_exists('hms_pdf_try_render_image')) {
+	function hms_pdf_try_render_image($pdf, $path, $x, $y, $w, $h = 0) {
+		if (!is_object($pdf) || !method_exists($pdf, 'Image')) {
+			return false;
+		}
+
+		$type = hms_pdf_image_type_from_path($path);
+		if ($type === '') {
+			return false;
+		}
+
+		try {
+			$pdf->Image($path, $x, $y, $w, $h, $type, '', '', false, 300, '', false, false, 0, false, false, false);
+			return true;
+		} catch (\Throwable $e) {
+			return false;
+		}
 	}
 }
 
@@ -275,8 +341,8 @@ if (!function_exists('hms_create_pdf_document')) {
 		$pdf->SetAuthor('Zantus HMS');
 		$pdf->SetTitle((string)$title);
 		$pdf->SetSubject((string)$title);
-		$topMargin = $pdf->hmsVariant === 'prescription' ? 50 : 58;
-		$bottomMargin = $pdf->hmsVariant === 'prescription' ? 20 : 22;
+		$topMargin = $pdf->hmsVariant === 'prescription' ? 50 : 52;
+		$bottomMargin = $pdf->hmsVariant === 'prescription' ? 20 : 16;
 		$pdf->SetMargins(14, $topMargin, 14);
 		$pdf->SetHeaderMargin(0);
 		$pdf->SetFooterMargin(0);
@@ -349,6 +415,53 @@ if (!function_exists('hms_pdf_status_badge_html')) {
 		}
 
 		return '<span style="background-color:' . $background . ';color:' . $color . ';font-size:8px;font-weight:bold;padding:4px 9px;border-radius:12px;">' . hms_pdf_html_escape($label) . '</span>';
+	}
+}
+
+if (!function_exists('hms_pdf_status_card_html')) {
+	function hms_pdf_status_card_html($title, $status, $tone = '') {
+		$label = trim((string)$status);
+		$key = strtolower($label);
+		$textColor = '#1d4ed8';
+		$accentColor = '#2563eb';
+		$background = '#eff6ff';
+		$titleColor = '#64748b';
+
+		if ($tone === '') {
+			if (strpos($key, 'paid') !== false || strpos($key, 'complete') !== false || strpos($key, 'success') !== false) {
+				$tone = 'green';
+			} elseif (strpos($key, 'schedule') !== false || strpos($key, 'check') !== false || strpos($key, 'visit') !== false) {
+				$tone = 'blue';
+			} elseif (strpos($key, 'pending') !== false) {
+				$tone = 'amber';
+			} elseif (strpos($key, 'cancel') !== false || strpos($key, 'failed') !== false) {
+				$tone = 'red';
+			} else {
+				$tone = 'blue';
+			}
+		}
+
+		if ($tone === 'green') {
+			$textColor = '#047857';
+			$accentColor = '#10b981';
+			$background = '#ecfdf5';
+			$titleColor = '#065f46';
+		} elseif ($tone === 'amber') {
+			$textColor = '#b45309';
+			$accentColor = '#f59e0b';
+			$background = '#fff7ed';
+			$titleColor = '#9a3412';
+		} elseif ($tone === 'red') {
+			$textColor = '#b91c1c';
+			$accentColor = '#ef4444';
+			$background = '#fef2f2';
+			$titleColor = '#991b1b';
+		}
+
+		return '<div style="background-color:' . $background . ';padding:8px 10px 9px 10px;border-top:3px solid ' . $accentColor . ';">'
+			. '<div style="font-size:7px;color:' . $titleColor . ';text-transform:uppercase;letter-spacing:0.9px;">' . hms_pdf_html_escape($title) . '</div>'
+			. '<div style="font-size:16px;color:' . $textColor . ';font-weight:bold;padding-top:3px;line-height:1.2;">' . hms_pdf_html_escape($label) . '</div>'
+			. '</div>';
 	}
 }
 

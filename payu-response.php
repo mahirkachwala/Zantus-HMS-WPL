@@ -9,7 +9,7 @@ function hms_payu_redirect($url) {
 	exit();
 }
 
-$payload = $_POST;
+$payload = !empty($_POST) ? $_POST : $_REQUEST;
 $appointmentId = (int)($payload['udf1'] ?? 0);
 $userId = (int)($payload['udf2'] ?? 0);
 $backUrl = 'appointments.php';
@@ -22,6 +22,23 @@ if ($userId > 0) {
 }
 
 if (empty($payload)) {
+	$pendingTxnId = '';
+	if ($appointmentId > 0 && !empty($_SESSION['payu_pending_txn_' . $appointmentId])) {
+		$pendingTxnId = trim((string)$_SESSION['payu_pending_txn_' . $appointmentId]);
+	}
+	if ($pendingTxnId === '' && $appointmentId > 0 && $userId > 0) {
+		$context = hms_get_payable_appointment_context($con, $appointmentId, $userId);
+		$appointment = $context['appointment'] ?? null;
+		$pendingTxnId = trim((string)($appointment['paymentRef'] ?? ''));
+	}
+	if ($pendingTxnId !== '' && $appointmentId > 0 && $userId > 0) {
+		$reconciled = hms_reconcile_payu_transaction($con, $appointmentId, $userId, $pendingTxnId);
+		if ($reconciled !== false) {
+			$_SESSION['msg'] = 'Payment successful for appointment #' . $appointmentId . '.';
+			hms_payu_redirect('payment-receipt.php?appointment_id=' . $appointmentId . '&download=1');
+		}
+	}
+
 	$_SESSION['payu_error'] = 'PayU did not return a payment response.';
 	hms_payu_redirect($backUrl);
 }
@@ -37,6 +54,14 @@ if ($appointmentId <= 0 || $userId <= 0) {
 }
 
 if (!hms_verify_payu_response_hash($payload)) {
+	$pendingTxnId = trim((string)($payload['txnid'] ?? ''));
+	if ($pendingTxnId !== '') {
+		$reconciled = hms_reconcile_payu_transaction($con, $appointmentId, $userId, $pendingTxnId);
+		if ($reconciled !== false) {
+			$_SESSION['msg'] = 'Payment successful for appointment #' . $appointmentId . '.';
+			hms_payu_redirect('payment-receipt.php?appointment_id=' . $appointmentId . '&download=1');
+		}
+	}
 	$_SESSION['payu_error'] = 'PayU response validation failed.';
 	hms_payu_redirect($backUrl);
 }
@@ -70,6 +95,14 @@ $fieldMessage = trim((string)($payload['error_Message'] ?? $payload['field9'] ??
 $statusMessage = $fieldMessage !== '' ? $fieldMessage : 'Payment was not completed on PayU.';
 
 if ($status !== 'success') {
+	$pendingTxnId = trim((string)($payload['txnid'] ?? ''));
+	if ($pendingTxnId !== '') {
+		$reconciled = hms_reconcile_payu_transaction($con, $appointmentId, $userId, $pendingTxnId);
+		if ($reconciled !== false) {
+			$_SESSION['msg'] = 'Payment successful for appointment #' . $appointmentId . '.';
+			hms_payu_redirect('payment-receipt.php?appointment_id=' . $appointmentId . '&download=1');
+		}
+	}
 	$_SESSION['payu_error'] = $statusMessage;
 	hms_payu_redirect($backUrl);
 }

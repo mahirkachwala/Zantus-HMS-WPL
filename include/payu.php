@@ -30,6 +30,12 @@ if (!function_exists('hms_payu_payment_url')) {
 	}
 }
 
+if (!function_exists('hms_payu_verify_url')) {
+	function hms_payu_verify_url() {
+		return hms_payu_base_url() . '/merchant/postservice?form=2';
+	}
+}
+
 if (!function_exists('hms_payu_is_configured')) {
 	function hms_payu_is_configured() {
 		return hms_payu_merchant_key() !== '' && hms_payu_merchant_salt() !== '';
@@ -175,6 +181,21 @@ if (!function_exists('hms_payu_request_hash')) {
 	}
 }
 
+if (!function_exists('hms_payu_verify_hash')) {
+	function hms_payu_verify_hash($txnid) {
+		$key = hms_payu_merchant_key();
+		$salt = hms_payu_merchant_salt();
+		$command = 'verify_payment';
+		$txnid = trim((string)$txnid);
+
+		if ($key === '' || $salt === '' || $txnid === '') {
+			return '';
+		}
+
+		return strtolower(hash('sha512', $key . '|' . $command . '|' . $txnid . '|' . $salt));
+	}
+}
+
 if (!function_exists('hms_verify_payu_response_hash')) {
 	function hms_verify_payu_response_hash(array $payload) {
 		$responseHash = strtolower(trim((string)($payload['hash'] ?? '')));
@@ -204,6 +225,138 @@ if (!function_exists('hms_verify_payu_response_hash')) {
 
 		$generated = strtolower(hash('sha512', $reverse));
 		return hash_equals($generated, $responseHash);
+	}
+}
+
+if (!function_exists('hms_save_payu_pending_reference')) {
+	function hms_save_payu_pending_reference($con, $appointmentId, $userId, $txnid) {
+		$appointmentId = (int)$appointmentId;
+		$userId = (int)$userId;
+		$txnid = trim((string)$txnid);
+		$table = hms_get_payment_appointment_table($con);
+
+		if ($appointmentId <= 0 || $userId <= 0 || $txnid === '') {
+			return false;
+		}
+
+		$_SESSION['payu_pending_txn_' . $appointmentId] = $txnid;
+		return (bool)hms_query_params(
+			$con,
+			"UPDATE $table SET paymentRef=$1 WHERE id=$2 AND userId=$3 AND (paymentRef IS NULL OR paymentRef='' OR paymentStatus='Pending')",
+			[$txnid, $appointmentId, $userId]
+		);
+	}
+}
+
+if (!function_exists('hms_payu_verify_transaction')) {
+	function hms_payu_verify_transaction($txnid) {
+		$txnid = trim((string)$txnid);
+		if ($txnid === '' || !hms_payu_is_configured() || !function_exists('curl_init')) {
+			return null;
+		}
+
+		$postFields = [
+			'key' => hms_payu_merchant_key(),
+			'command' => 'verify_payment',
+			'var1' => $txnid,
+			'hash' => hms_payu_verify_hash($txnid),
+		];
+
+		$ch = curl_init(hms_payu_verify_url());
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postFields));
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [
+			'Content-Type: application/x-www-form-urlencoded',
+			'Accept: application/json',
+		]);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+
+		$responseBody = curl_exec($ch);
+		$httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
+
+		if ($responseBody === false || $httpCode < 200 || $httpCode >= 300) {
+			return null;
+		}
+
+		$decoded = json_decode((string)$responseBody, true);
+		if (!is_array($decoded)) {
+			return null;
+		}
+
+		if (isset($decoded['transaction_details'][$txnid]) && is_array($decoded['transaction_details'][$txnid])) {
+			return $decoded['transaction_details'][$txnid];
+		}
+		if (isset($decoded['result'][0]) && is_array($decoded['result'][0])) {
+			return $decoded['result'][0];
+		}
+
+		return null;
+	}
+}
+
+if (!function_exists('hms_reconcile_payu_transaction')) {
+	function hms_reconcile_payu_transaction($con, $appointmentId, $userId, $txnid) {
+		$appointmentId = (int)$appointmentId;
+		$userId = (int)$userId;
+		$txnid = trim((string)$txnid);
+		if ($appointmentId <= 0 || $userId <= 0 || $txnid === '') {
+			return false;
+		}
+
+		$details = hms_payu_verify_transaction($txnid);
+		if (!is_array($details)) {
+			return false;
+		}
+
+		$status = strtolower(trim((string)($details['status'] ?? '')));
+		if ($status !== 'success') {
+			return false;
+		}
+
+		$table = hms_get_payment_appointment_table($con);
+		$payuId = trim((string)($details['mihpayid'] ?? ''));
+		$transactionRef = $payuId !== '' ? $payuId : $txnid;
+		$paidAt = trim((string)($details['addedon'] ?? ''));
+		if ($paidAt === '') {
+			$paidAt = date('Y-m-d H:i:s');
+		}
+
+		$context = hms_get_payable_appointment_context($con, $appointmentId, $userId);
+		$appointment = $context['appointment'] ?? null;
+		if (!$appointment) {
+			return false;
+		}
+
+		$amount = (float)($appointment['consultancyFees'] ?? 0);
+		$updateOk = (bool)hms_query_params(
+			$con,
+			"UPDATE $table SET paymentStatus='Paid', paymentRef=$1, paidAt=$2 WHERE id=$3 AND userId=$4",
+			[$transactionRef, $paidAt, $appointmentId, $userId]
+		);
+		$logOk = $updateOk && hms_record_payment_transaction(
+			$con,
+			$appointmentId,
+			$userId,
+			$amount,
+			'PayU',
+			$transactionRef,
+			'Paid',
+			$paidAt
+		);
+
+		if ($updateOk && $logOk) {
+			unset($_SESSION['payu_pending_txn_' . $appointmentId]);
+			return [
+				'transaction_ref' => $transactionRef,
+				'paid_at' => $paidAt,
+				'status' => 'Paid',
+			];
+		}
+
+		return false;
 	}
 }
 
@@ -254,6 +407,8 @@ if (!function_exists('hms_build_payu_checkout_request')) {
 		if ($fields['hash'] === '') {
 			throw new \RuntimeException('Unable to generate PayU request hash.');
 		}
+
+		hms_save_payu_pending_reference($con, $appointmentId, $userId, $txnid);
 
 		return [
 			'action' => hms_payu_payment_url(),
